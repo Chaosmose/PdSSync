@@ -1,0 +1,8 @@
+
+*.xcworkspacedata
+
+PdSSyncPhp/.buildpath
+
+PdSSyncPhp/.project
+
+PdSSyncPhp/.settings/org.eclipse.php.core.prefs
