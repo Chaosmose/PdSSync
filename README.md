@@ -1,14 +1,13 @@
 PdSSync
 =========
 
-A simple delta synchronizer
+A simple delta synchronizer for large repositories
 
-	[ SERVER ]
-	
-	↑       |   
-			
- upSync    downSync
-    |       ↓
+	[ SERVER ]	
+	|        |
+	|        |   
+ upSync  downSync
+    |        |
  MASTER   CLIENTS 
 
 
