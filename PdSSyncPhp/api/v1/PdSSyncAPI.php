@@ -1,4 +1,4 @@
- <?php 
+<?php 
  /**
   * 
   *  Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
@@ -41,22 +41,14 @@
  	 * Constructor: __construct
  	 * Allow for CORS, assemble and pre-process the data
  	 */
- 	public function __construct($request, $origin) {
- 		/*
- 		$APIKey = new Models\APIKey();
- 		$User = new Models\User();
+ 	public function __construct( ) {
  		
- 		if (!array_key_exists('apiKey', $this->request)) {
- 			throw new Exception('No API Key provided');
- 		} else if (!$APIKey->verifyKey($this->request['apiKey'], $origin)) {
- 			throw new Exception('Invalid API Key');
- 		} else if (array_key_exists('token', $this->request) &&
- 				!$User->get('token', $this->request['token']))
- 		
- 			throw new Exception('Invalid User Token');
- 		} 		
- 		$this->User = $User;
- 		*/
+ 		// Requests from the same server don't have a HTTP_ORIGIN header
+ 		if (!array_key_exists('HTTP_ORIGIN', $_SERVER)) {
+ 			$_SERVER['HTTP_ORIGIN'] = $_SERVER['SERVER_NAME'];
+ 		}
+ 		$request=$_REQUEST['request'];
+ 		$origin=$_SERVER['HTTP_ORIGIN'];
  		header("Access-Control-Allow-Orgin: *");
  		header("Access-Control-Allow-Methods: *");
  		header("Content-Type: application/json");
@@ -75,22 +67,7 @@
  				throw new Exception("Unexpected Header");
  			}
  		}
- 		switch($this->method) {
- 			case 'DELETE':
- 			case 'POST':
- 				$this->request = $this->_cleanInputs($_POST);
- 				break;
- 			case 'GET':
- 				$this->request = $this->_cleanInputs($_GET);
- 				break;
- 			case 'PUT':
- 				$this->request = $this->_cleanInputs($_GET);
- 				$this->file = file_get_contents("php://input");
- 				break;
- 			default:
- 				$this->_response('Invalid Method', 405);
- 				break;
- 		}
+ 		
  	}
 
  	/**
@@ -98,6 +75,22 @@
  	 * @return string
  	 */
    public function run() {
+   	switch($this->method) {
+   		case 'DELETE':
+   		case 'POST':
+   			$this->request = $this->_cleanInputs($_POST);
+   			break;
+   		case 'GET':
+   			$this->request = $this->_cleanInputs($_GET);
+   			break;
+   		case 'PUT':
+   			$this->request = $this->_cleanInputs($_GET);
+   			$this->file = file_get_contents("php://input");
+   			break;
+   		default:
+   			$this->_response('Invalid Method', 405);
+   			break;
+   	}
         if ((int)method_exists($this->endpoint) > 0) {
             return $this->_response($this->{$this->endpoint}($this->args));
         }
@@ -129,7 +122,7 @@
      * @param string $syncIdentifier
      * @return multitype:|string
      */
-    protected function uploadToRelativePath(string $relativePath='',string $syncIdentifier) {
+    protected function uploadToRelativePath( $relativePath, $syncIdentifier) {
     	if ($this->method == 'POST') {
     		return array();
     	} else {
@@ -153,7 +146,7 @@
     }
     
     
-    
+  
     
     /////////////////
     // Private method
@@ -241,4 +234,14 @@
     }
  }
 
+ /////////////////
+ // Boot strap
+ /////////////////
+ 
+ try {
+ 	$API = new PdSSyncAPI( );
+ 	echo $API->run();
+ } catch (Exception $e) {
+ 	echo json_encode(Array('error' => $e->getMessage()));
+ }
  
