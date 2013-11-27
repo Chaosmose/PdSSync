@@ -2,15 +2,17 @@
 
 A simple delta synchronizer for large repositories.
 The synchronization relies on a client software and if necessary a mediation service currently implemented in PHP.
+It allows to synchronizes local and distant sets of files by using a mediation service master  -> mediation -> clients
 PdSSync is still in early development phases do not use in any project !
 
 
 ## Objective C ##
-The objective c lib is a synchronisation client that synchronizes local A -\> B and distant set of files by using a mediation service MASTER  -\> \[ mediation server ] -\> CLIENTS
+The objective c lib 
 
 ## Key notions ##
 
 For PdSSync a **tree** or a **subtree** is a dictionary with for a given folder a list of all its files and folder relative path as a key and a CRC32 of the file as a value.
+
 	In json : { 'a/a.caf': 299993900 , ... } 
 
 ## PdSSyncPhp ##
