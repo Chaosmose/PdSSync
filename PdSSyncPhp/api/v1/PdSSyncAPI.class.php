@@ -1,4 +1,9 @@
 <?php
+
+include 'api/v1/PdSSyncConst.php';
+require_once 'api/v1/classes/TreeGenerator.class.php';
+require_once 'api/v1/classes/OperationsInterpreter.class.php';
+require_once 'api/v1/classes/BackgroundExecution.class.php';
 /**
   *  A simple API facade in one file
   *  Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
@@ -8,12 +13,7 @@
   */
 class PdSSyncAPI {
 	
-	/**
-	 * The suffix used to lock a tree 
-	 * @const string
-	 */
-	const  __LOCKED_SUFFIX ='.locked';
-	
+
 	/**
 	 * Property: method
 	 * The HTTP method this request was made in, either GET, POST, PUT or DELETE
@@ -116,15 +116,15 @@ class PdSSyncAPI {
 	/**
 	 * Returns the tree $paths is null we use the global repository tree.
 	 *
-	 * @param array $paths        	
+	 * @param array $relativePaths        	
 	 * @return multitype: string
 	 */
-	protected function distantTree(array $paths = array()) {
+	protected function distantTree(array $relativePaths = array()) {
 		if ($this->method == 'GET') {
 			$this->_createFoldersIfNecessary();
-			$fileName=crc32(  json_encode($path)  ) . '_tree.json' ;
+			$fileName=crc32(  json_encode($relativePaths)  ) .TREE_SUFFIX ;
 			$filePath=TREES_FOLDER_PATH.$fileName; 
-			$locker=$fileName.__LOCKED_SUFFIX;
+			$locker=$fileName.LOCKED_SUFFIX;
 			$lockerPath=TREES_FOLDER_PATH.$locker;
 			if (file_exists($lockerPath)){
 				// there is a locker and operation in progress.
@@ -134,17 +134,18 @@ class PdSSyncAPI {
 				$tree=json_decode(file_get_contents($filePath));
 				return $this->_response($tree,200);
 			}else{
-				if(file_put_contents($lockerPath, ''.time())!==false){
-					// GENERATE THE FILE IN BACKGROUND
-					// AND ON COMPLETION THE REMOVE THE LOCKER
-					//@TODO
-					return $this->_response('Operation in progress on '.$fileName , 204 );
-				}
+				// Generate the tree using a background process
+				$process = new BackgroundProcess();
+				$process->runPHP('
+							$treeGenerator=new TreeGenerator();
+							$treeGenerator->treeForRelativePaths($relativePaths);
+						');
+				return $this->_response('Operation in progress on '.$fileName , 204 );
 			}
 		} else {
 			$infos=array();
-			 $infos['information']='Method GET required';
-			 $infos['method']='GET';
+			 $infos[INFORMATIONS_KEY]='Method GET required';
+			 $infos[METHOD_KEY]='GET';
 			return $this->_response($infos,405);
 		}
 	}
@@ -159,11 +160,13 @@ class PdSSyncAPI {
 	 */
 	protected function uploadToRelativePath($relativePath, $syncIdentifier) {
 		if ($this->method == 'POST') {
-			return array ();
+			// TODO 
+			// DEAL WITH THE UPLOAD
+			return $this->_response('',200);
 		} else {
 			$infos=array();
-			 $infos['information']='Method POST required';
-			 $infos['method']='POST';
+			 $infos[INFORMATIONS_KEY]='Method POST required';
+			 $infos[METHOD_KEY]='POST';
 			return $this->_response($infos,405);
 		}
 	}
@@ -176,13 +179,18 @@ class PdSSyncAPI {
 	 * @param string $finalTree        	
 	 * @return multitype: string
 	 */
-	protected function finalizeSynchronization(string $syncIdentifier, array $operations, string $finalTree) {
+	protected function finalizeSynchronization($syncIdentifier, array $operations, $finalTree) {
 		if ($this->method == 'POST') {
-			return array ();
+			if(OperationsInterpreter::interpretOperation($syncIdentifier, $operations, $finalTree)){
+				return  $this->_response('',200);
+			}else{
+				//@TODO qualify
+				return  $this->_response('',500);
+			}
 		} else {
 			$infos=array();
-			$infos['information']='Method POST required';
-			$infos['method']='POST';
+			$infos[INFORMATIONS_KEY]='Method POST required';
+			$infos[METHOD_KEY]='POST';
 			return $this->_response($infos,405);
 		}
 	}
