@@ -33,7 +33,7 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync
 
 ### End points ###
 
-1. GET **distantTree** (string identifier, array paths<optional>)
+1. GET **distantTree** (array paths)
 Returns the distant tree or subtree (string json)
 
 	Succes status code : 200 => 'OK'
