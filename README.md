@@ -11,9 +11,7 @@ The objective c lib is a synchronisation client that synchronizes local A -\> B 
 ## PdSSyncPhp ##
 A very simple PHP sync restfull service to use in conjonction with PdSSync
 
-###For status code list check :###
-+ [www.w3.org] (http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html title="www.w3.org")
-+ [www.ietf.org] (http://www.ietf.org/assignments/http-status-codes/http-status-codes.xml title="www.ietf.org")
+### Status codes###
 
 * 1xx: Informational - Request received, continuing process
 * 2xx: Success - The action was successfully received, understood, and accepted
@@ -21,10 +19,13 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync
 * 4xx: Client Error - The request contains bad syntax or cannot be fulfilled
 * 5xx: Server Error - The server failed to fulfill an apparently valid request
 
-###Important client errors ###
+### Notable client errors ###
 
-*401 => 'Unauthorized' : if auth is required
-*423 => 'Locked' : if locked
+* 401 => 'Unauthorized' : if auth is required
+* 423 => 'Locked' : if locked
+
+##### Status code references ####
+[www.w3.org] (http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html title="www.w3.org"), [www.ietf.org] (http://www.ietf.org/assignments/http-status-codes/http-status-codes.xml title="www.ietf.org")
 
 ### End points ###
 
@@ -34,7 +35,7 @@ Succes status code : 200 => 'OK'
 
 POST uploadToRelativePath (string relativePath, string syncIdentifier)
 Returns success on completion + the location: /uri/resources  ou Content-Location 
-The upload path ".<syncIndentifier>_<file name>"
+The upload path ".syncIndentifier_file name"
 Succes status code : 201 => 'Created'
 
 POST (string json) finalizeWithOperations (string syncIdentifier, array operations, string finalTree)
