@@ -138,7 +138,7 @@ class PdSSyncAPI {
 				$process = new BackgroundProcess();
 				$process->runPHP('
 							$treeGenerator=new TreeGenerator();
-							$treeGenerator->treeForRelativePaths($relativePaths);
+							$treeGenerator->treeForRelativePaths('.$relativePaths.');
 						');
 				return $this->_response('Operation in progress on '.$fileName , 204 );
 			}
