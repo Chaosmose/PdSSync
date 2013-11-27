@@ -31,21 +31,23 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync
 
 GET distantTree (string identifier, array paths<optional>)
 Returns the distant tree or subtree (string json)
-Succes status code : 200 => 'OK'
+
+	Succes status code : 200 => 'OK'
 
 POST uploadToRelativePath (string relativePath, string syncIdentifier)
 Returns success on completion + the location: /uri/resources  ou Content-Location 
 The upload path ".syncIndentifier_file name"
-Succes status code : 201 => 'Created'
+
+	Succes status code : 201 => 'Created'
 
 POST (string json) finalizeWithOperations (string syncIdentifier, array operations, string finalTree)
+
 1. Locks 
 2. Finalize the synchronization bunch 
 3. Unlocks
-Returns success on completion
-Remains locked if there is an issue.
-Succes status code : 200 => 'OK'
-(200 => 'Accepted') 
+
+	Succes status code : 200 => 'OK'
+
 
 
 #### Distant FS operation : ####
