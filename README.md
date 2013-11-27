@@ -35,8 +35,9 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync
 
 1. GET **distantTree** (array paths)
 Returns the distant tree or subtree (string json)
-
-	Succes status code : 200 => 'OK'
+	Succes status code : 
+	200 => 'OK'
+	204 => 'No Content' ( the tree will be generated in background)
 
 2. POST **uploadToRelativePath** (string relativePath, string syncIdentifier)
 Returns success on completion + the location: /uri/resources  ou Content-Location 

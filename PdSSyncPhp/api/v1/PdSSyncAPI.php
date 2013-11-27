@@ -1,12 +1,14 @@
 <?php
 /**
-  * 
+  *  A simple API facade in one file
   *  Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
   *  
   * @author Benoit Pereira da Silva
   * @copyright https://github.com/benoit-pereira-da-silva/PdSSync
   */
 class PdSSyncAPI {
+	
+	const  __LOCKED_SUFFIX ='.locked';
 	
 	/**
 	 * Property: method
@@ -45,7 +47,6 @@ class PdSSyncAPI {
 	 * Allow for CORS, assemble and pre-process the data
 	 */
 	public function __construct() {
-		
 		// Requests from the same server don't have a HTTP_ORIGIN header
 		if (! array_key_exists ( 'HTTP_ORIGIN', $_SERVER )) {
 			$_SERVER ['HTTP_ORIGIN'] = $_SERVER ['SERVER_NAME'];
@@ -112,11 +113,30 @@ class PdSSyncAPI {
 	 */
 	protected function distantTree(array $paths = array()) {
 		if ($this->method == 'GET') {
-			return array ();
+			$this->_createFoldersIfNecessary();
+			$fileName=crc32((json_encode($path)).'_tree.json';
+			$filePath=TREES_FOLDER_PATH.$fileName; 
+			$locker=$fileName.__LOCKED_SUFFIX;
+			$lockerPath=TREES_FOLDER_PATH.$locker;
+			if (file_exists($lockerPath)){
+				// there is an operation in progress.
+				return $this->_response('Operation in progress on '.$fileName,423);
+			}
+			if(file_exists($filePath)){
+				$tree=json_decode(file_get_contents($filePath));
+				return $this->_response($tree,200);
+			}else{
+				// GENERATE THE FILE IN BACKGROUND
+				// AND ON COMPLETION THE REMOVE THE LOCKER
+				//@TODO
+				file_put_contents($filename, ''.time());
+				return $this->_response('Operation in progress on '.$fileName , 204 );
+			}
 		} else {
 			return "Only accepts GET requests";
 		}
 	}
+						
 	
 	/**
 	 * Upload the file to the relative path
@@ -150,8 +170,27 @@ class PdSSyncAPI {
 	}
 	
 	// ///////////////
-	// Private method
+	// Private methods
 	// //////////////
+	
+	/**
+	 *  Returns the absolute path
+	 * @param string $relativePath
+	 * @return string
+	 */
+	private function _absolutePath ($relativePath){
+		return REPOSITORY_PATH.$relativePath;
+	}
+	
+	/**
+	 * Creates the trees and repository folder.
+	 */
+	private  function _createFoldersIfNecessary{
+		if(!file_exists(TREES_FOLDER_PATH))
+			mkdir(TREES_FOLDER_PATH);
+		if(!file_exists(REPOSITORY_PATH))
+			mkdir(REPOSITORY_PATH);
+	}
 	
 	/**
 	 *
@@ -184,10 +223,10 @@ class PdSSyncAPI {
 	
 	/**
 	 *
-	 * @param integer $code        	
+	 * @param int $code        	
 	 * @return string
 	 */
-	private function _requestStatus(integer $code) {
+	private function _requestStatus( $code) {
 		$status = array (
 				100 => 'Continue',
 				101 => 'Switching Protocols',
@@ -236,16 +275,4 @@ class PdSSyncAPI {
 	}
 }
 
-// ///////////////
-// Boot strap
-// ///////////////
 
-try {
-	$API = new PdSSyncAPI ();
-	echo $API->run ();
-} catch ( Exception $e ) {
-	echo json_encode ( Array (
-			'error' => $e->getMessage () 
-	) );
-}
- 
