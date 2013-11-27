@@ -10,15 +10,16 @@ The objective c lib is a synchronisation client that synchronizes local A -\> B 
 
 ## PdSSyncPhp ##
 A very simple PHP sync restfull service to use in conjonction with PdSSync
-For status code list check :
-[www.w3.org] (http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html title="www.w3.org")
-[www.w3.org] (http://www.ietf.org/assignments/http-status-codes/http-status-codes.xml title="www.ietf.org")
 
-*1xx: Informational - Request received, continuing process
-*2xx: Success - The action was successfully received, understood, and accepted
-*3xx: Redirection - Further action must be taken in order to complete the request
-*4xx: Client Error - The request contains bad syntax or cannot be fulfilled
-*5xx: Server Error - The server failed to fulfill an apparently valid request
+###For status code list check :###
++ [www.w3.org] (http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html title="www.w3.org")
++ [www.ietf.org] (http://www.ietf.org/assignments/http-status-codes/http-status-codes.xml title="www.ietf.org")
+
+* 1xx: Informational - Request received, continuing process
+* 2xx: Success - The action was successfully received, understood, and accepted
+* 3xx: Redirection - Further action must be taken in order to complete the request
+* 4xx: Client Error - The request contains bad syntax or cannot be fulfilled
+* 5xx: Server Error - The server failed to fulfill an apparently valid request
 
 ###Important client errors ###
 
@@ -54,13 +55,13 @@ Succes status code : 200 => 'OK'
 
 #### Operation keys : ####
 
-	typedef enum \_PdSSyncOperation 
+	typedef enum _PdSSyncOperation 
 		PdSCopy      = 0,
 		PdSMove      = 1,
 		PdSDelete    = 2
 	} PdSSyncOperation;
 
-	typedef enum \_PdSSyncOperationParams 
+	typedef enum _PdSSyncOperationParams 
 		PdSSource      = 0,
 		PdSDestination = 1
 	} PdSSyncOperationParams;
