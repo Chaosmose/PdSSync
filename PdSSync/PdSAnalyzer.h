@@ -35,7 +35,7 @@ typedef enum _PdSSyncOperationParams {
 - (instancetype)initWithMasterURL:(NSURL*)masterURL andSlaveURL:(NSURL*)slaveURL;
 
 /**
- *  Creates a dictionary with MD5 keys and relative paths
+ *  Creates a dictionary with  relative paths as key and  CRC32 as value
  *
  *  @param url   the
  *  @param progressBlock the progress block
