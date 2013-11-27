@@ -29,7 +29,7 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync
 * 423 => 'Locked' : if locked
 
 ##### Status code references ####
-[www.w3.org] (http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html title="www.w3.org"), [www.ietf.org] (http://www.ietf.org/assignments/http-status-codes/http-status-codes.xml title="www.ietf.org")
+[www.w3.org] (http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html), [www.ietf.org] (http://www.ietf.org/assignments/http-status-codes/http-status-codes.xml)
 
 ### End points ###
 

@@ -8,6 +8,10 @@
   */
 class PdSSyncAPI {
 	
+	/**
+	 * The suffix used to lock a tree 
+	 * @const string
+	 */
 	const  __LOCKED_SUFFIX ='.locked';
 	
 	/**
@@ -92,7 +96,7 @@ class PdSSyncAPI {
 				$this->file = file_get_contents ( "php://input" );
 				break;
 			default :
-				$this->_response ( 'Invalid Method', 405 );
+				return $this->_response($this->method,400);
 				break;
 		}
 		if (( int ) method_exists ( $this->endpoint ) > 0) {
@@ -101,9 +105,13 @@ class PdSSyncAPI {
 		return $this->_response ( '', 400 );
 	}
 	
+	
+	
 	// ///////////////
 	// End points
 	// //////////////
+
+	
 	
 	/**
 	 * Returns the tree $paths is null we use the global repository tree.
@@ -114,26 +122,30 @@ class PdSSyncAPI {
 	protected function distantTree(array $paths = array()) {
 		if ($this->method == 'GET') {
 			$this->_createFoldersIfNecessary();
-			$fileName=crc32((json_encode($path)).'_tree.json';
+			$fileName=crc32(  json_encode($path)  ) . '_tree.json' ;
 			$filePath=TREES_FOLDER_PATH.$fileName; 
 			$locker=$fileName.__LOCKED_SUFFIX;
 			$lockerPath=TREES_FOLDER_PATH.$locker;
 			if (file_exists($lockerPath)){
-				// there is an operation in progress.
+				// there is a locker and operation in progress.
 				return $this->_response('Operation in progress on '.$fileName,423);
 			}
 			if(file_exists($filePath)){
 				$tree=json_decode(file_get_contents($filePath));
 				return $this->_response($tree,200);
 			}else{
-				// GENERATE THE FILE IN BACKGROUND
-				// AND ON COMPLETION THE REMOVE THE LOCKER
-				//@TODO
-				file_put_contents($filename, ''.time());
-				return $this->_response('Operation in progress on '.$fileName , 204 );
+				if(file_put_contents($lockerPath, ''.time())!==false){
+					// GENERATE THE FILE IN BACKGROUND
+					// AND ON COMPLETION THE REMOVE THE LOCKER
+					//@TODO
+					return $this->_response('Operation in progress on '.$fileName , 204 );
+				}
 			}
 		} else {
-			return "Only accepts GET requests";
+			$infos=array();
+			 $infos['information']='Method GET required';
+			 $infos['method']='GET';
+			return $this->_response($infos,405);
 		}
 	}
 						
@@ -149,7 +161,10 @@ class PdSSyncAPI {
 		if ($this->method == 'POST') {
 			return array ();
 		} else {
-			return "Only accepts POST requests";
+			$infos=array();
+			 $infos['information']='Method POST required';
+			 $infos['method']='POST';
+			return $this->_response($infos,405);
 		}
 	}
 	
@@ -165,27 +180,23 @@ class PdSSyncAPI {
 		if ($this->method == 'POST') {
 			return array ();
 		} else {
-			return "Only accepts POST requests";
+			$infos=array();
+			$infos['information']='Method POST required';
+			$infos['method']='POST';
+			return $this->_response($infos,405);
 		}
 	}
 	
+	
 	// ///////////////
-	// Private methods
+	// PRIVATE
 	// //////////////
 	
-	/**
-	 *  Returns the absolute path
-	 * @param string $relativePath
-	 * @return string
-	 */
-	private function _absolutePath ($relativePath){
-		return REPOSITORY_PATH.$relativePath;
-	}
-	
+
 	/**
 	 * Creates the trees and repository folder.
 	 */
-	private  function _createFoldersIfNecessary{
+	private  function _createFoldersIfNecessary(){
 		if(!file_exists(TREES_FOLDER_PATH))
 			mkdir(TREES_FOLDER_PATH);
 		if(!file_exists(REPOSITORY_PATH))
@@ -221,12 +232,16 @@ class PdSSyncAPI {
 		return $clean_input;
 	}
 	
+	// ///////////////
+	// protected
+	// //////////////
+	
 	/**
 	 *
 	 * @param int $code        	
 	 * @return string
 	 */
-	private function _requestStatus( $code) {
+	protected  function _requestStatus( $code) {
 		$status = array (
 				100 => 'Continue',
 				101 => 'Switching Protocols',
@@ -274,5 +289,3 @@ class PdSSyncAPI {
 		return ($status [$code]) ? $status [$code] : $status [500];
 	}
 }
-
-
