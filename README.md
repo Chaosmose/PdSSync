@@ -8,14 +8,15 @@ PdSSync is still in early development phases do not use in any project !
 ## Objective C ##
 The objective c lib is a synchronisation client that synchronizes local A -\> B and distant set of files by using a mediation service MASTER  -\> \[ mediation server ] -\> CLIENTS
 
-## Key notions ## 
+## Key notions ##
 
 For PdSSync a **tree** or a **subtree** is a dictionary with for a given folder a list of all its files and folder relative path as a key and a CRC32 of the file as a value.
+	In json : { 'a/a.caf': 299993900 , ... } 
 
 ## PdSSyncPhp ##
 A very simple PHP sync restfull service to use in conjonction with PdSSync
 
-### Status codes###
+### Status codes ###
 
 * 1xx: Informational - Request received, continuing process
 * 2xx: Success - The action was successfully received, understood, and accepted
