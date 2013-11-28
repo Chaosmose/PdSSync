@@ -4,9 +4,12 @@
 class BackgroundExecution {
 
 	private $pid;
-
+	
 	public  function runPHP($phpString,$outputFile = '/dev/null'){
-		$this->pid = shell_exec( 'php -r \''.$phpStringp.'\' > '.$outputFile.' 2>&amp;1 &amp; echo $!' ); 
+		$this->pid = shell_exec( 'php -r \''.$phpString.'\' > '.$outputFile.' 2>&amp;1 &amp; echo $!' ); 
+	}
+	public  function runPHPFile($phpFile,$outputFile = '/dev/null'){
+		$this->pid = shell_exec( 'php -f \''.$phpFile.'\' > '.$outputFile.' 2>&amp;1 &amp; echo $!' );
 	}
 	
 	public function isRunning() {
@@ -22,6 +25,10 @@ class BackgroundExecution {
 
 	public function getPid(){
 		return $this->pid;
+	}
+	
+	public  function kill(){
+		 shell_exec('ps '. $this->pid);
 	}
 	
 }

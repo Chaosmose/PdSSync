@@ -18,7 +18,7 @@ class TreeGenerator {
 		
 		// Create the locker
 		if (file_put_contents ( $lockerPath, '' . time () ) !== false) {
-			$nb = count ( $paths );
+			$nb = count ( $relativePaths );
 			if ($nb) {
 				// Recursive exploration of REPOSITORY_PATH
 				// $paths add all the relative path
@@ -26,8 +26,7 @@ class TreeGenerator {
 			}
 			$descriptor = array ();
 			foreach ( $relativePaths as $path ) {
-				$data = file_get_content ( $path );
-				$crc32 = crc32 ( $data );
+				$crc32 = crc32 ( file_get_content ( $path ) );
 				gc_collect_cycles (); // Invoke the GC
 				$descriptor [$path] = $crc32;
 			}
