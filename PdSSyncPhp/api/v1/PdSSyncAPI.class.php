@@ -162,7 +162,7 @@ class PdSSyncAPI {
 		if ($this->method == 'POST') {
 			// TODO 
 			// DEAL WITH THE UPLOAD
-			return $this->_response('',200);
+			return $this->_response('',201);
 		} else {
 			$infos=array();
 			 $infos[INFORMATIONS_KEY]='Method POST required';

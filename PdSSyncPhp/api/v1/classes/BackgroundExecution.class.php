@@ -6,16 +6,12 @@ class BackgroundExecution {
 	private $pid;
 
 	public  function runPHP($phpString,$outputFile = '/dev/null'){
-		$this->pid = shell_exec(sprintf(
-				'%s > %s 2>&amp;1 &amp; echo $!',
-				'php -r \'.$phpStringp.\'',
-				$outputFile
-		));
+		$this->pid = shell_exec( 'php -r \'.$phpStringp.\' > '.$outputFile.' 2>&amp;1 &amp; echo $!' ); 
 	}
 	
 	public function isRunning() {
 		try {
-			$result = shell_exec(sprintf('ps %d', $this->pid));
+			$result = shell_exec('ps '. $this->pid);
 			if(count(preg_split("/\n/", $result)) > 2) {
 				return true;
 			}
