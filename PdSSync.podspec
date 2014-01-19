@@ -8,6 +8,7 @@ Pod::Spec.new do |s|
   s.license     = { :type => "LGPL", :file => "LICENSE" }
 
   s.ios.deployment_target = '5.0'
+  s.osx.deployment_target = '10.9'
   s.requires_arc = true
   s.source_files =  'PdSSync/*.{h,m}'
   s.public_header_files = 'PdSSync/**/*.h'
