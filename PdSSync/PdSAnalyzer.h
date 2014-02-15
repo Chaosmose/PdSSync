@@ -1,6 +1,6 @@
 //
 //  PdSAnalyzer.h
-//  PdSDeltaSync
+//  PdSSync
 //
 //  Created by Benoit Pereira da Silva on 26/11/2013.
 //  Copyright (c) 2013 Pereira da Silva. All rights reserved.
