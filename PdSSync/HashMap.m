@@ -8,8 +8,8 @@
 
 #import "HashMap.h"
 
-static NSString*pathToHashKey=@"pathToHash";
-static NSString*hashToPathKey=@"hashToPathKey";
+NSString*const pathToHashKey=@"pathToHash";
+NSString*const hashToPathKey=@"hashToPathKey";
 
 
 @implementation HashMap {
@@ -27,7 +27,7 @@ static NSString*hashToPathKey=@"hashToPathKey";
     if([dictionary objectForKey:pathToHashKey] && [dictionary objectForKey:hashToPathKey]){
         HashMap *hashMap=[[HashMap alloc] init];
         hashMap->_hashToPath=[[dictionary objectForKey:hashToPathKey]copy];
-        hashMap->_pathToHash=[[dictionary objectForKey:pathToHashKey]copy]
+        hashMap->_pathToHash=[[dictionary objectForKey:pathToHashKey]copy];
         return hashMap;
     }else{
         return nil;
@@ -45,12 +45,12 @@ static NSString*hashToPathKey=@"hashToPathKey";
 }
 
 /**
- *  Add or replace the the path & hash
+ *  Sets the hash of a given path
  *
- *  @param path the path
  *  @param hash the hash
+ @  @param path the path
  */
-- (void)setPath:(NSString*)path forHash:(NSString*)hash{
+- (void)setHash:(NSString*)hash forPath:(NSString*)path{
     if(!_pathToHash){
         _pathToHash=[NSMutableDictionary dictionary];
         _hashToPath=[NSMutableDictionary dictionary];

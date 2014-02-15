@@ -10,8 +10,8 @@
 
 #import "DeltaPathMap.h"
 
-extern NSString*pathToHashKey;
-extern NSString*hashToPathKey;
+extern NSString* const pathToHashKey;
+extern NSString* const hashToPathKey;
 
 @interface HashMap : NSObject
 
@@ -34,12 +34,12 @@ extern NSString*hashToPathKey;
 - (NSDictionary*)dictionaryRepresentation;
 
 /**
- *  Add or replace the the path & hash
+ *  Sets the hash of a given path   
  *
- *  @param path the path
  *  @param hash the hash
+ @  @param path the path
  */
-- (void)setPath:(NSString*)path forHash:(NSString*)hash;
+- (void)setHash:(NSString*)hash forPath:(NSString*)path;
 
 /**
  *  Returns the hash of a given path or nil if not found

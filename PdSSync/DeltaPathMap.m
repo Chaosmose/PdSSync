@@ -7,10 +7,10 @@
 //
 
 #import "DeltaPathMap.h"
-
-static NSString*createdPathsKey=@"createdPaths";
-static NSString*deletedPathsKey=@"deletedPaths";
-static NSString*updatedPathsKey=@"updatedPaths";
+NSString* const similarPathsKey=@"similarPaths";
+NSString* const createdPathsKey=@"createdPaths";
+NSString* const deletedPathsKey=@"deletedPaths";
+NSString* const updatedPathsKey=@"updatedPaths";
 
 @implementation DeltaPathMap
 
@@ -21,6 +21,7 @@ static NSString*updatedPathsKey=@"updatedPaths";
  */
 +(DeltaPathMap*)deltaHasMap{
     DeltaPathMap*instance=[[DeltaPathMap alloc]init];
+    instance.similarPaths=[NSMutableArray array];
     instance.createdPaths=[NSMutableArray array];
     instance.updatedPaths=[NSMutableArray array];
     instance.deletedPaths=[NSMutableArray array];
@@ -36,11 +37,11 @@ static NSString*updatedPathsKey=@"updatedPaths";
  *  @return the dictionary
  */
 - (NSDictionary*)dictionaryRepresentation{
-    NSMutableDictionary*dictionary=[NSMutableDictionary dictionary];
-    [dictionary setObject:[[self createdPaths] copy] forKey:createdPathsKey];
-    [dictionary setObject:[[self updatedPaths] copy] forKey:deletedPathsKey];
-    [dictionary setObject:[[self deletedPaths] copy] forKey:updatedPathsKey];
-    return dictionary;
+    return @{ similarPathsKey:_similarPaths,
+             createdPathsKey:_createdPaths,
+             deletedPathsKey:_deletedPaths,
+             updatedPathsKey:_deletedPaths
+            };
 }
 
 

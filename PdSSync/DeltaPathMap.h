@@ -8,9 +8,10 @@
 
 #import <Foundation/Foundation.h>
 
-extern NSString*createdPathsKey;
-extern NSString*deletedPathsKey;
-extern NSString*updatedPathsKey;
+extern NSString* const similarPathsKey;
+extern NSString* const createdPathsKey;
+extern NSString* const deletedPathsKey;
+extern NSString* const updatedPathsKey;
 
 @interface DeltaPathMap : NSObject
 
