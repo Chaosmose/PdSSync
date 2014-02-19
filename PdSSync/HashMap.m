@@ -16,6 +16,17 @@ NSString*const hashToPathKey=@"hashToPathKey";
     NSMutableDictionary *_pathToHash; // Path is the key
     NSMutableDictionary *_hashToPath; // Hash is the key
 }
+
+
+-(instancetype)init{
+    self=[super init];
+    if (self) {
+        self->_pathToHash=[NSMutableDictionary dictionary];
+        self->_hashToPath=[NSMutableDictionary dictionary];
+    }
+    return self;
+}
+
 /**
  *  A dictionary encoded factory constructor
  *
