@@ -2,7 +2,7 @@
 
 A simple delta synchronizer for large repositories.
 The synchronization relies on a client software and if necessary a mediation service currently implemented in PHP.
-It allows to synchronizes local and distant sets of files by using a mediation service master  -> mediation -> clients
+It allows to synchronizes local and distant sets of files by using a mediation service.
 PdSSync is still in early development phases do not use in any project !
 
 
@@ -23,7 +23,7 @@ Json representation :
 
 ## DeltaPathMap ##
 
-A **DeltaPathMap** references the similarities and difference between two **hashMap** and furnish the logic to planify download or upload command operations.
+A **DeltaPathMap** references the similarities and difference between two **hashMap** and furnish the logic to planify download or upload command operations for clients according to their role.
 
 Json representation : 
 
