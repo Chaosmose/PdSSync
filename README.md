@@ -42,14 +42,11 @@ With 1 master client (Objc), 1 sync services(php), and n slaves clients(Objc)
 1. Master -> downloads the hashMap (if there is no hasMap the delta will be the current local)
 2. Master -> proceed to DeltaPathMap creation and command provisionning
 3. Master -> uploads files with a .download prefix to the sync 
-4. Master -> uploads the hasMap of a given channel and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans)
-Optionaly the synch server can send a push notification to client to force the step 5.
-
+4. Master -> uploads the hasMap of a given channel and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans,Optionaly the synch server can send a push notification to client to force the step 5)
 5. Slave -> downloads the hashMap
 6. Slave -> proceed to DeltaPathMap creation and command provisionning
 7. Slave -> downloads the files (on any missing file the task list is interrupted and go to 5)
 8. Slave -> on completion the synchronization is finalized. With a possible interruption of the current song +  redownload the hashmap and compare to conclude if 5 is required.
-
 
 ## Objective C ##
 The objective c lib 
