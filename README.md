@@ -8,7 +8,7 @@ PdSSync is still in early development phases do not use in any project !
 
 ## HashMap  ##
 
-For PdSSync a **hashMap** is a dictionary with for a given folder a list of all its files and folder relative path as a key and a CRC32 of the file as a value.
+For PdSSync a **hashMap** is a dictionary with for a given folder a list of all its files and folder relative path as a key and a CRC32 of the file as a value or the inverse.
 
 The master maintains one hashMap per root folder, the hash map is crypted.
 
@@ -51,8 +51,6 @@ Optionaly the synch server can send a push notification to client to force the s
 8. Slave -> on completion the synchronization is finalized. With a possible interruption of the current song +  redownload the hashmap and compare to conclude if 5 is required.
 
 
-
-	
 ## Objective C ##
 The objective c lib 
 
