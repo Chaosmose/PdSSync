@@ -2,13 +2,13 @@
 
 A simple delta synchronizer for large repositories.
 The synchronization relies on a client software and if necessary a mediation service currently implemented in PHP.
-It allows to synchronizes local and distant sets of files by using a mediation service.
+It allows to synchronizes local and distant sets of files grouped in a root folder by using a mediation service.
 PdSSync is still in early development phases do not use in any project !
 
 
 ## HashMap  ##
 
-For PdSSync a **hashMap** is a dictionary with for a given folder a list of all its files and folder relative path as a key and a CRC32 of the file as a value or the inverse.
+For PdSSync a **hashMap** is a dictionary with for a given folder the list of all its files relative path as a key and a Hash as a value or the inverse.
 
 The master maintains one hashMap per root folder, the hash map is crypted.
 
@@ -23,7 +23,7 @@ Json representation :
 
 ## DeltaPathMap ##
 
-A **DeltaPathMap** references the similarities and difference between two **hashMap** and furnish the logic to planify download or upload command operations for clients according to their role.
+A **DeltaPathMap** references the similarities and differences between two **hashMap** and furnish the logic to planify downloading or uploading command operations for clients according to their role.
 
 Json representation : 
 
@@ -37,14 +37,14 @@ Json representation :
 
 ## Synchronization process synopsis ##
 
-With 1 master client (Objc), 1 sync services(php), and n slaves clients(Objc)
+With 1 master client (Objc), 1 sync service(php), and n slaves clients(Objc)
 
-1. Master -> downloads the hashMap (if there is no hasMap the delta will be the current local)
-2. Master -> proceed to DeltaPathMap creation and command provisionning
+1. Master -> downloads the **hashMap** (if there is no hasMap the delta will be the current local)
+2. Master -> proceed to **DeltaPathMap** creation and command provisionning
 3. Master -> uploads files with a .download prefix to the sync 
-4. Master -> uploads the hasMap of a given channel and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans,Optionaly the synch server can send a push notification to client to force the step 5)
-5. Slave -> downloads the hashMap
-6. Slave -> proceed to DeltaPathMap creation and command provisionning
+4. Master -> uploads the hasMap of a given channel and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans, **Optionaly** the synch server can send a push notification to the slave clients to force the step 5)
+5. Slave -> downloads the current **hashMap**
+6. Slave -> proceed to **DeltaPathMap** creation and command provisionning
 7. Slave -> downloads the files (on any missing file the task list is interrupted and go to 5)
 8. Slave -> on completion the synchronization is finalized. With a possible interruption of the current song +  redownload the hashmap and compare to conclude if 5 is required.
 
