@@ -46,7 +46,7 @@ With 1 master client (Objc), 1 sync service(php), and n slaves clients(Objc)
 5. Slave -> downloads the current **hashMap**
 6. Slave -> proceed to **DeltaPathMap** creation and command provisionning
 7. Slave -> downloads the files (on any missing file the task list is interrupted, the local hash map is recomputed and we step back to 5)
-8. Slave -> on completion the synchronization is finalized redownload the **hashmap** and compare to conclude if 5 is required.
+8. Slave -> on completion the synchronization is finalized. (We redownload the **hashmap** and compare to conclude if stepping back to 5 is required.)
 
 
 ## Objective C ##
