@@ -1,7 +1,7 @@
 # PdSSync #
 
 A simple delta synchronizer for large repositories.
-The synchronization relies on a client software and if necessary a mediation service currently implemented in PHP.
+The synchronization relies on a client software and a Restfull service (currently implemented in PHP) 
 It allows to synchronizes local and distant sets of files grouped in a root folder by using a mediation service.
 PdSSync is still in early development phases do not use in any project !
 
