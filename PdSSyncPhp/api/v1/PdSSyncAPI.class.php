@@ -1,6 +1,6 @@
 <?php
 
-include 'api/v1/PdSSyncConst.php';
+include_once 'api/v1/PdSSyncConst.php';
 require_once 'api/v1/classes/HashMapGenerator.class.php';
 require_once 'api/v1/classes/OperationsInterpreter.class.php';
 require_once 'api/v1/classes/BackgroundExecution.class.php';
@@ -99,7 +99,7 @@ class PdSSyncAPI {
 				return $this->_response($this->method,400);
 				break;
 		}
-		if (( int ) method_exists ( $this->endpoint ) > 0) {
+		if (( int ) method_exists ( $this, $this->endpoint ) > 0) {
 			return $this->_response ( $this->{$this->endpoint} ( $this->args ) );
 		}
 		return $this->_response ( '', 400 );
