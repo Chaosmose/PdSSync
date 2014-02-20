@@ -3,7 +3,7 @@
 
 
 define('LOCKED_SUFFIX','.locked');
-define('TREE_SUFFIX','_tree.json');
+define('HASH_MAP_SUFFIX','.hashMap');
 
 // Responses key consts
 

@@ -2,20 +2,20 @@
 
 include 'api/v1/PdSSyncConst.php';
 
-class TreeGenerator {
+class HashMapGenerator {
 	
 	/**
-	 * Creates the tree for the relative paths
+	 * Creates a server side hash map for the relative paths
+	 *  Use the method if it is not possible to proceed the HashMap on the client side. 
 	 * 
 	 * @param array $relativePaths        	
 	 */
-	public function treeForRelativePaths(array $relativePaths = array()) {
+	public function HashMapForRelativePaths(array $relativePaths = array()) {
 		
-		$fileName = crc32 ( json_encode ( $relativePaths ) ) . TREE_SUFFIX;
-		$filePath = TREES_FOLDER_PATH . $fileName;
+		$fileName = crc32 ( json_encode ( $relativePaths ) ) . HASH_MAP_SUFFIX;
+		$filePath = HASH_MAPS_FOLDER_PATH . $fileName;
 		$locker = $fileName . LOCKED_SUFFIX;
-		$lockerPath = TREES_FOLDER_PATH . $locker;
-		
+		$lockerPath = HASH_MAPS_FOLDER_PATH . $locker;
 		// Create the locker
 		if (file_put_contents ( $lockerPath, '' . time () ) !== false) {
 			$nb = count ( $relativePaths );

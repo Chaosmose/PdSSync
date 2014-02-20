@@ -1,7 +1,7 @@
 <?php
 
 include 'api/v1/PdSSyncConst.php';
-require_once 'api/v1/classes/TreeGenerator.class.php';
+require_once 'api/v1/classes/HashMapGenerator.class.php';
 require_once 'api/v1/classes/OperationsInterpreter.class.php';
 require_once 'api/v1/classes/BackgroundExecution.class.php';
 /**
@@ -111,21 +111,31 @@ class PdSSyncAPI {
 	// End points
 	// //////////////
 
-	
+	protected function ping(){
+		if ($this->method == 'GET') {
+		return $this->_response('OK',200);
+		}else{
+			$infos=array();
+			 $infos[INFORMATIONS_KEY]='Method GET required';
+			 $infos[METHOD_KEY]='GET';
+			return $this->_response($infos,405);
+		}	
+	}
 	
 	/**
-	 * Returns the tree $paths is null we use the global repository tree.
+	 * Returns the hash map  $paths is null we use the global repository tree.
 	 *
 	 * @param array $relativePaths        	
+	 * @param boolean $canBeGeneratedServerSide 
 	 * @return multitype: string
 	 */
-	protected function distantTree(array $relativePaths = array()) {
+	protected function distantHashMap(array $relativePaths = array(),$canBeGeneratedServerSide =false) {
 		if ($this->method == 'GET') {
 			$this->_createFoldersIfNecessary();
-			$fileName=crc32(  json_encode($relativePaths)  ) .TREE_SUFFIX ;
-			$filePath=TREES_FOLDER_PATH.$fileName; 
+			$fileName=crc32(  json_encode($relativePaths)  ) .HASH_MAP_SUFFIX ;
+			$filePath=HASH_MAPS_FOLDER_PATH.$fileName; 
 			$locker=$fileName.LOCKED_SUFFIX;
-			$lockerPath=TREES_FOLDER_PATH.$locker;
+			$lockerPath=HASH_MAPS_FOLDER_PATH.$locker;
 			if (file_exists($lockerPath)){
 				// there is a locker and operation in progress.
 				return $this->_response('Operation in progress on '.$fileName,423);
@@ -133,14 +143,16 @@ class PdSSyncAPI {
 			if(file_exists($filePath)){
 				$tree=json_decode(file_get_contents($filePath));
 				return $this->_response($tree,200);
-			}else{
-				// Generate the tree using a background process
+			}else if ($canBeGeneratedServerSide==true){
+				// Generate an hash map using a background process
 				$process = new BackgroundProcess();
 				$process->runPHP('
-							$treeGenerator=new TreeGenerator();
-							$treeGenerator->treeForRelativePaths('.$relativePaths.');
+							$treeGenerator=new HashMapGenerator();
+							$treeGenerator->HashMapForRelativePaths('.$relativePaths.');
 						');
 				return $this->_response('Operation in progress on '.$fileName , 204 );
+			}elseif ($canBeGeneratedServerSide==false ){
+				return $this->_response('Hash map not found '.$fileName , 404 );
 			}
 		} else {
 			$infos=array();
@@ -205,8 +217,8 @@ class PdSSyncAPI {
 	 * Creates the trees and repository folder.
 	 */
 	private  function _createFoldersIfNecessary(){
-		if(!file_exists(TREES_FOLDER_PATH))
-			mkdir(TREES_FOLDER_PATH);
+		if(!file_exists(HASH_MAPS_FOLDER_PATH))
+			mkdir(HASH_MAPS_FOLDER_PATH);
 		if(!file_exists(REPOSITORY_PATH))
 			mkdir(REPOSITORY_PATH);
 	}

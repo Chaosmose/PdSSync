@@ -73,12 +73,12 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync objc 
 
 ### End points ###
 
-1. GET **distantHashMap** (array paths)
+1. GET **distantHashMap** (array paths, boolean canBeGeneratedServerSide)
 Returns the distant hashMap or subhashMap (string json)
 	Succes status code : 
 	200 => 'OK'
 	204 => 'No Content' ( the hashMap will be generated in background)
-
+	404 => 'the hashMap do not exist and will not be generated in background'
 2. POST **uploadToRelativePath** (string relativePath, string syncIdentifier)
 Returns success on completion + the location: /uri/resources  ou Content-Location 
 The upload path ".syncIndentifier_file name"
