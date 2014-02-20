@@ -42,7 +42,7 @@ With 1 master client (Objc), 1 sync service(php), and n slaves clients(Objc)
 1. Master -> downloads the **hashMap** (if there is no hasMap the delta will be the current local)
 2. Master -> proceed to **DeltaPathMap** creation and command provisionning
 3. Master -> uploads files with a .upload prefix to the service 
-4. Master -> uploads the hasMap of a given channel and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans, **Optionaly** the synch server can send a push notification to the slave clients to force the step 5)
+4. Master -> uploads the hasMap of the current root folder and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans, **Optionaly** the synch server can send a push notification to the slave clients to force the step 5)
 5. Slave -> downloads the current **hashMap**
 6. Slave -> proceed to **DeltaPathMap** creation and command provisionning
 7. Slave -> downloads the files (on any missing file the task list is interrupted, the local hash map is recomputed and we step back to 5)
