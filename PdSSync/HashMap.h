@@ -33,6 +33,8 @@ extern NSString* const hashToPathKey;
  */
 - (NSDictionary*)dictionaryRepresentation;
 
+
+
 /**
  *  Sets the hash of a given path   
  *

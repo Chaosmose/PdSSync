@@ -8,8 +8,8 @@
 
 #import "HashMap.h"
 
-NSString*const pathToHashKey=@"pathToHash";
-NSString*const hashToPathKey=@"hashToPathKey";
+NSString*const pathToHashKey=@"pthToH";
+NSString*const hashToPathKey=@"hToPth";
 
 
 @implementation HashMap {
@@ -35,10 +35,19 @@ NSString*const hashToPathKey=@"hashToPathKey";
  *  @return tha HashMap
  */
 +(instancetype)fromDictionary:(NSDictionary*)dictionary{
-    if([dictionary objectForKey:pathToHashKey] && [dictionary objectForKey:hashToPathKey]){
+    if([dictionary objectForKey:hashToPathKey]){
         HashMap *hashMap=[[HashMap alloc] init];
         hashMap->_hashToPath=[[dictionary objectForKey:hashToPathKey]copy];
-        hashMap->_pathToHash=[[dictionary objectForKey:pathToHashKey]copy];
+        if([dictionary objectForKey:pathToHashKey]){
+            hashMap->_pathToHash=[[dictionary objectForKey:pathToHashKey]copy];
+        }else{
+            // It is a compact mode we regenerate the homologous map
+            hashMap->_hashToPath=[NSMutableDictionary dictionary];
+            for (NSString*path in hashMap->_pathToHash) {
+                NSString*hash=[hashMap->_hashToPath valueForKey:path];
+                hashMap->_hashToPath[[hash copy]]=[path copy];
+            }
+        }
         return hashMap;
     }else{
         return nil;
@@ -52,8 +61,9 @@ NSString*const hashToPathKey=@"hashToPathKey";
  *  @return the dictionary
  */
 - (NSDictionary*)dictionaryRepresentation{
-    return @{pathToHashKey:[_pathToHash copy], hashToPathKey:[_hashToPath copy]};
+    return @{hashToPathKey:[_hashToPath copy]};
 }
+
 
 /**
  *  Sets the hash of a given path
