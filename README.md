@@ -21,9 +21,9 @@ Json representation :
   		}
 	}
 
-## DeltaPathMap ## 
+## DeltaPathMap ##
 
-A **DeltaPathMap** reference the similarities and difference between two **hashMap**
+A **DeltaPathMap** references the similarities and difference between two **hashMap** and furnish the logic to planify download or upload command operations.
 
 Json representation : 
 
