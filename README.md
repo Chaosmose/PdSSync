@@ -1,10 +1,22 @@
 # PdSSync #
 
-A simple delta synchronizer for large repositories.
-The synchronization relies on a client software and a Restfull service (currently implemented in PHP) 
+A simple delta synchronizer for documents and data between devices.
+The synchronization relies on a client software and a Restfull service 
 It allows to synchronizes local and distant sets of files grouped in a root folder by using a mediation service.
-PdSSync is still in early development phases do not use in any project !
 
+## Approach ##   
+
+- do not rely on any framework
+- delegate as much as possible the synchronization logic to the clients to distribute the load and to save server charge and bandwidth
+- keep it as minimal and simple as possible
+- do not focus on conflict resolution but on fault resilience (there is no transactional guarantee)
+- allow very efficient caching and mem caching strategy (we will provide advanced implementation samples)
+- hash maps can be encrypted
+- allow advanced hashing strategy ( like considering that a modified file should not be synchronized bec) 
+
+**PdSSync** is still in early development phases do not use in any project !
+Currently the web api is prototyped in PHP , JAVA and Python port would be appreciate feel free to contact me.
+We will support soon MessagePack encoding.
 
 ## HashMap  ##
 
@@ -73,27 +85,34 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync objc 
 
 ### End points ###
 
-1. GET **distantHashMap** (array paths, boolean canBeGeneratedServerSide)
+1.  GET  **reachable** ()
+A simple reachability end point 
+	Succes status code : 
+	200 => 'OK'
+	
+You can use httpie to call any of the end points.
+http GET <server.com>/api/v1/reachable/
+
+2. GET **distantHashMap** (array paths)
 Returns the distant hashMap or subhashMap (string json)
 	Succes status code : 
 	200 => 'OK'
 	204 => 'No Content' ( the hashMap will be generated in background)
 	404 => 'the hashMap do not exist and will not be generated in background'
-2. POST **uploadToRelativePath** (string relativePath, string syncIdentifier)
+3. POST **uploadToRelativePath** (string relativePath, string syncIdentifier)
 Returns success on completion + the location: /uri/resources  ou Content-Location 
 The upload path ".syncIndentifier_file name"
-
 	Succes status code : 201 => 'Created'
 
-3. POST (string json) **finalizeSynchronization** (string syncIdentifier, array operations, string finalhashMap)
+4. POST (string json) **finalizeSynchronization** (string syncIdentifier, array operations, string finalHashMap)
 Locks, Finalize the synchronization bunch then Unlocks.
-
 	Succes status code : 200 => 'OK'
 
 
-
 #### Distant FS operation : ####
+
 * unPrefix (string syncIdentifier) private operation performed on finalizeSynchronization
+* sanitize (string relative path) private operation to delete unreferenced files.
 * move : for renaming or path changing
 * copy : for duplication 
 * remove : to delete a path, and sub paths

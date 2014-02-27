@@ -4,10 +4,11 @@
 // Boot strap
 // ///////////////
 
+define('REPOSITORY_PATH', __DIR__. '/repository/' );
+define('ADMIN_PRIVILEGE_KEY','6ca0c48126a159392c938833d4678913');
+
 require_once 'api/v1/PdSSyncAPI.class.php';
 
-define("REPOSITORY_PATH", __DIR__. '/repository/' );
-define("HASH_MAPS_FOLDER_PATH",__DIR__.'/hashMaps/');
 try {
 	$API = new PdSSyncAPI ();
 	echo $API->run ();

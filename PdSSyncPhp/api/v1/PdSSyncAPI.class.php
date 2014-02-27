@@ -1,9 +1,8 @@
 <?php
 
 include_once 'api/v1/PdSSyncConst.php';
-require_once 'api/v1/classes/HashMapGenerator.class.php';
 require_once 'api/v1/classes/OperationsInterpreter.class.php';
-require_once 'api/v1/classes/BackgroundExecution.class.php';
+
 /**
   *  A simple API facade in one file
   *  Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
@@ -110,10 +109,32 @@ class PdSSyncAPI {
 	// ///////////////
 	// End points
 	// //////////////
+	
+	
+	// http POST dev.local/api/v1/install/
+	
+	protected function install ($adminKey){
+		if ($this->method == 'POST') {
+			if(isset($adminKey) && $adminKey==ADMIN_PRIVILEGE_KEY){
+				$this->_createFoldersIfNecessary();
+				return $this->_response('AAAA',200);
+			}else{
+				return $this->_response('UUUUU',201);
+			}
+		}else{
+			$infos=array();
+			$infos[INFORMATIONS_KEY]='Method POST required';
+			$infos[METHOD_KEY]='POST';
+			return $this->_response($infos,405);
+		}
+	}
 
-	protected function ping(){
+	
+	// http GET dev.local/api/v1/reachable/
+	
+	protected function reachable(){
 		if ($this->method == 'GET') {
-		return $this->_response('OK',200);
+			return $this->_response(null,200);
 		}else{
 			$infos=array();
 			 $infos[INFORMATIONS_KEY]='Method GET required';
@@ -123,36 +144,19 @@ class PdSSyncAPI {
 	}
 	
 	/**
-	 * Returns the hash map  $paths is null we use the global repository tree.
+	 * Returns the hash map 
 	 *
-	 * @param array $relativePaths        	
-	 * @param boolean $canBeGeneratedServerSide 
+	 * @param string $relativeRootFolderPath        	
 	 * @return multitype: string
 	 */
-	protected function distantHashMap(array $relativePaths = array(),$canBeGeneratedServerSide =false) {
+	protected function distantHashMap( $relativeRootFolderPath ) {
 		if ($this->method == 'GET') {
-			$this->_createFoldersIfNecessary();
-			$fileName=crc32(  json_encode($relativePaths)  ) .HASH_MAP_SUFFIX ;
-			$filePath=HASH_MAPS_FOLDER_PATH.$fileName; 
-			$locker=$fileName.LOCKED_SUFFIX;
-			$lockerPath=HASH_MAPS_FOLDER_PATH.$locker;
-			if (file_exists($lockerPath)){
-				// there is a locker and operation in progress.
-				return $this->_response('Operation in progress on '.$fileName,423);
-			}
+			$filePath=REPOSITORY_PATH.$relativeRootFolderPath.HASHMAP_FILENAME; 
 			if(file_exists($filePath)){
-				$tree=json_decode(file_get_contents($filePath));
-				return $this->_response($tree,200);
-			}else if ($canBeGeneratedServerSide==true){
-				// Generate an hash map using a background process
-				$process = new BackgroundProcess();
-				$process->runPHP('
-							$treeGenerator=new HashMapGenerator();
-							$treeGenerator->HashMapForRelativePaths('.$relativePaths.');
-						');
-				return $this->_response('Operation in progress on '.$fileName , 204 );
-			}elseif ($canBeGeneratedServerSide==false ){
-				return $this->_response('Hash map not found '.$fileName , 404 );
+				$hashMap=json_decode(file_get_contents($filePath));
+				return $this->_response($hashMap,200);
+			}else {
+				return $this->_response('Hash map not found '.$filePath , 404 );
 			}
 		} else {
 			$infos=array();
@@ -172,9 +176,12 @@ class PdSSyncAPI {
 	 */
 	protected function uploadToRelativePath($relativePath, $syncIdentifier) {
 		if ($this->method == 'POST') {
-			// TODO 
-			// DEAL WITH THE UPLOAD
-			return $this->_response('',201);
+			$uploadfile = REPOSITORY_PATH . basename($_FILES['userfile']['name']);
+			if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploadfile)) {
+				$this->_response('',201);
+			}else{
+				$this->_response('',201);
+			}
 		} else {
 			$infos=array();
 			 $infos[INFORMATIONS_KEY]='Method POST required';
@@ -184,16 +191,16 @@ class PdSSyncAPI {
 	}
 	
 	/**
-	 * Locks, Finalize the synchronization bunch, then Unlocks.
+	 * Locks, Finalize the synchronization operations bunch, then save the hashMap.
 	 *
 	 * @param string $syncIdentifier        	
 	 * @param array $operations        	
-	 * @param string $finalTree        	
+	 * @param string $hashMap        	
 	 * @return multitype: string
 	 */
-	protected function finalizeSynchronization($syncIdentifier, array $operations, $finalTree) {
+	protected function finalizeSynchronization($syncIdentifier, array $operations, $finalHashMap) {
 		if ($this->method == 'POST') {
-			if(OperationsInterpreter::interpretOperation($syncIdentifier, $operations, $finalTree)){
+			if(OperationsInterpreter::interpretOperation($syncIdentifier, $operations, $finalHashMap)){
 				return  $this->_response('',200);
 			}else{
 				//@TODO qualify
@@ -214,11 +221,9 @@ class PdSSyncAPI {
 	
 
 	/**
-	 * Creates the trees and repository folder.
+	 * Creates the hashMaps and repository folder.
 	 */
 	private  function _createFoldersIfNecessary(){
-		if(!file_exists(HASH_MAPS_FOLDER_PATH))
-			mkdir(HASH_MAPS_FOLDER_PATH);
 		if(!file_exists(REPOSITORY_PATH))
 			mkdir(REPOSITORY_PATH);
 	}
@@ -230,8 +235,12 @@ class PdSSyncAPI {
 	 * @return string
 	 */
 	private function _response($data, $status = 200) {
-		header ( "HTTP/1.1 " . $status . " " . $this->_requestStatus ( $status ) );
-		return json_encode ( $data );
+		header ( 'HTTP/1.1 '. $status . ' ' . $this->_requestStatus ( $status ) );
+		if(isset($data)){
+			return json_encode ( $data );
+		}else{
+			return null;
+		}
 	}
 	
 	/**
