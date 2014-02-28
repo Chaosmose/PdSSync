@@ -4,15 +4,14 @@ include_once 'api/v1/PdSSyncConst.php';
 require_once 'api/v1/classes/OperationsInterpreter.class.php';
 
 /**
-  *  A simple API facade in one file
-  *  Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
-  *  
-  * @author Benoit Pereira da Silva
-  * @copyright https://github.com/benoit-pereira-da-silva/PdSSync
-  */
+ * A simple API facade in one file
+ * Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
+ *
+ * @author Benoit Pereira da Silva
+ * @copyright https://github.com/benoit-pereira-da-silva/PdSSync
+ */
 class PdSSyncAPI {
 	
-
 	/**
 	 * Property: method
 	 * The HTTP method this request was made in, either GET, POST, PUT or DELETE
@@ -95,137 +94,142 @@ class PdSSyncAPI {
 				$this->file = file_get_contents ( "php://input" );
 				break;
 			default :
-				return $this->_response($this->method,400);
+				return $this->_response ( $this->method, 400 );
 				break;
 		}
 		if (( int ) method_exists ( $this, $this->endpoint ) > 0) {
-			return $this->_response ( $this->{$this->endpoint} ( $this->args ) );
+			return $this->{$this->endpoint} ( $this->args );
 		}
 		return $this->_response ( '', 400 );
 	}
-	
-	
 	
 	// ///////////////
 	// End points
 	// //////////////
 	
+	// http -v -f POST dev.local/api/v1/install/ adminKey='YOUR KEY'
 	
-	// http POST dev.local/api/v1/install/
-	
-	protected function install ($adminKey){
+	protected function install() {
 		if ($this->method == 'POST') {
-			if(isset($adminKey) && $adminKey==ADMIN_PRIVILEGE_KEY){
-				$this->_createFoldersIfNecessary();
-				return $this->_response('AAAA',200);
-			}else{
-				return $this->_response('UUUUU',201);
-			}
-		}else{
-			$infos=array();
-			$infos[INFORMATIONS_KEY]='Method POST required';
-			$infos[METHOD_KEY]='POST';
-			return $this->_response($infos,405);
-		}
-	}
-
-	
-	// http GET dev.local/api/v1/reachable/
-	
-	protected function reachable(){
-		if ($this->method == 'GET') {
-			return $this->_response(null,200);
-		}else{
-			$infos=array();
-			 $infos[INFORMATIONS_KEY]='Method GET required';
-			 $infos[METHOD_KEY]='GET';
-			return $this->_response($infos,405);
-		}	
-	}
-	
-	/**
-	 * Returns the hash map 
-	 *
-	 * @param string $relativeRootFolderPath        	
-	 * @return multitype: string
-	 */
-	protected function distantHashMap( $relativeRootFolderPath ) {
-		if ($this->method == 'GET') {
-			$filePath=REPOSITORY_PATH.$relativeRootFolderPath.HASHMAP_FILENAME; 
-			if(file_exists($filePath)){
-				$hashMap=json_decode(file_get_contents($filePath));
-				return $this->_response($hashMap,200);
-			}else {
-				return $this->_response('Hash map not found '.$filePath , 404 );
+			if (isset ( $this->request ['adminKey'] ) && $this->request ['adminKey'] == ADMIN_PRIVILEGE_KEY) {
+				$this->_createFoldersIfNecessary ();
+				return $this->_response ( null, 201 );
+			} else {
+				return $this->_response ( null, 401 );
 			}
 		} else {
-			$infos=array();
-			 $infos[INFORMATIONS_KEY]='Method GET required';
-			 $infos[METHOD_KEY]='GET';
-			return $this->_response($infos,405);
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method POST required';
+			$infos [METHOD_KEY] = 'POST';
+			return $this->_response ( $infos, 405 );
 		}
 	}
-						
+	
+	// http GET dev.local/api/v1/reachable/
+	protected function reachable() {
+		if ($this->method == 'GET') {
+			return $this->_response ( null, 200 );
+		} else {
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method GET required';
+			$infos [METHOD_KEY] = 'GET';
+			return $this->_response ( $infos, 405 );
+		}
+	}
+	
+	// http -v GET dev.local/api/v1/distantHashMap/?path=abc
+	
+	/**
+	 * Returns the hash map
+	 * 
+	 * @return multitype: string
+	 */
+	protected function distantHashMap() {
+		if ($this->method == 'GET') {
+			if (isset ( $this->request ['path'] )) {
+				$filePath = REPOSITORY_PATH . $this->request ['path'] . HASHMAP_FILENAME;
+				if (file_exists ( $filePath )) {
+					$hashMap = json_decode ( file_get_contents ( $filePath ) );
+					return $this->_response ( $hashMap, 200 );
+				}
+			}
+			return $this->_response ( 'Hash map not found ', 404 );
+		} else {
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method GET required';
+			$infos [METHOD_KEY] = 'GET';
+			return $this->_response ( $infos, 405 );
+		}
+	}
 	
 	/**
 	 * Upload the file to the relative path
-	 *
-	 * @param string $relativePath        	
-	 * @param string $syncIdentifier        	
+	 * 
 	 * @return multitype: string
 	 */
-	protected function uploadToRelativePath($relativePath, $syncIdentifier) {
+	protected function uploadToRelativePath() {
 		if ($this->method == 'POST') {
-			$uploadfile = REPOSITORY_PATH . basename($_FILES['userfile']['name']);
-			if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploadfile)) {
-				$this->_response('',201);
-			}else{
-				$this->_response('',201);
+			$relativePath = isset ( $this->request ['path'] ) ? $this->request ['path'] : null;
+			$syncIdentifier = isset ( $this->request ['syncIdentifier'] ) ? $this->request ['syncIdentifier'] : null;
+			if ($relativePath && $syncIdentifier) {
+				$uploadfile = REPOSITORY_PATH . basename ( $_FILES ['userfile'] ['name'] );
+				if (move_uploaded_file ( $_FILES ['userfile'] ['tmp_name'], $uploadfile )) {
+					$this->_response ( '', 201 );
+				} else {
+					$this->_response ( '', 201 );
+				}
+			} else {
+				$this->_response ( 'path and syncIdentifier are required', 400 );
 			}
 		} else {
-			$infos=array();
-			 $infos[INFORMATIONS_KEY]='Method POST required';
-			 $infos[METHOD_KEY]='POST';
-			return $this->_response($infos,405);
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method POST required';
+			$infos [METHOD_KEY] = 'POST';
+			return $this->_response ( $infos, 405 );
 		}
 	}
 	
 	/**
 	 * Locks, Finalize the synchronization operations bunch, then save the hashMap.
 	 *
-	 * @param string $syncIdentifier        	
-	 * @param array $operations        	
-	 * @param string $hashMap        	
+	 * string syncIdentifier
+	 * array operations
+	 * string hashMap
+	 * 
 	 * @return multitype: string
 	 */
-	protected function finalizeSynchronization($syncIdentifier, array $operations, $finalHashMap) {
+	protected function finalizeSynchronization() {
 		if ($this->method == 'POST') {
-			if(OperationsInterpreter::interpretOperation($syncIdentifier, $operations, $finalHashMap)){
-				return  $this->_response('',200);
-			}else{
-				//@TODO qualify
-				return  $this->_response('',500);
+			$syncIdentifier = isset ( $this->request ['syncIdentifier'] ) ? $this->request ['syncIdentifier'] : null;
+			$operations = isset ( $this->request ['operations'] ) ? $this->request ['operations'] : null;
+			$hashMap = isset ( $this->request ['hashMap'] ) ? $this->request ['hashMap'] : null;
+			if ($syncIdentifier && $operations && $hashMap) {
+				if (OperationsInterpreter::interpretOperation ( $syncIdentifier, $operations, $finalHashMap )) {
+					return $this->_response ( '', 200 );
+				} else {
+					return $this->_response ( '', 500 );
+				}
+			} else {
+				$this->_response ( 'operations, hashMap,  syncIdentifier are required', 400 );
 			}
 		} else {
-			$infos=array();
-			$infos[INFORMATIONS_KEY]='Method POST required';
-			$infos[METHOD_KEY]='POST';
-			return $this->_response($infos,405);
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method POST required';
+			$infos [METHOD_KEY] = 'POST';
+			return $this->_response ( $infos, 405 );
 		}
 	}
-	
 	
 	// ///////////////
 	// PRIVATE
 	// //////////////
 	
-
 	/**
 	 * Creates the hashMaps and repository folder.
 	 */
-	private  function _createFoldersIfNecessary(){
-		if(!file_exists(REPOSITORY_PATH))
-			mkdir(REPOSITORY_PATH);
+	private function _createFoldersIfNecessary() {
+		if (! file_exists ( REPOSITORY_PATH ))
+			mkdir ( REPOSITORY_PATH );
 	}
 	
 	/**
@@ -235,10 +239,11 @@ class PdSSyncAPI {
 	 * @return string
 	 */
 	private function _response($data, $status = 200) {
-		header ( 'HTTP/1.1 '. $status . ' ' . $this->_requestStatus ( $status ) );
-		if(isset($data)){
+		$header = 'HTTP/1.1 ' . $status . ' ' . $this->_requestStatus ( $status );
+		header ( $header );
+		if (isset ( $data )) {
 			return json_encode ( $data );
-		}else{
+		} else {
 			return null;
 		}
 	}
@@ -270,7 +275,7 @@ class PdSSyncAPI {
 	 * @param int $code        	
 	 * @return string
 	 */
-	protected  function _requestStatus( $code) {
+	protected function _requestStatus($code) {
 		$status = array (
 				100 => 'Continue',
 				101 => 'Switching Protocols',
