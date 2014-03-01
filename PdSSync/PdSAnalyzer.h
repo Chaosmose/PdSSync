@@ -8,16 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-typedef enum PdSSyncOperations {
-    PdSCopy      = 0,
-    PdSMove      = 1,
-    PdSDelete    = 2
-} PdSSyncOperation;
 
-typedef enum PdSSyncOperationParams {
-    PdSSource      = 0,
-    PdSDestination = 1
-} PdSSyncOperationParam;
 
 @interface PdSAnalyzer : NSObject
 

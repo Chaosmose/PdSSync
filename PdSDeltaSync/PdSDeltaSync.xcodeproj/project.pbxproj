@@ -11,7 +11,8 @@
 		E50B631A1844CD0F00D66BB6 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = E50B63191844CD0F00D66BB6 /* main.m */; };
 		E50B631E1844CD0F00D66BB6 /* PdSDeltaSync.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = E50B631D1844CD0F00D66BB6 /* PdSDeltaSync.1 */; };
 		E50B632A1844CD8700D66BB6 /* PdSAnalyzer.m in Sources */ = {isa = PBXBuildFile; fileRef = E50B63291844CD8700D66BB6 /* PdSAnalyzer.m */; };
-		E56D1C461844DDD800A434C9 /* NSData+CRC.m in Sources */ = {isa = PBXBuildFile; fileRef = E56D1C451844DDD800A434C9 /* NSData+CRC.m */; };
+		E52C30B218C23A5400281482 /* DeltaPathMap.m in Sources */ = {isa = PBXBuildFile; fileRef = E52C30AE18C23A5400281482 /* DeltaPathMap.m */; };
+		E52C30B318C23A5400281482 /* HashMap.m in Sources */ = {isa = PBXBuildFile; fileRef = E52C30B018C23A5400281482 /* HashMap.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,8 +36,11 @@
 		E50B631D1844CD0F00D66BB6 /* PdSDeltaSync.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = PdSDeltaSync.1; sourceTree = "<group>"; };
 		E50B63281844CD8700D66BB6 /* PdSAnalyzer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PdSAnalyzer.h; sourceTree = "<group>"; };
 		E50B63291844CD8700D66BB6 /* PdSAnalyzer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PdSAnalyzer.m; sourceTree = "<group>"; };
-		E56D1C441844DDD800A434C9 /* NSData+CRC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSData+CRC.h"; sourceTree = "<group>"; };
-		E56D1C451844DDD800A434C9 /* NSData+CRC.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSData+CRC.m"; sourceTree = "<group>"; };
+		E52C30AD18C23A5400281482 /* DeltaPathMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeltaPathMap.h; sourceTree = "<group>"; };
+		E52C30AE18C23A5400281482 /* DeltaPathMap.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DeltaPathMap.m; sourceTree = "<group>"; };
+		E52C30AF18C23A5400281482 /* HashMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HashMap.h; sourceTree = "<group>"; };
+		E52C30B018C23A5400281482 /* HashMap.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HashMap.m; sourceTree = "<group>"; };
+		E52C30B118C23A5400281482 /* PdSSync.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PdSSync.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,10 +102,13 @@
 		E50B63271844CD8700D66BB6 /* PdSSync */ = {
 			isa = PBXGroup;
 			children = (
+				E52C30AD18C23A5400281482 /* DeltaPathMap.h */,
+				E52C30AE18C23A5400281482 /* DeltaPathMap.m */,
+				E52C30AF18C23A5400281482 /* HashMap.h */,
+				E52C30B018C23A5400281482 /* HashMap.m */,
+				E52C30B118C23A5400281482 /* PdSSync.h */,
 				E50B63281844CD8700D66BB6 /* PdSAnalyzer.h */,
 				E50B63291844CD8700D66BB6 /* PdSAnalyzer.m */,
-				E56D1C441844DDD800A434C9 /* NSData+CRC.h */,
-				E56D1C451844DDD800A434C9 /* NSData+CRC.m */,
 			);
 			name = PdSSync;
 			path = ../PdSSync;
@@ -159,7 +166,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				E50B631A1844CD0F00D66BB6 /* main.m in Sources */,
-				E56D1C461844DDD800A434C9 /* NSData+CRC.m in Sources */,
+				E52C30B218C23A5400281482 /* DeltaPathMap.m in Sources */,
+				E52C30B318C23A5400281482 /* HashMap.m in Sources */,
 				E50B632A1844CD8700D66BB6 /* PdSAnalyzer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

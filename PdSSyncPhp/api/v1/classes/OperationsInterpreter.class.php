@@ -4,7 +4,7 @@ include_once 'api/v1/PdSSyncConst.php';
 
 class OperationsInterpreter{
 	
-	static function interpretOperation($syncIdentifier, array $operations, $finalTree){
+	static function interpretOperations($syncIdentifier, $rootFolderRelativePath, array $operations, $finalHashMap){
 		// @TODO
 		// Interprete the command
 		// Replace the tree

@@ -122,7 +122,8 @@ Locks, Finalize the synchronization bunch then Unlocks.
 	typedef enum _PdSSyncOperation 
 		PdSCopy      = 0,
 		PdSMove      = 1,
-		PdSDelete    = 2
+		PdSDelete    = 2,
+		PdSUnPrefix  = 3
 	} PdSSyncOperation;
 
 	typedef enum _PdSSyncOperationParams 

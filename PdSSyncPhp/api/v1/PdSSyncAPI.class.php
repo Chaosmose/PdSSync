@@ -108,7 +108,6 @@ class PdSSyncAPI {
 	// //////////////
 	
 	// http -v -f POST dev.local/api/v1/install/ adminKey='YOUR KEY'
-	
 	protected function install() {
 		if ($this->method == 'POST') {
 			if (isset ( $this->request ['adminKey'] ) && $this->request ['adminKey'] == ADMIN_PRIVILEGE_KEY) {
@@ -137,11 +136,11 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET dev.local/api/v1/distantHashMap/?path=abc
+	// http -v GET dev.local/api/cd /distantHashMap/?path=abc
 	
 	/**
 	 * Returns the hash map
-	 * 
+	 *
 	 * @return multitype: string
 	 */
 	protected function distantHashMap() {
@@ -162,24 +161,26 @@ class PdSSyncAPI {
 		}
 	}
 	
+	// http -v -f POST dev.local/api/v1/uploadToRelativePath/ destination='file1.txt'  syncIdentifier='xx' source@~/Documents/text1.txt
+	
 	/**
 	 * Upload the file to the relative path
-	 * 
+	 *
 	 * @return multitype: string
 	 */
 	protected function uploadToRelativePath() {
 		if ($this->method == 'POST') {
-			$relativePath = isset ( $this->request ['path'] ) ? $this->request ['path'] : null;
+			$relativePath = isset ( $this->request ['destination'] ) ? $this->request ['destination'] : null;
 			$syncIdentifier = isset ( $this->request ['syncIdentifier'] ) ? $this->request ['syncIdentifier'] : null;
-			if ($relativePath && $syncIdentifier) {
-				$uploadfile = REPOSITORY_PATH . basename ( $_FILES ['userfile'] ['name'] );
-				if (move_uploaded_file ( $_FILES ['userfile'] ['tmp_name'], $uploadfile )) {
-					$this->_response ( '', 201 );
+			if ($relativePath && $syncIdentifier && isset ( $_FILES ['source'] )) {
+				$uploadfile = REPOSITORY_PATH . $syncIdentifier . '_' . basename ( $_FILES ['source'] ['name'] );
+				if (move_uploaded_file ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
+					return $this->_response ( null, 201 );
 				} else {
-					$this->_response ( '', 201 );
+					return $this->_response ( null, 201 );
 				}
 			} else {
-				$this->_response ( 'path and syncIdentifier are required', 400 );
+				return $this->_response ( 'destination, source and syncIdentifier are required', 400 );
 			}
 		} else {
 			$infos = array ();
@@ -188,31 +189,33 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
+	// http -v -f POST dev.local/api/v1/finalizeSynchronization/ operations[]="op"  syncIdentifier="xx" hashMap="yy"
 	
 	/**
 	 * Locks, Finalize the synchronization operations bunch, then save the hashMap.
-	 *
-	 * string syncIdentifier
-	 * array operations
-	 * string hashMap
 	 * 
 	 * @return multitype: string
 	 */
 	protected function finalizeSynchronization() {
 		if ($this->method == 'POST') {
+			$rootFolderRelativePath=  isset ( $this->request ['path'] ) ? $this->request ['syncIdentifier'] : null;
 			$syncIdentifier = isset ( $this->request ['syncIdentifier'] ) ? $this->request ['syncIdentifier'] : null;
 			$operations = isset ( $this->request ['operations'] ) ? $this->request ['operations'] : null;
 			$hashMap = isset ( $this->request ['hashMap'] ) ? $this->request ['hashMap'] : null;
-			if ($syncIdentifier && $operations && $hashMap) {
-				if (OperationsInterpreter::interpretOperation ( $syncIdentifier, $operations, $finalHashMap )) {
-					return $this->_response ( '', 200 );
+			if ($rootFolderRelativePath&& $syncIdentifier && $operations && $hashMap) {
+				if (is_array ( $operations ) ) {
+					if (OperationsInterpreter::interpretOperations ( $syncIdentifier, $operations, $hashMap )) {
+						return $this->_response ( '', 200 );
+					} else {
+						return $this->_response ( '', 500 );
+					}
 				} else {
-					return $this->_response ( '', 500 );
+					return $this->_response ( 'operations must be an array', 400 );
 				}
 			} else {
-				$this->_response ( 'operations, hashMap,  syncIdentifier are required', 400 );
+				return $this->_response ( 'path :'. $rootFolderRelativePath. 'operations :' . $operations . ', hashMap:' . $hashMap . ',  syncIdentifier:' . $syncIdentifier . ' are required', 400 );
 			}
-		} else {
+		} else {open .
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method POST required';
 			$infos [METHOD_KEY] = 'POST';
