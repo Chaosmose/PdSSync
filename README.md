@@ -11,7 +11,7 @@ It allows to synchronizes local and distant sets of files grouped in a root fold
 - keep it as minimal and simple as possible
 - do not focus on conflict resolution but on fault resilience (there is no transactional guarantee)
 - allow very efficient caching and mem caching strategy (we will provide advanced implementation samples)
-- hash maps can be encrypted
+- support hash maps encryption
 - allow advanced hashing strategy ( like considering that a modified file should not be synchronized bec) 
 
 **PdSSync** is still in early development phases do not use in any project !
@@ -85,51 +85,54 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync objc 
 
 ### End points ###
 
-1.  GET  **reachable** ()
-A simple reachability end point 
-	Succes status code : 
-	200 => 'OK'
-	
-You can use httpie to call any of the end points.
-http GET <server.com>/api/v1/reachable/
+http GET dev.local/api/v1/reachable/
 
-2. GET **distantHashMap** (array paths)
-Returns the distant hashMap or subhashMap (string json)
-	Succes status code : 
-	200 => 'OK'
-	204 => 'No Content' ( the hashMap will be generated in background)
-	404 => 'the hashMap do not exist and will not be generated in background'
-3. POST **uploadToRelativePath** (string relativePath, string syncIdentifier)
-Returns success on completion + the location: /uri/resources  ou Content-Location 
-The upload path ".syncIndentifier_file name"
-	Succes status code : 201 => 'Created'
+http -v -f POST dev.local/api/v1/install/ adminKey='YOUR KEY'
 
-4. POST (string json) **finalizeSynchronization** (string syncIdentifier, array operations, string finalHashMap)
-Locks, Finalize the synchronization bunch then Unlocks.
-	Succes status code : 200 => 'OK'
+http -v -f POST dev.local/api/v1/create/tree/
+
+http -v GET dev.local/api/v1/hashMap/tree/1
+
+http -v -f POST dev.local/api/v1/uploadFileTo/tree/1/ destination='file1.txt'  syncIdentifier='xx' source@~/Documents/text1.txt  doers='' undoers=''
+
+http -v -f POST dev.local/api/v1/finalizeSynchronization/ commands[]='<encodedCommand>'  syncIdentifier='xx' hashMap=''
+
+#### Commands  : ####
+
+Any command is encoded in an array.
+Json Encoded command [PdSCopy,<PdSDestination>,<PdSSource>] : [1,'a/a.caf','b/c/c.caf'] will copy the file from 'b/c/c.caf' to 'a/a.caf'
+
+##### Sync CMD ####
+
+typedef NS_ENUM (NSUInteger,
+                  PdSSyncCommand) {
+    PdSCreate   = 0 , // W destination
+    PdSCopy     = 1 , // R source W destination
+    PdSMove     = 2 , // R source W destination
+    PdSDelete   = 3 , // W source
+} ;
+
+typedef NS_ENUM(NSUInteger,
+                PdSSyncCMDParam) {
+    PdSDestination = 0,
+    PdSSource      = 1
+} ;
+
+##### Admin CMD  #####
+
+typedef NS_ENUM (NSUInteger,
+                 PdSAdminCommand) {
+    PdsSanitize    = 4 , // X on tree
+    PdSChmod       = 5 , // X on tree
+    PdSForget      = 6 , // X on tree
+} ;
+
+typedef NS_ENUM(NSUInteger,
+                PdSAdminCMDParam) {
+    PdSPoi         = 0,
+    PdSDepth       = 1,
+    PdSValue       = 2
+} ;
 
 
-#### Distant FS operation : ####
-
-* unPrefix (string syncIdentifier) private operation performed on finalizeSynchronization
-* sanitize (string relative path) private operation to delete unreferenced files.
-* move : for renaming or path changing
-* copy : for duplication 
-* remove : to delete a path, and sub paths
-
-#### Operation keys : ####
-
-	typedef enum _PdSSyncOperation 
-		PdSCopy      = 0,
-		PdSMove      = 1,
-		PdSDelete    = 2,
-		PdSUnPrefix  = 3
-	} PdSSyncOperation;
-
-	typedef enum _PdSSyncOperationParams 
-		PdSSource      = 0,
-		PdSDestination = 1
-	} PdSSyncOperationParams;
-	
-	Json Encoding [ { '0':['a/a.caf','b/c/c.caf'] } ] will copy the file from 'a/a.caf' to 'b/c/c.caf'
 

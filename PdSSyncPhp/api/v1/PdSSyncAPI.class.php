@@ -1,7 +1,7 @@
 <?php
 
 include_once 'api/v1/PdSSyncConst.php';
-require_once 'api/v1/classes/OperationsInterpreter.class.php';
+require_once 'api/v1/classes/CommandInterpreter.class.php';
 
 /**
  * A simple API facade in one file
@@ -124,6 +124,26 @@ class PdSSyncAPI {
 		}
 	}
 	
+	
+	// http -v -f POST dev.local/api/v1/create/tree/
+	
+	protected function create() {
+		if ($this->method == 'POST') {
+			// 
+			
+			
+			return $this->_response ( '', 201 );
+		} else {
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method GET required';
+			$infos [METHOD_KEY] = 'GET';
+			return $this->_response ( $infos, 405 );
+		}
+	}
+	
+	
+	
+	
 	// http GET dev.local/api/v1/reachable/
 	protected function reachable() {
 		if ($this->method == 'GET') {
@@ -136,17 +156,22 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET dev.local/api/cd /distantHashMap/?path=abc
+	// http -v GET dev.local/api/v1/hashMap/tree/1
 	
 	/**
 	 * Returns the hash map
 	 *
 	 * @return multitype: string
 	 */
-	protected function distantHashMap() {
+	protected function hashMap() {
 		if ($this->method == 'GET') {
 			if (isset ( $this->request ['path'] )) {
-				$filePath = REPOSITORY_PATH . $this->request ['path'] . HASHMAP_FILENAME;
+				if (isset($this->verb) && count($this->args)>0){
+					$treeID=(int) $this->args[0];
+				}else{
+					$treeID=0;
+				}
+				$filePath = REPOSITORY_PATH . $treeID.DIRECTORY_SEPARATOR.$this->request ['path'] . HASHMAP_FILENAME;
 				if (file_exists ( $filePath )) {
 					$hashMap = json_decode ( file_get_contents ( $filePath ) );
 					return $this->_response ( $hashMap, 200 );
@@ -161,19 +186,29 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST dev.local/api/v1/uploadToRelativePath/ destination='file1.txt'  syncIdentifier='xx' source@~/Documents/text1.txt
+	// http -v -f POST dev.local/api/v1/uploadFileTo/tree/1/ destination='file1.txt'  syncIdentifier='xx' source@~/Documents/text1.txt  doers='' undoers=''
 	
 	/**
 	 * Upload the file to the relative path
-	 *
+	 * 
 	 * @return multitype: string
 	 */
-	protected function uploadToRelativePath() {
+	protected function uploadFileTo() {
 		if ($this->method == 'POST') {
 			$relativePath = isset ( $this->request ['destination'] ) ? $this->request ['destination'] : null;
 			$syncIdentifier = isset ( $this->request ['syncIdentifier'] ) ? $this->request ['syncIdentifier'] : null;
+			if (isset($this->verb) && count($this->args)>0){
+				$treeID=(int) $this->args[0];
+			}else{
+				$treeID=0;
+			}
+			// @todo support doers / undoers
+			$doers =isset ( $this->request ['doers'] ) ? $this->request ['doers'] : null;
+			$undoers =isset ( $this->request ['undoers'] ) ? $this->request ['undoers'] : null;
+			
 			if ($relativePath && $syncIdentifier && isset ( $_FILES ['source'] )) {
 				$uploadfile = REPOSITORY_PATH . $syncIdentifier . '_' . basename ( $_FILES ['source'] ['name'] );
+				//@todo use the command interpreter and a PdSCreate command
 				if (move_uploaded_file ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
 					return $this->_response ( null, 201 );
 				} else {
@@ -189,8 +224,8 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	// http -v -f POST dev.local/api/v1/finalizeSynchronization/ operations[]="op"  syncIdentifier="xx" hashMap="yy"
 	
+	// http -v -f POST dev.local/api/v1/finalizeSynchronization/ commands[]="op"  syncIdentifier="xx" hashMap="yy"
 	/**
 	 * Locks, Finalize the synchronization operations bunch, then save the hashMap.
 	 * 
@@ -200,11 +235,13 @@ class PdSSyncAPI {
 		if ($this->method == 'POST') {
 			$rootFolderRelativePath=  isset ( $this->request ['path'] ) ? $this->request ['syncIdentifier'] : null;
 			$syncIdentifier = isset ( $this->request ['syncIdentifier'] ) ? $this->request ['syncIdentifier'] : null;
-			$operations = isset ( $this->request ['operations'] ) ? $this->request ['operations'] : null;
+			$commands = isset ( $this->request ['commands'] ) ? $this->request ['commands'] : null;
 			$hashMap = isset ( $this->request ['hashMap'] ) ? $this->request ['hashMap'] : null;
-			if ($rootFolderRelativePath&& $syncIdentifier && $operations && $hashMap) {
+			if ($rootFolderRelativePath&& $syncIdentifier && $commands && $hashMap) {
 				if (is_array ( $operations ) ) {
-					if (OperationsInterpreter::interpretOperations ( $syncIdentifier, $operations, $hashMap )) {
+				$ci=new CommandInterpreter(); 
+				//@todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
+					if ($ci->interpretBunchOfCommand ( $syncIdentifier, $commands, $hashMap )) {
 						return $this->_response ( '', 200 );
 					} else {
 						return $this->_response ( '', 500 );
@@ -213,7 +250,7 @@ class PdSSyncAPI {
 					return $this->_response ( 'operations must be an array', 400 );
 				}
 			} else {
-				return $this->_response ( 'path :'. $rootFolderRelativePath. 'operations :' . $operations . ', hashMap:' . $hashMap . ',  syncIdentifier:' . $syncIdentifier . ' are required', 400 );
+				return $this->_response ( 'path :'. $rootFolderRelativePath. 'commands :' . $commands . ', hashMap:' . $hashMap . ',  syncIdentifier:' . $syncIdentifier . ' are required', 400 );
 			}
 		} else {open .
 			$infos = array ();

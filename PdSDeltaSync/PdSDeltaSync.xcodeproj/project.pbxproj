@@ -41,6 +41,7 @@
 		E52C30AF18C23A5400281482 /* HashMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HashMap.h; sourceTree = "<group>"; };
 		E52C30B018C23A5400281482 /* HashMap.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HashMap.m; sourceTree = "<group>"; };
 		E52C30B118C23A5400281482 /* PdSSync.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PdSSync.h; sourceTree = "<group>"; };
+		E5CBEBD818C45D1800381B74 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +103,7 @@
 		E50B63271844CD8700D66BB6 /* PdSSync */ = {
 			isa = PBXGroup;
 			children = (
+				E5CBEBD818C45D1800381B74 /* README.md */,
 				E52C30AD18C23A5400281482 /* DeltaPathMap.h */,
 				E52C30AE18C23A5400281482 /* DeltaPathMap.m */,
 				E52C30AF18C23A5400281482 /* HashMap.h */,
