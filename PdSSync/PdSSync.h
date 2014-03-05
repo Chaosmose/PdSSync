@@ -21,10 +21,10 @@
 
 typedef NS_ENUM (NSUInteger,
                   PdSSyncCommand) {
-    PdSCreate   = 0 , // W destination
-    PdSCopy     = 1 , // R source W destination
-    PdSMove     = 2 , // R source W destination
-    PdSDelete   = 3 , // W source
+    PdSCreateOrUpdate   = 0 , // W destination or source
+    PdSCopy             = 1 , // R source W destination
+    PdSMove             = 2 , // R source W destination
+    PdSDelete           = 3 , // W source
 } ;
 
 typedef NS_ENUM(NSUInteger,

@@ -2,10 +2,15 @@
 
 include_once 'api/v1/PdSSyncConst.php';
 require_once 'api/v1/classes/CommandInterpreter.class.php';
+require_once 'api/v1/classes/FileManager.class.php';
 
 /**
- * A simple API facade in one file
+ * A simple API facade in one file with no database.
  * Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
+ * 
+ * Optimized according to google bests practices :  https://developers.google.com/speed/articles/optimizing-php
+ *
+ *	http://json-schema.org
  *
  * @author Benoit Pereira da Silva
  * @copyright https://github.com/benoit-pereira-da-silva/PdSSync
@@ -45,6 +50,20 @@ class PdSSyncAPI {
 	protected $file = Null;
 	
 	/**
+	 * The command interpreter
+	 * 
+	 * @var CommandInterpreter
+	 */
+	protected $interpreter = Null;
+	
+	/**
+	 * The filemanager
+	 * 
+	 * @var FileManager
+	 */
+	protected $fileManager = Null;
+	
+	/**
 	 * Constructor: __construct
 	 * Allow for CORS, assemble and pre-process the data
 	 */
@@ -55,9 +74,6 @@ class PdSSyncAPI {
 		}
 		$request = $_REQUEST ['request'];
 		$origin = $_SERVER ['HTTP_ORIGIN'];
-		header ( "Access-Control-Allow-Orgin: *" );
-		header ( "Access-Control-Allow-Methods: *" );
-		header ( "Content-Type: application/json" );
 		$this->args = explode ( '/', rtrim ( $request, '/' ) );
 		$this->endpoint = array_shift ( $this->args );
 		if (array_key_exists ( 0, $this->args ) && ! is_numeric ( $this->args [0] )) {
@@ -107,10 +123,26 @@ class PdSSyncAPI {
 	// End points
 	// //////////////
 	
-	// http -v -f POST dev.local/api/v1/install/ adminKey='YOUR KEY'
+	// http GET PdsSync.api.local/api/v1/reachable/
+	
+	
+	protected function reachable() {
+		if ($this->method == 'GET') {
+			return $this->_response ( null, 200 );
+		} else {
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method GET required';
+			$infos [METHOD_KEY] = 'GET';
+			return $this->_response ( $infos, 405 );
+		}
+	}
+	
+	// http -v -f POST PdsSync.api.local/api/v1/install/ key='6ca0c48126a159392c938833d4678913'
+	
 	protected function install() {
 		if ($this->method == 'POST') {
-			if (isset ( $this->request ['adminKey'] ) && $this->request ['adminKey'] == ADMIN_PRIVILEGE_KEY) {
+			$this->fileManager = new FileManager ();
+			if (isset ( $this->request ['key'] ) && $this->request ['key'] == SECRET_KEY) {
 				$this->_createFoldersIfNecessary ();
 				return $this->_response ( null, 201 );
 			} else {
@@ -124,39 +156,29 @@ class PdSSyncAPI {
 		}
 	}
 	
-	
-	// http -v -f POST dev.local/api/v1/create/tree/
+	// http -v -f POST PdsSync.api.local/api/v1/create/tree/ key='6ca0c48126a159392c938833d4678913'
+	//53170ab57dee3 
 	
 	protected function create() {
 		if ($this->method == 'POST') {
-			// 
-			
-			
-			return $this->_response ( '', 201 );
+			if (isset ( $this->request ['key'] ) && $this->request ['key'] == SECRET_KEY) {
+				$guid=uniqid();
+				$this->fileManager = new FileManager ();
+				$path=$this->fileManager->absoluteMasterPath($guid, ''  );
+		        $this->fileManager->mkdir($path);
+				return $this->_response ( $guid, 201 );
+			} else {
+				return $this->_response ( null, 401 );
+			}
 		} else {
 			$infos = array ();
-			$infos [INFORMATIONS_KEY] = 'Method GET required';
-			$infos [METHOD_KEY] = 'GET';
+			$infos [INFORMATIONS_KEY] = 'Method POST required';
+			$infos [METHOD_KEY] = 'POST';
 			return $this->_response ( $infos, 405 );
 		}
 	}
 	
-	
-	
-	
-	// http GET dev.local/api/v1/reachable/
-	protected function reachable() {
-		if ($this->method == 'GET') {
-			return $this->_response ( null, 200 );
-		} else {
-			$infos = array ();
-			$infos [INFORMATIONS_KEY] = 'Method GET required';
-			$infos [METHOD_KEY] = 'GET';
-			return $this->_response ( $infos, 405 );
-		}
-	}
-	
-	// http -v GET dev.local/api/v1/hashMap/tree/1
+	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/53170ab57dee3
 	
 	/**
 	 * Returns the hash map
@@ -165,17 +187,20 @@ class PdSSyncAPI {
 	 */
 	protected function hashMap() {
 		if ($this->method == 'GET') {
+			$this->fileManager = new FileManager ();
 			if (isset ( $this->request ['path'] )) {
-				if (isset($this->verb) && count($this->args)>0){
-					$treeID=(int) $this->args[0];
-				}else{
-					$treeID=0;
+				if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+					$treeId = ( int ) $this->args [0];
+				} else {
+					$treeId = 0;
 				}
-				$filePath = REPOSITORY_PATH . $treeID.DIRECTORY_SEPARATOR.$this->request ['path'] . HASHMAP_FILENAME;
-				if (file_exists ( $filePath )) {
-					$hashMap = json_decode ( file_get_contents ( $filePath ) );
-					return $this->_response ( $hashMap, 200 );
-				}
+				$location = $this->fileManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME);
+				header ( 'Location; '.$location);
+				$status= 302; 
+				$header = 'HTTP/1.1 ' . $status . ' ' . $this->_requestStatus ( $status );
+				header ( $header );
+				exit();
+				
 			}
 			return $this->_response ( 'Hash map not found ', 404 );
 		} else {
@@ -186,30 +211,62 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST dev.local/api/v1/uploadFileTo/tree/1/ destination='file1.txt'  syncIdentifier='xx' source@~/Documents/text1.txt  doers='' undoers=''
+	// http -v GET PdsSync.api.local/api/v1/file/tree/1/a/b/c.dat
+	
+	/**
+	 * Redirects to a file
+	 *
+	 * @return multitype: string
+	 */
+	protected function file() {
+		if ($this->method == 'GET') {
+			$this->fileManager = new FileManager ();
+			if (isset ( $this->request ['path'] )) {
+				if (isset ( $this->verb ) && ($this->verb == "tree") && count ( $this->args ) > 0) {
+					$treeId = ( int ) $this->args [0];
+				} else {
+					$treeId = 0;
+				}
+				
+				// Principles  : 
+				// 1 resolution ( to prevent from hazardous discovery )
+				// 2 @todo  acl
+				// 3 service use apache as much as possible
+				// 4 files may be crypted ( and decrypted on client only)
+				
+				$location = $this->fileManager->uriFor($treeId, $this->request ['path']);
+				header ( 'Location; '.$location);
+				$status= 302; 	// 302 found  @todo 304 support
+				$header = 'HTTP/1.1 ' . $status . ' ' . $this->_requestStatus ( $status );
+				header ( $header );
+				
+				exit;
+			}
+			return $this->_response ( 'Hash map not found ', 404 );
+		} else {
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method GET required';
+			$infos [METHOD_KEY] = 'GET';
+			return $this->_response ( $infos, 405 );
+		}
+	}
+	
+	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/53170ab57dee3/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/text1.txt doers='' undoers=''
 	
 	/**
 	 * Upload the file to the relative path
-	 * 
+	 *
 	 * @return multitype: string
 	 */
 	protected function uploadFileTo() {
-		if ($this->method == 'POST') {
-			$relativePath = isset ( $this->request ['destination'] ) ? $this->request ['destination'] : null;
-			$syncIdentifier = isset ( $this->request ['syncIdentifier'] ) ? $this->request ['syncIdentifier'] : null;
-			if (isset($this->verb) && count($this->args)>0){
-				$treeID=(int) $this->args[0];
-			}else{
-				$treeID=0;
-			}
+		if ($this->method == 'POST' ) {
+
 			// @todo support doers / undoers
-			$doers =isset ( $this->request ['doers'] ) ? $this->request ['doers'] : null;
-			$undoers =isset ( $this->request ['undoers'] ) ? $this->request ['undoers'] : null;
-			
-			if ($relativePath && $syncIdentifier && isset ( $_FILES ['source'] )) {
-				$uploadfile = REPOSITORY_PATH . $syncIdentifier . '_' . basename ( $_FILES ['source'] ['name'] );
-				//@todo use the command interpreter and a PdSCreate command
-				if (move_uploaded_file ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
+			if ( isset($this->request ['destination']) && Isset($this->request ['syncIdentifier']) && isset ( $_FILES ['source'] )) {
+				$this->fileManager = new FileManager ();
+				$d=  dirname($this->request ['destination']).DIRECTORY_SEPARATOR.$this->request ['syncIdentifier'].basename($this->request ['destination']);
+				$uploadfile = $this->fileManager->absoluteMasterPath($treeId,$d) ;
+				if ($this->fileManager->move_uploaded_file ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
 					return $this->_response ( null, 201 );
 				} else {
 					return $this->_response ( null, 201 );
@@ -220,45 +277,62 @@ class PdSSyncAPI {
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method POST required';
-			$infos [METHOD_KEY] = 'POST';
+			$infos [METHOD_KEY] = $this->method ;
 			return $this->_response ( $infos, 405 );
 		}
 	}
 	
-	// http -v -f POST dev.local/api/v1/finalizeSynchronization/ commands[]="op"  syncIdentifier="xx" hashMap="yy"
+	// http -v -f POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/53170ab57dee3/ commands[]='op' syncIdentifier='your-syncID'  hashMap=''
+	
 	/**
-	 * Locks, Finalize the synchronization operations bunch, then save the hashMap.
-	 * 
+	 *  Finalize the synchronization transaction with a bunch, then save the hashMap.
+	 *
 	 * @return multitype: string
 	 */
-	protected function finalizeSynchronization() {
+	protected function finalizeTransactionIn() {
 		if ($this->method == 'POST') {
-			$rootFolderRelativePath=  isset ( $this->request ['path'] ) ? $this->request ['syncIdentifier'] : null;
-			$syncIdentifier = isset ( $this->request ['syncIdentifier'] ) ? $this->request ['syncIdentifier'] : null;
-			$commands = isset ( $this->request ['commands'] ) ? $this->request ['commands'] : null;
-			$hashMap = isset ( $this->request ['hashMap'] ) ? $this->request ['hashMap'] : null;
-			if ($rootFolderRelativePath&& $syncIdentifier && $commands && $hashMap) {
-				if (is_array ( $operations ) ) {
-				$ci=new CommandInterpreter(); 
-				//@todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
-					if ($ci->interpretBunchOfCommand ( $syncIdentifier, $commands, $hashMap )) {
-						return $this->_response ( '', 200 );
+			
+			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+				$treeId = $this->args [0];
+			} else {
+				$treeId = '';
+			}
+			
+			if( isset ( $this->request ['syncIdentifier'] )  && isset($this->request ['commands']) && isset($this->request ['hashMap']) ) {
+				if (is_array ( $this->request ['commands'] )){
+					if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+						$treeId = $this->args [0];
 					} else {
-						return $this->_response ( '', 500 );
+						$treeId = '';
+					}
+					// @todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
+					$errors=$this->getInterpreter()->interpretBunchOfCommand ($treeId, $this->request ['syncIdentifier'], $this->request ['commands'], $this->request ['hashMap'] );
+					if($errors==null){
+						return $this->_response ( null, 200 );
+					} else {
+						return $this->_response ( $errors , 417 );
 					}
 				} else {
 					return $this->_response ( 'operations must be an array', 400 );
 				}
 			} else {
-				return $this->_response ( 'path :'. $rootFolderRelativePath. 'commands :' . $commands . ', hashMap:' . $hashMap . ',  syncIdentifier:' . $syncIdentifier . ' are required', 400 );
+				return $this->_response (
+						 	'commands :' .   $this->request ['commands']  . 
+							', hashMap:' . $this->request ['hashMap'] . 
+							',  syncIdentifier:' . $this->request ['syncIdentifier'] . ' are required', 400
+						 );
 			}
-		} else {open .
-			$infos = array ();
+		} else {
+			open . $infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method POST required';
-			$infos [METHOD_KEY] = 'POST';
+			$infos [METHOD_KEY] =$this->method ;
 			return $this->_response ( $infos, 405 );
 		}
 	}
+	
+	
+	
+	
 	
 	// ///////////////
 	// PRIVATE
@@ -268,17 +342,25 @@ class PdSSyncAPI {
 	 * Creates the hashMaps and repository folder.
 	 */
 	private function _createFoldersIfNecessary() {
-		if (! file_exists ( REPOSITORY_PATH ))
-			mkdir ( REPOSITORY_PATH );
+		$path = $this->fileManager->repositoryAbsolutePath();
+		if (! $this->fileManager->file_exists ( $path )) {
+			$this->fileManager->mkdir ( $path );
+		}
 	}
 	
 	/**
 	 *
-	 * @param unknown_type $data        	
-	 * @param unknown_type $status        	
+	 * @param string $data        	
+	 * @param int $status        	
 	 * @return string
 	 */
 	private function _response($data, $status = 200) {
+		// we use this for JSON response only
+		// We can accounter also redirections so we prefer to set 
+		// the header contextually.
+		header ( "Access-Control-Allow-Orgin: *" );
+		header ( "Access-Control-Allow-Methods: *" );
+		header ( "Content-Type: application/json" );
 		$header = 'HTTP/1.1 ' . $status . ' ' . $this->_requestStatus ( $status );
 		header ( $header );
 		if (isset ( $data )) {
@@ -362,4 +444,25 @@ class PdSSyncAPI {
 		);
 		return ($status [$code]) ? $status [$code] : $status [500];
 	}
+	
+	
+	// Setters and getters 
+	
+	/**
+	 * A lazy loading command interpreter
+	 * with its associated file manager
+	 * @return the $interpreter
+	 */
+	protected function getInterpreter() {
+		if(!$this->interpreter){
+			$this->interpreter=new CommandInterpreter();
+			if($this->fileManager){
+				$this->fileManager=new FileManager();
+			}
+			$this->interpreter->setFileManager($this->fileManager);
+		}
+		return $this->interpreter;
+	}
+
+
 }

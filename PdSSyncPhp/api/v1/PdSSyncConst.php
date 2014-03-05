@@ -4,7 +4,8 @@
 
 define('INFORMATIONS_KEY','informations');
 define('METHOD_KEY','method');
-define ('HASHMAP_FILENAME','hashMap');
+define ('HASHMAP_FILENAME','.hashMap');
+define('METADATA_FOLDER', '.PdSync/');
 
 // WE use "UNIX like permissions"
 
@@ -16,6 +17,8 @@ define ('HASHMAP_FILENAME','hashMap');
 
 // Each leaf can historizized [ state : [ [ doer , undoer ] , ... ]
 // we use for history : state, .PdSync/<relativepath>/counter , .PdSync/<relativepath>/history/0000000001.doer,000000001.undoer
+// .PdSync/hashmap
+
 
 // Command encoding 
 
@@ -36,11 +39,17 @@ define ('W_OTHER' ,     2);
 define ('X_OTHER'  ,     1);
 
 
+define ('R_PRIVILEGE', 2);
+define ('W_PRIVILEGE', 4);
+define ('X_PRIVILEGE', 8);
+
+
+
 ///////////////////////////////
 // PdSSyncCommands
 ///////////////////////////////
 
-define ('PdSCreate'	,	0);
+define ('PdSCreateOrUpdate'	,	0);        // W source - un prefix the asset
 define ('PdSCopy'	,	1); 		// R source W destination
 define ('PdSMove'	,	2); 		// R source W destination
 define ('PdSDelete'	,	3);		// W source
