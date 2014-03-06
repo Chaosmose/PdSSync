@@ -50,14 +50,14 @@ define ('X_PRIVILEGE', 8);
 ///////////////////////////////
 
 define ('PdSCreateOrUpdate'	,	0);        // W source - un prefix the asset
-define ('PdSCopy'	,	1); 		// R source W destination
-define ('PdSMove'	,	2); 		// R source W destination
-define ('PdSDelete'	,	3);		// W source
+define ('PdSCopy'	,					1); 		// R source W destination
+define ('PdSMove'	,					2); 		// R source W destination
+define ('PdSDelete'	,					3);		// W source
 
 // PdSSyncCMDParamsRank
 
-define ('PdSDestination'	,	1);
-define ('PdSSource'			,	2);
+define ('PdSDestination'	,			1);
+define ('PdSSource'			,			2);
 
 ///////////////////////////////
 // PdSAdminCommands

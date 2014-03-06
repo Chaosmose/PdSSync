@@ -1,4 +1,5 @@
 <?php
+
 include_once 'api/v1/PdSSyncConst.php';
 require_once 'api/v1/classes/CommandInterpreter.class.php';
 require_once 'api/v1/classes/FileManager.class.php';
@@ -461,6 +462,4 @@ class PdSSyncAPI {
 		}
 		return $this->interpreter;
 	}
-
-
 }

@@ -1,4 +1,4 @@
-'<?php
+<?php
 
 include_once 'api/v1/PdSSyncConst.php';
 include_once 'api/v1/classes/FileManager.class.php';
