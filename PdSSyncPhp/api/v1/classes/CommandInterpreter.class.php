@@ -10,29 +10,29 @@ class CommandInterpreter {
 	 *
 	 * @var FileManager
 	 */
-	protected   $_fileManager = NULL;
+	protected   $fileManager = NULL;
 	
 	/**
 	 *  References the current list of files to be used for finalization.
 	 * @var array
 	 */
-	private  $_listOfFiles=array();
+	private  $listOfFiles=array();
 	
 	/**
 	 * @return the $fileManager
 	 */
 	public function getFileManager() {
-		if(!$this->_fileManager){
-			$this->_fileManager=new  FileManager();
+		if(!$this->fileManager){
+			$this->fileManager=new  FileManager();
 		}
-		return $this->_fileManager;
+		return $this->fileManager;
 	}
 
 	/**
 	 * @param FileManager $fileManager
 	 */
 	public function setFileManager($fileManager) {
-		$this->_fileManager = $fileManager;
+		$this->fileManager = $fileManager;
 	}
 
 	/**
@@ -75,10 +75,10 @@ class CommandInterpreter {
 	 */
 	private function _finalize($treeId, $syncIdentifier,$finalHashMap){
 		$failures=array();
-		foreach ($this->_listOfFiles  as $file) {
-			$protectedPath= dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file);
-			if($this->_fileManager->file_exists($protectedPath)){
-				$this->_fileManager->rename($this->_fileManager->absoluteMasterPath($treeId, $protectedPath), $this->_fileManager->absoluteMasterPath($treeId, $file));
+		foreach ($this->listOfFiles  as $file) {
+			$protectedPath= $this->fileManager->absoluteMasterPath($treeId, dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file));
+			if($this->fileManager->file_exists($protectedPath)){
+				$this->fileManager->rename($protectedPath, $this->fileManager->absoluteMasterPath($treeId, $file));
 			}else{
 				$failures[]='Unexisting path : '.$protectedPath;
 			}
@@ -86,7 +86,14 @@ class CommandInterpreter {
 		if(count($failures)>0){
 			return $failures;
 		}else{
-			return NULL;
+			$this->fileManager->mkdir($this->fileManager-> absoluteMasterPath($treeId, METADATA_FOLDER));
+			
+			if($this->fileManager->saveHashMap($treeId,$finalHashMap)){
+				return NULL;
+			}else{
+				$failures[]='Error when saving the hashmap';
+				return  $failures;
+			}
 		}
 	}	
 	
@@ -108,7 +115,7 @@ class CommandInterpreter {
 					if($this->_isAllowedTo(W_PRIVILEGE, $cmd[PdSDestination]) ){
 						// There is no real FS action to perform 
 						// We just added the file for finalization.
-						$this->_listOfFiles[]= $cmd[PdSDestination];
+						$this->listOfFiles[]= $cmd[PdSDestination];
 						return NULL;
 					}else{
 						return 'PdSCreateOrUpdate W_PRIVILEGE required for :'.  $cmd[PdSDestination];

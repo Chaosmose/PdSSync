@@ -4,7 +4,7 @@
 
 define('INFORMATIONS_KEY','informations');
 define('METHOD_KEY','method');
-define ('HASHMAP_FILENAME','.hashMap');
+define ('HASHMAP_FILENAME','hashMap');
 define('METADATA_FOLDER', '.PdSync/');
 
 // WE use "UNIX like permissions"

@@ -153,7 +153,7 @@ class PdSSyncAPI {
 	}
 	
 	// http -v -f POST PdsSync.api.local/api/v1/create/tree/ key='6ca0c48126a159392c938833d4678913'
-	//53170ab57dee3 
+	//5318984dd5e87 
 	
 	protected function create() {
 		if ($this->method == 'POST') {
@@ -162,6 +162,7 @@ class PdSSyncAPI {
 				$this->fileManager = new FileManager ();
 				$path=$this->fileManager->absoluteMasterPath($guid, ''  );
 		        $this->fileManager->mkdir($path);
+				$this->fileManager->mkdir($this->fileManager->absoluteMasterPath($guid, METADATA_FOLDER));
 				return $this->_response ( $guid, 201 );
 			} else {
 				return $this->_response ( NULL, 401 );
@@ -174,7 +175,7 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/53170ab57dee3
+	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/5318a867a4e76
 	
 	/**
 	 * Returns the hash map
@@ -186,56 +187,12 @@ class PdSSyncAPI {
 			$this->fileManager = new FileManager ();
 			if (isset ( $this->request ['path'] )) {
 				if (isset ( $this->verb ) && count ( $this->args ) > 0) {
-					$treeId = ( int ) $this->args [0];
+					$treeId = $this->args [0];
 				} else {
 					$treeId = 0;
 				}
 				$location = $this->fileManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME);
-				header ( 'Location; '.$location);
-				$status= 302; 
-				$header = 'HTTP/1.1 ' . $status . ' ' . $this->_requestStatus ( $status );
-				header ( $header );
-				exit();
-				
-			}
-			return $this->_response ( 'Hash map not found ', 404 );
-		} else {
-			$infos = array ();
-			$infos [INFORMATIONS_KEY] = 'Method GET required';
-			$infos [METHOD_KEY] = 'GET';
-			return $this->_response ( $infos, 405 );
-		}
-	}
-	
-	// http -v GET PdsSync.api.local/api/v1/file/tree/1/a/b/c.dat
-	
-	/**
-	 * Redirects to a file
-	 *
-	 * @return multitype: string
-	 */
-	protected function file() {
-		if ($this->method == 'GET') {
-			$this->fileManager = new FileManager ();
-			if (isset ( $this->request ['path'] )) {
-				if (isset ( $this->verb ) && ($this->verb == "tree") && count ( $this->args ) > 0) {
-					$treeId = ( int ) $this->args [0];
-				} else {
-					$treeId = 0;
-				}
-				
-				// Principles  : 
-				// 1 resolution ( to prevent from hazardous discovery )
-				// 2 @todo  acl
-				// 3 use apache as much as possible
-				// 4 files may be crypted ( and decrypted  client side only)
-				
-				$location = $this->fileManager->uriFor($treeId, $this->request ['path']);
-				header ( 'Location; '.$location);
-				$status= 302; 	// 302 found  @todo 304 support
-				$header = 'HTTP/1.1 ' . $status . ' ' . $this->_requestStatus ( $status );
-				header ( $header );
-				
+				header (  'Location:  '. $location,true,301);
 				exit;
 			}
 			return $this->_response ( 'Hash map not found ', 404 );
@@ -247,7 +204,42 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/53170ab57dee3/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/text1.txt doers='' undoers=''
+	// http -v GET PdsSync.api.local/api/v1/file/tree/5318a867a4e76/?path=a/file1.txt
+	
+	/**
+	 * Redirects to a file
+	 *
+	 * @return multitype: string
+	 */
+	protected function file() {
+		if ($this->method == 'GET') {
+			if (isset ( $this->request ['path']  )) {
+				if (isset ( $this->verb ) && ($this->verb == "tree") && count ( $this->args ) > 0) {
+					$treeId = $this->args [0];
+				} else {
+					$treeId = 0;
+				}
+				
+				// Principles  : 
+				// 1 resolution ( to prevent from hazardous discovery )
+				// 2 @todo  acl
+				// 3 use apache as much as possible
+				// 4 files may be crypted ( and decrypted  client side only)
+				$this->fileManager = new FileManager ();
+				$location = $this->fileManager->uriFor($treeId, $this->request ['path']);
+				header (  'Location:  '. $location,true,301);
+				exit;
+			}
+			return $this->_response ( 'Hash map not found ', 404 );
+		} else {
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method GET required';
+			$infos [METHOD_KEY] = 'GET';
+			return $this->_response ( $infos, 405 );
+		}
+	}
+	
+	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/5318a867a4e76/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
 	
 	/**
 	 * Upload the file to the relative path
@@ -282,9 +274,11 @@ class PdSSyncAPI {
 		}
 	}
 	
-	/* 
-	 	http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/53170ab57dee3/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap=''
+	
+	/*
+		http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/5318a867a4e76/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap='[]'
 	 */
+	
 	/**
 	 *  Finalize the synchronization transaction with a bunch, then save the hashMap.
 	 *
@@ -308,7 +302,7 @@ class PdSSyncAPI {
 					// @todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
 					$errors=$this->getInterpreter()->interpretBunchOfCommand ($treeId, $post ['syncIdentifier'], $post['commands'], $post ['hashMap'] );
 					if($errors==NULL){
-						return $this->_response ( 'OK', 200 );
+						return $this->_response ( NULL, 200 );
 					} else {
 						return $this->_response ( $errors , 417 );
 					}
@@ -329,9 +323,6 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	
-	
-
 	
 	// ///////////////
 	// PRIVATE
