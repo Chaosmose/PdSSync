@@ -28,9 +28,9 @@ typedef NS_ENUM (NSUInteger,
 } ;
 
 typedef NS_ENUM(NSUInteger,
-                PdSSyncCMDParam) {
-    PdSDestination = 0,
-    PdSSource      = 1
+                PdSSyncCMDParamRank) {
+    PdSDestination = 1,
+    PdSSource      = 2
 } ;
 
 
@@ -42,10 +42,10 @@ typedef NS_ENUM (NSUInteger,
 } ;
 
 typedef NS_ENUM(NSUInteger,
-                PdSAdminCMDParam) {
-    PdSPoi         = 0,
-    PdSDepth       = 1,
-    PdSValue       = 2
+                PdSAdminCMDParamRank) {
+    PdSPoi         = 1,
+    PdSDepth       = 2,
+    PdSValue       = 3
 } ;
 
 

@@ -1,9 +1,10 @@
 <?php
 
 include_once 'api/v1/PdSSyncConst.php';
+
 /**
- *  A file manager proxy 
- *  for future extensions.
+ *  A file manager proxy  
+ *  for future extensions like supporting google app engine 
  * @author bpds
  *
  */
@@ -39,6 +40,10 @@ class FileManager {
 			mkdir($dir);
 		}
 		return move_uploaded_file($filename, $destination);
+	}
+	
+	public function  rename($oldname, $newname){
+		return rename($oldname, $newname);
 	}
 	
 	

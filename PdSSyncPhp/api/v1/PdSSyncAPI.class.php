@@ -1,5 +1,4 @@
 <?php
-
 include_once 'api/v1/PdSSyncConst.php';
 require_once 'api/v1/classes/CommandInterpreter.class.php';
 require_once 'api/v1/classes/FileManager.class.php';
@@ -7,11 +6,7 @@ require_once 'api/v1/classes/FileManager.class.php';
 /**
  * A simple API facade in one file with no database.
  * Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
- * 
  * Optimized according to google bests practices :  https://developers.google.com/speed/articles/optimizing-php
- *
- *	http://json-schema.org
- *
  * @author Benoit Pereira da Silva
  * @copyright https://github.com/benoit-pereira-da-silva/PdSSync
  */
@@ -47,21 +42,21 @@ class PdSSyncAPI {
 	 * Property: file
 	 * Stores the input of the PUT request
 	 */
-	protected $file = Null;
+	protected $file = NULL;
 	
 	/**
 	 * The command interpreter
 	 * 
 	 * @var CommandInterpreter
 	 */
-	protected $interpreter = Null;
+	protected $interpreter = NULL;
 	
 	/**
-	 * The filemanager
+	 * The filemanager is an abstraction
 	 * 
 	 * @var FileManager
 	 */
-	protected $fileManager = Null;
+	protected $fileManager = NULL;
 	
 	/**
 	 * Constructor: __construct
@@ -114,7 +109,7 @@ class PdSSyncAPI {
 				break;
 		}
 		if (( int ) method_exists ( $this, $this->endpoint ) > 0) {
-			return $this->{$this->endpoint} ( $this->args );
+			return  $this->{$this->endpoint} ( $this->args );
 		}
 		return $this->_response ( '', 400 );
 	}
@@ -128,7 +123,7 @@ class PdSSyncAPI {
 	
 	protected function reachable() {
 		if ($this->method == 'GET') {
-			return $this->_response ( null, 200 );
+			return $this->_response ( NULL, 200 );
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method GET required';
@@ -144,9 +139,9 @@ class PdSSyncAPI {
 			$this->fileManager = new FileManager ();
 			if (isset ( $this->request ['key'] ) && $this->request ['key'] == SECRET_KEY) {
 				$this->_createFoldersIfNecessary ();
-				return $this->_response ( null, 201 );
+				return $this->_response ( NULL, 201 );
 			} else {
-				return $this->_response ( null, 401 );
+				return $this->_response ( NULL, 401 );
 			}
 		} else {
 			$infos = array ();
@@ -168,7 +163,7 @@ class PdSSyncAPI {
 		        $this->fileManager->mkdir($path);
 				return $this->_response ( $guid, 201 );
 			} else {
-				return $this->_response ( null, 401 );
+				return $this->_response ( NULL, 401 );
 			}
 		} else {
 			$infos = array ();
@@ -231,8 +226,8 @@ class PdSSyncAPI {
 				// Principles  : 
 				// 1 resolution ( to prevent from hazardous discovery )
 				// 2 @todo  acl
-				// 3 service use apache as much as possible
-				// 4 files may be crypted ( and decrypted on client only)
+				// 3 use apache as much as possible
+				// 4 files may be crypted ( and decrypted  client side only)
 				
 				$location = $this->fileManager->uriFor($treeId, $this->request ['path']);
 				header ( 'Location; '.$location);
@@ -260,16 +255,20 @@ class PdSSyncAPI {
 	 */
 	protected function uploadFileTo() {
 		if ($this->method == 'POST' ) {
-
+			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+				$treeId = $this->args [0];
+			} else {
+				$treeId = '';
+			}
 			// @todo support doers / undoers
 			if ( isset($this->request ['destination']) && Isset($this->request ['syncIdentifier']) && isset ( $_FILES ['source'] )) {
 				$this->fileManager = new FileManager ();
 				$d=  dirname($this->request ['destination']).DIRECTORY_SEPARATOR.$this->request ['syncIdentifier'].basename($this->request ['destination']);
 				$uploadfile = $this->fileManager->absoluteMasterPath($treeId,$d) ;
 				if ($this->fileManager->move_uploaded_file ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
-					return $this->_response ( null, 201 );
+					return $this->_response ( NULL, 201 );
 				} else {
-					return $this->_response ( null, 201 );
+					return $this->_response ( NULL, 201 );
 				}
 			} else {
 				return $this->_response ( 'destination, source and syncIdentifier are required', 400 );
@@ -282,8 +281,9 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/53170ab57dee3/ commands[]='op' syncIdentifier='your-syncID'  hashMap=''
-	
+	/* 
+	 	http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/53170ab57dee3/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap=''
+	 */
 	/**
 	 *  Finalize the synchronization transaction with a bunch, then save the hashMap.
 	 *
@@ -291,35 +291,34 @@ class PdSSyncAPI {
 	 */
 	protected function finalizeTransactionIn() {
 		if ($this->method == 'POST') {
-			
-			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
-				$treeId = $this->args [0];
-			} else {
-				$treeId = '';
+			try {
+				// http://www.php.net/manual/en/wrappers.php.php
+				$post= json_decode( file_get_contents('php://input'),true ) ;// A raw post  not a Multi part form.
+			} catch (Exception $e) {
+				return $this->_response ( 'commands must be a valid json array : '.$post ['commands'], 400 );
 			}
-			
-			if( isset ( $this->request ['syncIdentifier'] )  && isset($this->request ['commands']) && isset($this->request ['hashMap']) ) {
-				if (is_array ( $this->request ['commands'] )){
+			if( isset ($post) && isset ( $post ['syncIdentifier'] )  && isset($post ['commands']) && isset($post ['hashMap']) ) {
+				if (is_array ($post['commands'])){
 					if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 						$treeId = $this->args [0];
-					} else {
+					} else { 
 						$treeId = '';
 					}
 					// @todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
-					$errors=$this->getInterpreter()->interpretBunchOfCommand ($treeId, $this->request ['syncIdentifier'], $this->request ['commands'], $this->request ['hashMap'] );
-					if($errors==null){
-						return $this->_response ( null, 200 );
+					$errors=$this->getInterpreter()->interpretBunchOfCommand ($treeId, $post ['syncIdentifier'], $post['commands'], $post ['hashMap'] );
+					if($errors==NULL){
+						return $this->_response ( 'OK', 200 );
 					} else {
 						return $this->_response ( $errors , 417 );
 					}
 				} else {
-					return $this->_response ( 'operations must be an array', 400 );
+					return $this->_response ( 'commands must be an array = '.$post, 400 );
 				}
 			} else {
 				return $this->_response (
-						 	'commands :' .   $this->request ['commands']  . 
-							', hashMap:' . $this->request ['hashMap'] . 
-							',  syncIdentifier:' . $this->request ['syncIdentifier'] . ' are required', 400
+						 	'commands :' .   $post ['commands']  . 
+							', hashMap:' . $post ['hashMap'] . 
+							',  syncIdentifier:' .$post['syncIdentifier'] . ' are required', 400
 						 );
 			}
 		} else {
@@ -331,8 +330,7 @@ class PdSSyncAPI {
 	}
 	
 	
-	
-	
+
 	
 	// ///////////////
 	// PRIVATE
@@ -366,7 +364,7 @@ class PdSSyncAPI {
 		if (isset ( $data )) {
 			return json_encode ( $data );
 		} else {
-			return null;
+			return NULL;
 		}
 	}
 	
@@ -456,7 +454,7 @@ class PdSSyncAPI {
 	protected function getInterpreter() {
 		if(!$this->interpreter){
 			$this->interpreter=new CommandInterpreter();
-			if($this->fileManager){
+			if(!$this->fileManager){
 				$this->fileManager=new FileManager();
 			}
 			$this->interpreter->setFileManager($this->fileManager);

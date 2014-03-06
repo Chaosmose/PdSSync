@@ -1,4 +1,4 @@
-<?php
+'<?php
 
 include_once 'api/v1/PdSSyncConst.php';
 include_once 'api/v1/classes/FileManager.class.php';
@@ -10,7 +10,7 @@ class CommandInterpreter {
 	 *
 	 * @var FileManager
 	 */
-	protected   $_fileManager = Null;
+	protected   $_fileManager = NULL;
 	
 	/**
 	 *  References the current list of files to be used for finalization.
@@ -48,7 +48,7 @@ class CommandInterpreter {
 		foreach ($bunchOfCommand as $command) {
 			if(is_array($command)){
 				$result=$this->_decodeAndRunCommand($syncIdentifier,$command);
-				if($result!=null){
+				if($result!=NULL){
 					$failures[]=$result;
 				}
 			}else{
@@ -57,12 +57,12 @@ class CommandInterpreter {
 			if(isset($result)){
 				$failures[]=$result;
 			}
-			$result=null;
+			$result=NULL;
 		}
 		if(count($failures)>0){
-			return json_encode($failures);
+			return $failures;
 		}else{
-			return $this->_finalize($syncIdentifier, $finalHashMap);
+			return $this->_finalize($treeId, $syncIdentifier, $finalHashMap);
 		}
 	}
 	
@@ -73,13 +73,23 @@ class CommandInterpreter {
 	 * @param string $syncIdentifier
 	 * @param string $finalHashMap
 	 */
-	private function _finalize( $syncIdentifier,$finalHashMap){
-		// @TODO remove the prefixes of any files.
+	private function _finalize($treeId, $syncIdentifier,$finalHashMap){
+		$failures=array();
 		foreach ($this->_listOfFiles  as $file) {
-		$file=$syncIdentifier.file;
+			$protectedPath= dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file);
+			if($this->_fileManager->file_exists($protectedPath)){
+				$this->_fileManager->rename($this->_fileManager->absoluteMasterPath($treeId, $protectedPath), $this->_fileManager->absoluteMasterPath($treeId, $file));
+			}else{
+				$failures[]='Unexisting path : '.$protectedPath;
+			}
 		}
-		
+		if(count($failures)>0){
+			return $failures;
+		}else{
+			return NULL;
+		}
 	}	
+	
 	
 	/**
 	 *  Decodes and runs the command 
@@ -92,23 +102,23 @@ class CommandInterpreter {
 			$command = $cmd [0];
 			switch ($command) {
 				case PdSCreateOrUpdate :
-					if(isset($cmd[PdSDestination])&& $cmd[PdSDestination]!=null){
-							return 'PdSDestination must be non null'.  $cmd;
+					if(!isset($cmd[PdSDestination])){
+							return 'PdSDestination must be non null :'.  $cmd;
 					}
 					if($this->_isAllowedTo(W_PRIVILEGE, $cmd[PdSDestination]) ){
 						// There is no real FS action to perform 
 						// We just added the file for finalization.
-						$_listOfFiles[]= $cmd[PdSDestination];
-						return null;
+						$this->_listOfFiles[]= $cmd[PdSDestination];
+						return NULL;
 					}else{
-						return 'PdSCreateOrUpdate W_PRIVILEGE required on '.  $cmd[PdSDestination];
+						return 'PdSCreateOrUpdate W_PRIVILEGE required for :'.  $cmd[PdSDestination];
 					}
 					break;
 				case PdSCopy :
 					if($this->_isAllowedTo(R_PRIVILEGE, $cmd[PdSSource]) &&
 						$this->_isAllowedTo(R_PRIVILEGE, $cmd[PdSDestination]) ){
 							// we copy directly  
-						return null;
+						return NULL;
 					}else{
 						return 'PdSCopy R_PRIVILEGE required on '. $cmd[PdSSource] . 'AND R_PRIVILEGE required on  '.$cmd[PdSDestination];
 					}

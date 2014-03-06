@@ -54,10 +54,10 @@ define ('PdSCopy'	,	1); 		// R source W destination
 define ('PdSMove'	,	2); 		// R source W destination
 define ('PdSDelete'	,	3);		// W source
 
-// PdSSyncCMDParams
+// PdSSyncCMDParamsRank
 
-define ('PdSDestination'	,	0);
-define ('PdSSource'			,	1);
+define ('PdSDestination'	,	1);
+define ('PdSSource'			,	2);
 
 ///////////////////////////////
 // PdSAdminCommands
@@ -67,8 +67,8 @@ define ('PdsSanitize'	,	4); 		// X  on tree
 define ('PdSChmod'		,	5); 		// X  on tree
 define ('PdSForget'	 	,	6);		// X  on tree
 
-// PdSAdminCMDParam
+// PdSAdminCMDParamRank
 
-define ('PdSPoi'			,	0);
-define ('PdSDepth'		,	1);
-define ('PdSValue'		, 	2);
+define ('PdSPoi'			,	1);
+define ('PdSDepth'		,	2);
+define ('PdSValue'		, 	3);
