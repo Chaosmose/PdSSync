@@ -133,12 +133,12 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST PdsSync.api.local/api/v1/install/ key='6ca0c48126a159392c938833d4678913'
+	// http -v -f POST PdsSync.api.local/api/v1/install/ key='6ca0c48126a15939-2c938833d4678913'
 	
 	protected function install() {
 		if ($this->method == 'POST') {
 			$this->fileManager = new FileManager ();
-			if (isset ( $this->request ['key'] ) && $this->request ['key'] == SECRET_KEY) {
+			if (isset ( $this->request ['key'] ) && $this->request ['key'] == CREATIVE_KEY) {
 				$this->_createFoldersIfNecessary ();
 				return $this->_response ( NULL, 201 );
 			} else {
@@ -152,12 +152,12 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST PdsSync.api.local/api/v1/create/tree/ key='6ca0c48126a159392c938833d4678913'
+	// http -v -f POST PdsSync.api.local/api/v1/create/tree/ key='6ca0c48126a15939-2c938833d4678913'
 	//5318984dd5e87 
 	
 	protected function create() {
 		if ($this->method == 'POST') {
-			if (isset ( $this->request ['key'] ) && $this->request ['key'] == SECRET_KEY) {
+			if (isset ( $this->request ['key'] ) && $this->request ['key'] == CREATIVE_KEY) {
 				$guid=uniqid();
 				$this->fileManager = new FileManager ();
 				$path=$this->fileManager->absoluteMasterPath($guid, ''  );
@@ -191,9 +191,16 @@ class PdSSyncAPI {
 				} else {
 					$treeId = 0;
 				}
+				
+				// IMPORTANT
+				// Return a 401 if not authorized.
+				// A 301 on redirection.
+				// When the ACL changes on a tree its Id changes ??
+				
 				$location = $this->fileManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME);
 				header (  'Location:  '. $location,true,301);
 				exit;
+				
 			}
 			return $this->_response ( 'Hash map not found ', 404 );
 		} else {
@@ -220,6 +227,11 @@ class PdSSyncAPI {
 					$treeId = 0;
 				}
 				
+				// IMPORTANT 
+				// Return a 401 if not authorized.
+				// A 301 on redirection.
+				// When the ACL changes on a tree its Id changes ??
+				
 				// Principles  : 
 				// 1 resolution ( to prevent from hazardous discovery )
 				// 2 @todo  acl
@@ -228,6 +240,7 @@ class PdSSyncAPI {
 				$this->fileManager = new FileManager ();
 				$location = $this->fileManager->uriFor($treeId, $this->request ['path']);
 				header (  'Location:  '. $location,true,301);
+				
 				exit;
 			}
 			return $this->_response ( 'Hash map not found ', 404 );

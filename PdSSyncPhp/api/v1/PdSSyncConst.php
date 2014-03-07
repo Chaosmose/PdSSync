@@ -43,6 +43,7 @@ define ('R_PRIVILEGE', 2);
 define ('W_PRIVILEGE', 4);
 define ('X_PRIVILEGE', 8);
 
+define ('ANONYMOUS' , 0 );
 
 
 ///////////////////////////////
