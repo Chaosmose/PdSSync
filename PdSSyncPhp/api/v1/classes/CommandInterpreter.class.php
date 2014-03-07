@@ -1,16 +1,16 @@
 <?php
 
 include_once 'api/v1/PdSSyncConst.php';
-include_once 'api/v1/classes/FileManager.class.php';
+include_once 'api/v1/classes/IOManager.class.php';
 
 class CommandInterpreter {
 	
 	/**
-	 * The filemanager
+	 * The $ioManager
 	 *
-	 * @var FileManager
+	 * @var IOManager
 	 */
-	protected   $fileManager = NULL;
+	protected   $ioManager = NULL;
 	
 	/**
 	 *  References the current list of files to be used for finalization.
@@ -22,17 +22,17 @@ class CommandInterpreter {
 	 * @return the $fileManager
 	 */
 	public function getFileManager() {
-		if(!$this->fileManager){
-			$this->fileManager=new  FileManager();
+		if(!$this->ioManager){
+			$this->ioManager=new  IOManager();
 		}
-		return $this->fileManager;
+		return $this->ioManager;
 	}
 
 	/**
-	 * @param FileManager $fileManager
+	 * @param IOManager $ioManager
 	 */
-	public function setFileManager($fileManager) {
-		$this->fileManager = $fileManager;
+	public function setIOManager($ioManager) {
+		$this->ioManager = $ioManager;
 	}
 
 	/**
@@ -76,9 +76,9 @@ class CommandInterpreter {
 	private function _finalize($treeId, $syncIdentifier,$finalHashMap){
 		$failures=array();
 		foreach ($this->listOfFiles  as $file) {
-			$protectedPath= $this->fileManager->absoluteMasterPath($treeId, dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file));
-			if($this->fileManager->file_exists($protectedPath)){
-				$this->fileManager->rename($protectedPath, $this->fileManager->absoluteMasterPath($treeId, $file));
+			$protectedPath= $this->ioManager->absolutePath($treeId, dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file));
+			if($this->ioManager->exists($protectedPath)){
+				$this->ioManager->rename($protectedPath, $this->ioManager->absolutePath($treeId, $file));
 			}else{
 				$failures[]='Unexisting path : '.$protectedPath;
 			}
@@ -86,9 +86,9 @@ class CommandInterpreter {
 		if(count($failures)>0){
 			return $failures;
 		}else{
-			$this->fileManager->mkdir($this->fileManager-> absoluteMasterPath($treeId, METADATA_FOLDER));
+			$this->ioManager->mkdir($this->ioManager-> absolutePath($treeId, METADATA_FOLDER));
 			
-			if($this->fileManager->saveHashMap($treeId,$finalHashMap)){
+			if($this->ioManager->saveHashMap($treeId,$finalHashMap)){
 				return NULL;
 			}else{
 				$failures[]='Error when saving the hashmap';

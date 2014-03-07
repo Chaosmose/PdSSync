@@ -5,7 +5,10 @@
 define('INFORMATIONS_KEY','informations');
 define('METHOD_KEY','method');
 define ('HASHMAP_FILENAME','hashMap');
-define('METADATA_FOLDER', '.PdSync/');
+define ('UID_FILENAME','uid');
+define('SYSTEM_DATA_PREFIX', '.');
+define('METADATA_FOLDER','.PdSSync/');
+
 
 // WE use "UNIX like permissions"
 
@@ -20,7 +23,6 @@ define('METADATA_FOLDER', '.PdSync/');
 // .PdSync/hashmap
 
 
-// Command encoding 
 
 ///////////////////////////////
 // PdSSyncPrivilege
@@ -44,6 +46,9 @@ define ('W_PRIVILEGE', 4);
 define ('X_PRIVILEGE', 8);
 
 define ('ANONYMOUS' , 0 );
+
+
+// Command encoding
 
 
 ///////////////////////////////

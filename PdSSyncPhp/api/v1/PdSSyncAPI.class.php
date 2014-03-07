@@ -2,12 +2,14 @@
 
 include_once 'api/v1/PdSSyncConst.php';
 require_once 'api/v1/classes/CommandInterpreter.class.php';
-require_once 'api/v1/classes/FileManager.class.php';
+require_once 'api/v1/classes/IOManager.class.php';
 
 /**
- * A simple API facade in one file with no database.
+ * A simple API facade in one file
  * Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
+ * 
  * Optimized according to google bests practices :  https://developers.google.com/speed/articles/optimizing-php
+ * 
  * @author Benoit Pereira da Silva
  * @copyright https://github.com/benoit-pereira-da-silva/PdSSync
  */
@@ -53,11 +55,10 @@ class PdSSyncAPI {
 	protected $interpreter = NULL;
 	
 	/**
-	 * The filemanager is an abstraction
-	 * 
-	 * @var FileManager
+	 * The IOManager is currently a FS abstraction
+	 * @var IOManager
 	 */
-	protected $fileManager = NULL;
+	protected $ioManager = NULL;
 	
 	/**
 	 * Constructor: __construct
@@ -137,9 +138,9 @@ class PdSSyncAPI {
 	
 	protected function install() {
 		if ($this->method == 'POST') {
-			$this->fileManager = new FileManager ();
+			$this->ioManager = new IOManager ();
 			if (isset ( $this->request ['key'] ) && $this->request ['key'] == CREATIVE_KEY) {
-				$this->_createFoldersIfNecessary ();
+				$this->ioManager->install();
 				return $this->_response ( NULL, 201 );
 			} else {
 				return $this->_response ( NULL, 401 );
@@ -152,20 +153,29 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST PdsSync.api.local/api/v1/create/tree/ key='6ca0c48126a15939-2c938833d4678913'
-	//5318984dd5e87 
+	// http -v -f POST PdsSync.api.local/api/v1/create/tree/unique-public-id-1293 key='6ca0c48126a15939-2c938833d4678913'
 	
 	protected function create() {
 		if ($this->method == 'POST') {
-			if (isset ( $this->request ['key'] ) && $this->request ['key'] == CREATIVE_KEY) {
-				$guid=uniqid();
-				$this->fileManager = new FileManager ();
-				$path=$this->fileManager->absoluteMasterPath($guid, ''  );
-		        $this->fileManager->mkdir($path);
-				$this->fileManager->mkdir($this->fileManager->absoluteMasterPath($guid, METADATA_FOLDER));
-				return $this->_response ( $guid, 201 );
+			
+			if (isset ( $this->verb ) && count ( $this->args ) > 1 && $this->args [0] == "tree") {
+				$treeId = $this->args [1];
+				if(strlen($treeId)<20){
+					return $this->_response ( NULL, 406 );
+				}
+				if (isset ( $this->request ['key'] ) && $this->request ['key'] == CREATIVE_KEY) {
+					$this->ioManager = new IOManager ();
+					$result=$this->ioManager->createTree($treeId);
+					if($result==NULL){
+						return $this->_response ( NULL, 201 );
+					}else {
+						return  $this->_response ( $result, 400 );
+					}
+				} else {
+					return $this->_response ( NULL, 401 );
+				}
 			} else {
-				return $this->_response ( NULL, 401 );
+				return $this->_response ( 'Unknown entity' . $this->args [0], 400 );
 			}
 		} else {
 			$infos = array ();
@@ -175,7 +185,7 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/5318a867a4e76
+	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293
 	
 	/**
 	 * Returns the hash map
@@ -184,7 +194,7 @@ class PdSSyncAPI {
 	 */
 	protected function hashMap() {
 		if ($this->method == 'GET') {
-			$this->fileManager = new FileManager ();
+			$this->ioManager = new IOManager ();
 			if (isset ( $this->request ['path'] )) {
 				if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 					$treeId = $this->args [0];
@@ -197,8 +207,8 @@ class PdSSyncAPI {
 				// A 301 on redirection.
 				// When the ACL changes on a tree its Id changes ??
 				
-				$location = $this->fileManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME);
-				header (  'Location:  '. $location,true,301);
+				$location = $this->ioManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME);
+				header (  'Location:  '. $location,true,307);
 				exit;
 				
 			}
@@ -211,7 +221,7 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET PdsSync.api.local/api/v1/file/tree/5318a867a4e76/?path=a/file1.txt
+	// http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt
 	
 	/**
 	 * Redirects to a file
@@ -229,18 +239,17 @@ class PdSSyncAPI {
 				
 				// IMPORTANT 
 				// Return a 401 if not authorized.
-				// A 301 on redirection.
-				// When the ACL changes on a tree its Id changes ??
+				// A 307 on redirection.
 				
 				// Principles  : 
 				// 1 resolution ( to prevent from hazardous discovery )
 				// 2 @todo  acl
 				// 3 use apache as much as possible
 				// 4 files may be crypted ( and decrypted  client side only)
-				$this->fileManager = new FileManager ();
-				$location = $this->fileManager->uriFor($treeId, $this->request ['path']);
-				header (  'Location:  '. $location,true,301);
 				
+				$this->ioManager = new IOManager ();
+				$location = $this->ioManager->uriFor($treeId, $this->request ['path']);
+				header (  'Location:  '. $location,true,307);
 				exit;
 			}
 			return $this->_response ( 'Hash map not found ', 404 );
@@ -268,10 +277,10 @@ class PdSSyncAPI {
 			}
 			// @todo support doers / undoers
 			if ( isset($this->request ['destination']) && Isset($this->request ['syncIdentifier']) && isset ( $_FILES ['source'] )) {
-				$this->fileManager = new FileManager ();
+				$this->ioManager = new IOManager ();
 				$d=  dirname($this->request ['destination']).DIRECTORY_SEPARATOR.$this->request ['syncIdentifier'].basename($this->request ['destination']);
-				$uploadfile = $this->fileManager->absoluteMasterPath($treeId,$d) ;
-				if ($this->fileManager->move_uploaded_file ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
+				$uploadfile = $this->ioManager->absolutePath($treeId,$d) ;
+				if ($this->ioManager->move_uploaded ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
 					return $this->_response ( NULL, 201 );
 				} else {
 					return $this->_response ( NULL, 201 );
@@ -337,20 +346,7 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// ///////////////
-	// PRIVATE
-	// //////////////
-	
-	/**
-	 * Creates the hashMaps and repository folder.
-	 */
-	private function _createFoldersIfNecessary() {
-		$path = $this->fileManager->repositoryAbsolutePath();
-		if (! $this->fileManager->file_exists ( $path )) {
-			$this->fileManager->mkdir ( $path );
-		}
-	}
-	
+
 	/**
 	 *
 	 * @param string $data        	
@@ -459,10 +455,10 @@ class PdSSyncAPI {
 	protected function getInterpreter() {
 		if(!$this->interpreter){
 			$this->interpreter=new CommandInterpreter();
-			if(!$this->fileManager){
-				$this->fileManager=new FileManager();
+			if(!$this->ioManager){
+				$this->ioManager=new IOManager();
 			}
-			$this->interpreter->setFileManager($this->fileManager);
+			$this->interpreter->setIOManager($this->ioManager);
 		}
 		return $this->interpreter;
 	}
