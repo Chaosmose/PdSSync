@@ -1,6 +1,6 @@
 <?php
 
-include_once 'api/v1/PdSSyncConst.php';
+include_once 'v1/PdSSyncConst.php';
 
 /**
  * An IOmanager proxy
@@ -12,25 +12,39 @@ include_once 'api/v1/PdSSyncConst.php';
  */
 class IOManager {
 	
-
+	/**
+	 *  The current tree data 
+	 * @var array
+	 */
+	private   $treeData=NULL;
+	
+	
 	/**
 	 * Returns the absolute path of a given resource
 	 * @param string $treeId
 	 * @param string $relativePath
-	 * @return string
+	 * @return string|NULL
 	 */
 	public function absolutePath($treeId, $relativePath) {
-		return $this->repositoryAbsolutePath () . $this->_currentPublicId($treeId). DIRECTORY_SEPARATOR . $relativePath;
+		$currentId=$this->_currentPublicId($treeId);
+		if($currentId!=NULL){
+			return $this->repositoryAbsolutePath () . $this->_currentPublicId($currentId). DIRECTORY_SEPARATOR . $relativePath;
+		}return NULL;
 	}
 	
 	/**
 	 *  Returns the current public uri for a given resource
 	 * @param string $treeId
 	 * @param string $relativePath
-	 * @return string
+	 * @return string|NULL
 	 */
 	public function uriFor($treeId, $relativePath) {
-		return REPOSITORY_HOST . $this->_currentPublicId($treeId) . DIRECTORY_SEPARATOR . $relativePath;
+		$currentId=$this->_currentPublicId($treeId);
+		if($currentId!=NULL && $this->exists($this->absolutePath($treeId, $relativePath))){
+			return REPOSITORY_HOST.$currentId .DIRECTORY_SEPARATOR . $relativePath;
+		}else{
+			return NULL;
+		}
 	}
 		
 	/**
@@ -39,19 +53,67 @@ class IOManager {
 	 *  For example in case of ACL invalidation for a group member
 	 *   It is the public exposed tree root folder
 	 * @param string $treeId
-	 * @return string|NULL
+	 * @return array|NULL
 	 */
 	public function createTree( $treeId){
-		$currentPublicId = uniqid ();
-		$systemDataFolder = $this->_systemdataFolderPathFor($treeId);
+		$currentPublicId = $this->_createAPublicId();
+		$systemDataFolder = $this->_treeInfosFolderPathFor($treeId);
+		$messages=array();
+		// Create the system data folder
 		if($this->exists($systemDataFolder)){
-			return $treeId.' is already existing';
+			$messages[]= $systemDataFolder.' is already existing';
 		}
-		if(!$this->mkdir ($systemDataFolder)){
-			return $treeId.' mkdir error';
+		 if (!$this->mkdir ($systemDataFolder)){
+			$messages[]= $systemDataFolder.' mkdir error';
 		}
-		if($this->put_contents($metadataFolderPath.UID_FILENAME, $currentPublicId)==false){
-			return  $treeId.'UID_FILENAME file_put_contents error';
+		
+		// Put the current public id, owner, and an array of groups
+		$this->treeData=array( $currentPublicId, ANONYMOUS,  array(ANONYMOUS), 777);
+		
+		if($this->put_contents($systemDataFolder.TREE_INFOS_FILENAME, json_encode($this->treeData))==false){
+			$messages[]=$treeId.'createTree tree infos file_put_contents error '.$systemDataFolder.TREE_INFOS_FILENAME;
+		}
+		// Create the public id folder
+		$currentPublicIdFolder=$this->repositoryAbsolutePath ().$currentPublicId. DIRECTORY_SEPARATOR ;
+		if(!$this->mkdir($currentPublicIdFolder)){
+			$messages[]= $currentPublicIdFolder.' createTree mkdir error';
+		}
+		// Create the meatdata folder in the public id folder
+		if(!$this->mkdir($currentPublicIdFolder.METADATA_FOLDER)){
+			$messages[]= $currentPublicIdFolder.METADATA_FOLDER.' createTree mkdir error';
+		}
+		if(count($messages)>0){
+			return $messages;
+		}
+		return NULL;
+	}
+	
+	private  function _createAPublicId(){
+		return md5(uniqid());
+	}
+	
+	
+	/**
+	 * Changes the public identifier.
+	 * 
+	 * @param unknown_type $treeId
+	 */
+	public function touchTree($treeId){
+		$messages=array();
+		$currentPublicId=$this->_currentPublicId($treeId);// populates $this->treeData
+		$currentPublicIdFolder=$this->repositoryAbsolutePath ().$currentPublicId. DIRECTORY_SEPARATOR ;
+		$newPublicId = $this->_createAPublicId();
+		$newPublicIdFolder=$this->repositoryAbsolutePath ().$newPublicId. DIRECTORY_SEPARATOR ;
+		$this->treeData[0]=$newPublicId;
+		if($this->put_contents($this->_treeInfosFolderPathFor($treeId).TREE_INFOS_FILENAME, json_encode($this->treeData))==false){
+			$messages[]=$treeId.'touchTree tree infos file_put_contents error '.$this->_treeInfosFolderPathFor($treeId).TREE_INFOS_FILENAME;
+		}else{
+			if($this->rename($currentPublicIdFolder, $newPublicIdFolder)==false){
+				$messages[]=$treeId.' moving folder error ';
+			}
+		}
+		if(count($messages)>0){
+			return $messages;
 		}
 		return NULL;
 	}
@@ -82,27 +144,11 @@ class IOManager {
 		return MASTER_REPOSITORY_WRITING_PATH;
 	}
 	
-	/**
-	 * The system data folder for a given tree
-	 * @param string $treeId
-	 * @return string
-	 */
-	private  function _systemdataFolderPathFor($treeId){
-		// The metadata folder uses the unique  tree id
-		 return SYSTEM_DATA_PREFIX.$treeId;
-	}
+
 	
+
 	/**
-	 *  Returns the current public id of a given tree
-	 * @param string $treeId
-	 * @return string
-	 */
-	private function _currentPublicId($treeId){
-	 	return $this->get_contents($this->_systemdataFolderPathFor($treeId).UID_FILENAME);	
-	}
-	
-	/**
-	 *  Creates the repository 
+	 *  Creates the repository
 	 *  And could perform any installation related task
 	 */
 	public function install() {
@@ -112,10 +158,40 @@ class IOManager {
 		}
 	}
 	
-	// Proxy for Standard FS Functions
-	// For future extensions cache etc... 
+	
+	/**
+	 * The infos folder for a given tree
+	 * @param string $treeId
+	 * @return string
+	 */
+	private  function _treeInfosFolderPathFor($treeId){
+		// The metadata folder uses the unique  tree id
+		return $this->repositoryAbsolutePath() .SYSTEM_DATA_PREFIX.md5(SECRET.$treeId).DIRECTORY_SEPARATOR;
+	}
+	
+	/**
+	 *  Returns the current public id of a given tree
+	 * @param string $treeId
+	 * @return string
+	 */
+	private function _currentPublicId($treeId){
+		if($this->treeData==NULL){
+			$p=$this->_treeInfosFolderPathFor($treeId).TREE_INFOS_FILENAME;
+			if($this->exists($p)){
+				$this->treeData= json_decode( $this->get_contents($p));
+				return $this->treeData[0];
+			}
+			return '';
+		}else{
+				return $this->treeData[0];
+		}
+
+	}
 
 	
+	// Proxy for Standard FS Functions
+	// For future extensions cache ... 
+
 	public function exists($filename) {
 		return file_exists ( $filename );
 	}
@@ -131,8 +207,9 @@ class IOManager {
 	
 	public function mkdir($dir) {
 		if (! file_exists ( $dir )) {
-			mkdir ( $dir, 0777, true );
+			return mkdir ( $dir, 0777, true );
 		}
+		return true;
 	}
 	
 	public function move_uploaded($filename, $destination) {

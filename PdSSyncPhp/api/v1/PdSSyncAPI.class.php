@@ -1,8 +1,8 @@
 <?php
 
-include_once 'api/v1/PdSSyncConst.php';
-require_once 'api/v1/classes/CommandInterpreter.class.php';
-require_once 'api/v1/classes/IOManager.class.php';
+include_once 'v1/PdSSyncConst.php';
+require_once 'v1/classes/CommandInterpreter.class.php';
+require_once 'v1/classes/IOManager.class.php';
 
 /**
  * A simple API facade in one file
@@ -40,12 +40,7 @@ class PdSSyncAPI {
 	 * eg: /<endpoint>/<verb>/<arg0>/<arg1>
 	 * or /<endpoint>/<arg0>
 	 */
-	protected $args = Array ();
-	/**
-	 * Property: file
-	 * Stores the input of the PUT request
-	 */
-	protected $file = NULL;
+	protected $args = Array ();	
 	
 	/**
 	 * The command interpreter
@@ -158,8 +153,8 @@ class PdSSyncAPI {
 	protected function create() {
 		if ($this->method == 'POST') {
 			
-			if (isset ( $this->verb ) && count ( $this->args ) > 1 && $this->args [0] == "tree") {
-				$treeId = $this->args [1];
+			if (isset ( $this->verb ) && count ( $this->args ) > 0 && $this->verb == "tree") {
+				$treeId = $this->args [0];
 				if(strlen($treeId)<20){
 					return $this->_response ( NULL, 406 );
 				}
@@ -185,6 +180,37 @@ class PdSSyncAPI {
 		}
 	}
 	
+	
+	// http -v -f POST PdsSync.api.local/api/v1/touch/tree/unique-public-id-1293
+	
+	// @todo ACL for touch
+	
+	protected function touch(){
+		if ($this->method == 'POST') {
+			if (isset ( $this->verb ) && count ( $this->args ) > 0 && $this->verb == "tree") {
+				$treeId = $this->args [0];
+				if (strlen ( $treeId ) < 20) {
+					return $this->_response ( NULL, 406 );
+				}	
+				$this->ioManager = new IOManager ();
+				$result = $this->ioManager->touchTree ( $treeId );
+				if ($result == NULL) {
+					return $this->_response ( NULL, 200 );
+				} else {
+					return $this->_response ( $result, 400 );
+				}
+			} else {
+				return $this->_response ( 'Unknown entity' . $this->args [0], 400 );
+			}
+		} else {
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method POST required';
+			$infos [METHOD_KEY] = 'POST';
+			return $this->_response ( $infos, 405 );
+		}
+	}
+	
+	
 	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293
 	
 	/**
@@ -195,7 +221,6 @@ class PdSSyncAPI {
 	protected function hashMap() {
 		if ($this->method == 'GET') {
 			$this->ioManager = new IOManager ();
-			if (isset ( $this->request ['path'] )) {
 				if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 					$treeId = $this->args [0];
 				} else {
@@ -204,15 +229,16 @@ class PdSSyncAPI {
 				
 				// IMPORTANT
 				// Return a 401 if not authorized.
-				// A 301 on redirection.
-				// When the ACL changes on a tree its Id changes ??
+				// A 307 on redirection.
 				
 				$location = $this->ioManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME);
-				header (  'Location:  '. $location,true,307);
-				exit;
+				if($location!=NULL){
+					header (  'Location:  '. $location,true,307);
+					exit;
+				}else{
+					return $this->_response (NULL,404);
+				}
 				
-			}
-			return $this->_response ( 'Hash map not found ', 404 );
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method GET required';
@@ -249,10 +275,14 @@ class PdSSyncAPI {
 				
 				$this->ioManager = new IOManager ();
 				$location = $this->ioManager->uriFor($treeId, $this->request ['path']);
-				header (  'Location:  '. $location,true,307);
-				exit;
+				if($location!=NULL){
+					header (  'Location:  '. $location,true,307);
+					exit;
+				}else{
+					return $this->_response (NULL,404);
+				}
 			}
-			return $this->_response ( 'Hash map not found ', 404 );
+			return $this->_response ( 'File not found ', 404 );
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method GET required';
@@ -261,7 +291,7 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/5318a867a4e76/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
+	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
 	
 	/**
 	 * Upload the file to the relative path
@@ -298,7 +328,7 @@ class PdSSyncAPI {
 	
 	
 	/*
-		http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/5318a867a4e76/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap='[]'
+		http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/unique-public-id-1293/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap='[]'
 	 */
 	
 	/**

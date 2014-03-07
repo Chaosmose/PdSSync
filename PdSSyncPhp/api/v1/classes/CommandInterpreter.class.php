@@ -1,7 +1,7 @@
 <?php
 
-include_once 'api/v1/PdSSyncConst.php';
-include_once 'api/v1/classes/IOManager.class.php';
+include_once 'v1/PdSSyncConst.php';
+include_once 'v1/classes/IOManager.class.php';
 
 class CommandInterpreter {
 	
@@ -19,9 +19,10 @@ class CommandInterpreter {
 	private  $listOfFiles=array();
 	
 	/**
-	 * @return the $fileManager
+	 * Returns the IOManager 
+	 * @return the ioManager
 	 */
-	public function getFileManager() {
+	private function _getIOManager() {
 		if(!$this->ioManager){
 			$this->ioManager=new  IOManager();
 		}
@@ -77,7 +78,7 @@ class CommandInterpreter {
 		$failures=array();
 		foreach ($this->listOfFiles  as $file) {
 			$protectedPath= $this->ioManager->absolutePath($treeId, dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file));
-			if($this->ioManager->exists($protectedPath)){
+			if($this->_getIOManager()->exists($protectedPath)){
 				$this->ioManager->rename($protectedPath, $this->ioManager->absolutePath($treeId, $file));
 			}else{
 				$failures[]='Unexisting path : '.$protectedPath;
