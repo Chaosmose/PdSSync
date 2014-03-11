@@ -1,8 +1,8 @@
 <?php
 
-include_once 'v1/PdSSyncConst.php';
 require_once 'v1/classes/CommandInterpreter.class.php';
 require_once 'v1/classes/IOManager.class.php';
+
 
 /**
  * A simple API facade in one file
@@ -51,6 +51,11 @@ class PdSSyncAPI {
 	
 	/**
 	 * The IOManager is currently a FS abstraction
+	 * @var IOManager
+	 */
+	
+	/**
+	 *  
 	 * @var IOManager
 	 */
 	protected $ioManager = NULL;
@@ -115,6 +120,7 @@ class PdSSyncAPI {
 	// End points
 	// //////////////
 	
+	
 	// http GET PdsSync.api.local/api/v1/reachable/
 	
 	
@@ -133,7 +139,7 @@ class PdSSyncAPI {
 	
 	protected function install() {
 		if ($this->method == 'POST') {
-			$this->ioManager = new IOManager ();
+			$this->ioManager = $this->getIoManager();
 			if (isset ( $this->request ['key'] ) && $this->request ['key'] == CREATIVE_KEY) {
 				$this->ioManager->install();
 				return $this->_response ( NULL, 201 );
@@ -149,7 +155,7 @@ class PdSSyncAPI {
 	}
 	
 	// http -v -f POST PdsSync.api.local/api/v1/create/tree/unique-public-id-1293 key='6ca0c48126a15939-2c938833d4678913'
-	
+
 	protected function create() {
 		if ($this->method == 'POST') {
 			
@@ -159,7 +165,7 @@ class PdSSyncAPI {
 					return $this->_response ( NULL, 406 );
 				}
 				if (isset ( $this->request ['key'] ) && $this->request ['key'] == CREATIVE_KEY) {
-					$this->ioManager = new IOManager ();
+					$this->ioManager = $this->getIoManager();
 					$result=$this->ioManager->createTree($treeId);
 					if($result==NULL){
 						return $this->_response ( NULL, 201 );
@@ -182,7 +188,6 @@ class PdSSyncAPI {
 	
 	
 	// http -v -f POST PdsSync.api.local/api/v1/touch/tree/unique-public-id-1293
-	
 	// @todo ACL for touch
 	
 	protected function touch(){
@@ -192,7 +197,7 @@ class PdSSyncAPI {
 				if (strlen ( $treeId ) < 20) {
 					return $this->_response ( NULL, 406 );
 				}	
-				$this->ioManager = new IOManager ();
+				$this->ioManager =  $this->getIoManager();
 				$result = $this->ioManager->touchTree ( $treeId );
 				if ($result == NULL) {
 					return $this->_response ( NULL, 200 );
@@ -211,34 +216,37 @@ class PdSSyncAPI {
 	}
 	
 	
-	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293
+	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293 direct=true
 	
 	/**
 	 * Returns the hash map
-	 *
+	 * By default direct=true
 	 * @return multitype: string
 	 */
 	protected function hashMap() {
 		if ($this->method == 'GET') {
-			$this->ioManager = new IOManager ();
+			$this->ioManager = $this->getIoManager();
 				if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 					$treeId = $this->args [0];
 				} else {
-					$treeId = 0;
+					return $this->_response ( 'Undefined treeId', 404 );
 				}
 				
-				// IMPORTANT
-				// Return a 401 if not authorized.
-				// A 307 on redirection.
-				
-				$location = $this->ioManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME);
-				if($location!=NULL){
-					header (  'Location:  '. $location,true,307);
-					exit;
-				}else{
-					return $this->_response (NULL,404);
+				if (strlen ( $treeId ) < 20) {
+					return $this->_response ( NULL, 406 );
 				}
 				
+				$direct=true;
+				if(isset($this->request['direct'])){
+					$direct=(bool)$this->request['direct'];
+				}
+				
+				// This method can interupt the flow
+				// And redirect  according to the context with a 307 status code
+				$result = $this->ioManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME,(!$direct));
+				return	$this->_response ( $result, $this->ioManager->status );
+				
+			
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method GET required';
@@ -247,11 +255,11 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt
+	// http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt direct=false
 	
 	/**
 	 * Redirects to a file
-	 *
+	 * By default direct=false
 	 * @return multitype: string
 	 */
 	protected function file() {
@@ -260,29 +268,25 @@ class PdSSyncAPI {
 				if (isset ( $this->verb ) && ($this->verb == "tree") && count ( $this->args ) > 0) {
 					$treeId = $this->args [0];
 				} else {
-					$treeId = 0;
+					return $this->_response ( 'Undefined treeId', 404 );
+				}
+				if (strlen ( $treeId ) < 20) {
+					return $this->_response ( NULL, 406 );
+				}
+				$direct=false;
+				if(isset($this->request['direct'])){
+					$direct=(bool)$this->request['direct'];
 				}
 				
-				// IMPORTANT 
-				// Return a 401 if not authorized.
-				// A 307 on redirection.
+				$this->ioManager = $this->getIoManager ();
+				// This method can interupt the flow
+				// And redirect according to the context with a 307 status code
+				$result = $this->ioManager->uriFor ( $treeId, $this->request ['path'] ,$direct);
+				return	$this->_response ( $result, $this->ioManager->status );
 				
-				// Principles  : 
-				// 1 resolution ( to prevent from hazardous discovery )
-				// 2 @todo  acl
-				// 3 use apache as much as possible
-				// 4 files may be crypted ( and decrypted  client side only)
-				
-				$this->ioManager = new IOManager ();
-				$location = $this->ioManager->uriFor($treeId, $this->request ['path']);
-				if($location!=NULL){
-					header (  'Location:  '. $location,true,307);
-					exit;
-				}else{
-					return $this->_response (NULL,404);
-				}
+			}else{
+				return $this->_response ( 'Undefined path ', 404 );
 			}
-			return $this->_response ( 'File not found ', 404 );
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method GET required';
@@ -292,6 +296,8 @@ class PdSSyncAPI {
 	}
 	
 	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
+	
+	// @todo  store a the sync id & relative path to a private zone for the sanitizing procedure.
 	
 	/**
 	 * Upload the file to the relative path
@@ -303,11 +309,14 @@ class PdSSyncAPI {
 			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 				$treeId = $this->args [0];
 			} else {
-				$treeId = '';
+				return $this->_response ( 'Undefined treeId', 404 );
+			}
+			if (strlen ( $treeId ) < 20) {
+				return $this->_response ( NULL, 406 );
 			}
 			// @todo support doers / undoers
 			if ( isset($this->request ['destination']) && Isset($this->request ['syncIdentifier']) && isset ( $_FILES ['source'] )) {
-				$this->ioManager = new IOManager ();
+				$this->ioManager = $this->getIoManager();
 				$d=  dirname($this->request ['destination']).DIRECTORY_SEPARATOR.$this->request ['syncIdentifier'].basename($this->request ['destination']);
 				$uploadfile = $this->ioManager->absolutePath($treeId,$d) ;
 				if ($this->ioManager->move_uploaded ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
@@ -349,7 +358,10 @@ class PdSSyncAPI {
 					if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 						$treeId = $this->args [0];
 					} else { 
-						$treeId = '';
+						return $this->_response ( 'Undefined treeId', 404 );
+					}
+					if (strlen ( $treeId ) < 20) {
+						return $this->_response ( NULL, 406 );
 					}
 					// @todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
 					$errors=$this->getInterpreter()->interpretBunchOfCommand ($treeId, $post ['syncIdentifier'], $post['commands'], $post ['hashMap'] );
@@ -473,10 +485,7 @@ class PdSSyncAPI {
 		);
 		return ($status [$code]) ? $status [$code] : $status [500];
 	}
-	
-	
-	// Setters and getters 
-	
+
 	/**
 	 * A lazy loading command interpreter
 	 * with its associated file manager
@@ -485,11 +494,21 @@ class PdSSyncAPI {
 	protected function getInterpreter() {
 		if(!$this->interpreter){
 			$this->interpreter=new CommandInterpreter();
-			if(!$this->ioManager){
-				$this->ioManager=new IOManager();
-			}
-			$this->interpreter->setIOManager($this->ioManager);
+			$this->interpreter->setIOManager($this->getIoManager());
 		}
 		return $this->interpreter;
 	}
+	
+	
+	/**
+	 * @return the $ioManager
+	 */
+	protected function getIoManager() {
+		if(!$this->ioManager){
+			$className=PERSISTENCY_CLASSNAME;
+			$this->ioManager=new $className();
+		}
+		return $this->ioManager;
+	}	
 }
+?>

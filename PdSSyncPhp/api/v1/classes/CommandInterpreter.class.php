@@ -1,7 +1,6 @@
 <?php
 
 include_once 'v1/PdSSyncConst.php';
-include_once 'v1/classes/IOManager.class.php';
 
 class CommandInterpreter {
 	
@@ -18,17 +17,6 @@ class CommandInterpreter {
 	 */
 	private  $listOfFiles=array();
 	
-	/**
-	 * Returns the IOManager 
-	 * @return the ioManager
-	 */
-	private function _getIOManager() {
-		if(!$this->ioManager){
-			$this->ioManager=new  IOManager();
-		}
-		return $this->ioManager;
-	}
-
 	/**
 	 * @param IOManager $ioManager
 	 */
@@ -48,7 +36,7 @@ class CommandInterpreter {
 		$failures=array();
 		foreach ($bunchOfCommand as $command) {
 			if(is_array($command)){
-				$result=$this->_decodeAndRunCommand($syncIdentifier,$command);
+				$result=$this->_decodeAndRunCommand($syncIdentifier,$command,$treeId);
 				if($result!=NULL){
 					$failures[]=$result;
 				}
@@ -78,7 +66,7 @@ class CommandInterpreter {
 		$failures=array();
 		foreach ($this->listOfFiles  as $file) {
 			$protectedPath= $this->ioManager->absolutePath($treeId, dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file));
-			if($this->_getIOManager()->exists($protectedPath)){
+			if($this->ioManager->exists($protectedPath)){
 				$this->ioManager->rename($protectedPath, $this->ioManager->absolutePath($treeId, $file));
 			}else{
 				$failures[]='Unexisting path : '.$protectedPath;
@@ -88,7 +76,6 @@ class CommandInterpreter {
 			return $failures;
 		}else{
 			$this->ioManager->mkdir($this->ioManager-> absolutePath($treeId, METADATA_FOLDER));
-			
 			if($this->ioManager->saveHashMap($treeId,$finalHashMap)){
 				return NULL;
 			}else{
@@ -103,9 +90,10 @@ class CommandInterpreter {
 	 *  Decodes and runs the command 
 	 *  @param $syncIdentifier
 	 * @param array $cmd
+	 * @param string $treeId
 	 * @return string on error, or null on success
 	 */
-	private function _decodeAndRunCommand($syncIdentifier, array $cmd) {
+	private function _decodeAndRunCommand($syncIdentifier, array $cmd , $treeId) {
 		if (count ( $cmd > 1 )) {
 			$command = $cmd [0];
 			switch ($command) {
@@ -125,36 +113,57 @@ class CommandInterpreter {
 				case PdSCopy :
 					if($this->_isAllowedTo(R_PRIVILEGE, $cmd[PdSSource]) &&
 						$this->_isAllowedTo(R_PRIVILEGE, $cmd[PdSDestination]) ){
-							// we copy directly  
+						 if($this->ioManager->copy($cmd[PdSSource],  $cmd[PdSDestination])){
+							return NULL;
+						 }else{
+						 	return 'PdSCopy error';
+						 }
 						return NULL;
 					}else{
 						return 'PdSCopy R_PRIVILEGE required on '. $cmd[PdSSource] . 'AND R_PRIVILEGE required on  '.$cmd[PdSDestination];
 					}
 					break;
 				case PdSMove :
+					if($this->_isAllowedTo(R_PRIVILEGE, $cmd[PdSSource]) &&
+							$this->_isAllowedTo(R_PRIVILEGE, $cmd[PdSDestination]) ){
+						 if($this->ioManager->rename($cmd[PdSSource],  $cmd[PdSDestination])){
+							return NULL;
+						 }else{
+						 	return 'PdSMove error';
+						 }
+					}else{
+						return 'PdSMove R_PRIVILEGE required on '. $cmd[PdSSource] . 'AND R_PRIVILEGE required on  '.$cmd[PdSDestination];
+					}
 					break;
 				case PdSDelete :
+					if($this->_isAllowedTo(W_PRIVILEGE, $cmd[PdSSource])){
+						if($this->ioManager->delete($cmd[PdSSource])){
+							return NULL;
+						}else{
+							return 'PdSDelete error';
+						}
+						return NULL;
+					}else{
+						return 'PdSDelete W_PRIVILEGE required on '. $cmd[PdSSource];
+					}
+					
 					break;
 				case PdsSanitize :
-					if (count ( $cmd > 2 )) {
-						$cmd[PdSPoi];
-						$cmd[PdSDepth];
-						$cmd[PdSValue];
-					}
+						if($this->_isAllowedTo(R_PRIVILEGE, $this->ioManager->absolutePath($treeId,''))){
+							// @todo purge any unfinalized sync in progress.
+						}
 					break;
 				case PdSChmod :
-					if (count ( $cmd > 2 )) {
-						$cmd[PdSPoi];
-						$cmd[PdSDepth];
-						$cmd[PdSValue];
-					}
+
+						if($this->_isAllowedTo(R_PRIVILEGE, $this->ioManager->absolutePath($treeId,''))){
+							// @todo chmod should apply to the whole tree
+						}
+		
 					break;
 				case PdSForget :
-				if (count ( $cmd > 2 )) {
-						$cmd[PdSPoi];
-						$cmd[PdSDepth];
-						$cmd[PdSValue];
-					}
+						if($this->_isAllowedTo(R_PRIVILEGE, $this->ioManager->absolutePath($treeId,''))){
+							//@todo erase the undoers and redoers to clean up the delta history
+						}
 					break;
 				default ;
 					break;
@@ -165,12 +174,11 @@ class CommandInterpreter {
 	
 
 	private function _isAllowedTo($privilege,$relativePath){
+		// @todo 
 		//define ('R_PRIVILEGE', 2);
 		//define ('W_PRIVILEGE', 4);
 		//define ('X_PRIVILEGE', 8);
 		return true;
 	}
-
-	
-	
 }
+?>

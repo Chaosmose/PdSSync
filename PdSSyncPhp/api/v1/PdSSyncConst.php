@@ -74,8 +74,4 @@ define ('PdsSanitize'	,	4); 		// X  on tree
 define ('PdSChmod'		,	5); 		// X  on tree
 define ('PdSForget'	 	,	6);		// X  on tree
 
-// PdSAdminCMDParamRank
 
-define ('PdSPoi'			,	1);
-define ('PdSDepth'		,	2);
-define ('PdSValue'		, 	3);

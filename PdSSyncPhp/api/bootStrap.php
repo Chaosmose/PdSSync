@@ -1,5 +1,6 @@
 <?php
 
+include_once 'v1/PdSSyncConst.php';
 include_once 'v1/PdSSyncConfig.php';
 require_once 'v1/PdSSyncAPI.class.php';
 
