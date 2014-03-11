@@ -41,13 +41,6 @@ typedef NS_ENUM (NSUInteger,
     PdSForget      = 6 , // X on tree
 } ;
 
-typedef NS_ENUM(NSUInteger,
-                PdSAdminCMDParamRank) {
-    PdSPoi         = 1,
-    PdSDepth       = 2,
-    PdSValue       = 3
-} ;
-
 
 typedef NS_ENUM(NSUInteger,
                 PdSSyncPrivilege) {
@@ -66,4 +59,5 @@ typedef NS_ENUM(NSUInteger,
 
 #import "HashMap.h"
 #import "DeltaPathMap.h"
-#import "PdSAnalyzer.h"
+#import "PdSSynchronizer.h"
+#import "PdSLocalCommandInterpreter.h"
