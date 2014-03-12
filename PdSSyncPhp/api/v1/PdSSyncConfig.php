@@ -7,7 +7,7 @@
 
 //define ( 'REPOSITORY_HOST'										,	'http://PdsSync.repository.local/' );
 define ( 'REPOSITORY_HOST'										,	'http://PdsSync.api.local/Repository/' );
-define ( 'MASTER_REPOSITORY_WRITING_PATH'		,	dirname( dirname(__DIR__)). '/Repository/'  );
+define ( 'REPOSITORY_WRITING_PATH'		,	dirname( dirname(__DIR__)). '/Repository/'  );
 
 ///////////////////////
 // PERSITENCY

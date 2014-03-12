@@ -112,7 +112,7 @@ abstract  class IOManagerAbstract  {
 	
 
 	public function repositoryAbsolutePath() {
-		return MASTER_REPOSITORY_WRITING_PATH;
+		return REPOSITORY_WRITING_PATH;
 	}
 	
 
