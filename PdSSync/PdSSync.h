@@ -55,9 +55,18 @@ typedef NS_ENUM(NSUInteger,
     X_OTHER     =   1
 } ;
 
+typedef NS_ENUM (NSUInteger,
+                 PdSSyncMode) {
+    MasterIsLocalSlaveIsDistant   = 0 ,
+    MasterIsDistantSlaveIsLocal   = 1 ,
+    MasterIsLocalSlaveIsLocal     = 2 ,
+    MasterIsDistantSlaveIsDistant = 3 // Currently not supported ?
+    
+} ;
+
 
 
 #import "HashMap.h"
 #import "DeltaPathMap.h"
-#import "PdSSynchronizer.h"
-#import "PdSLocalCommandInterpreter.h"
+#import "PdSCommandInterpreter.h"
+#import "PdSLocalAnalyzer.h"
