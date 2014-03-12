@@ -13,14 +13,14 @@
 
 
 /**
- *  The master url
+ *  The source url
  */
-@property( nonatomic,readonly)NSURL*masterUrl;
+@property( nonatomic,readonly)NSURL*sourceUrl;
 
 /**
- *  The slave url
+ *  The destination url
  */
-@property (nonatomic,readonly)NSURL*slaveUrl;
+@property (nonatomic,readonly)NSURL*destinationUrl;
 
 
 /**
@@ -58,16 +58,16 @@
 /**
  *  The dedicated initializer.
  *
- *  @param masterUrl      the master url
- *  @param slaveUrl       the slave url
+ *  @param sourceUrl      the source url
+ *  @param destinationUrl       the destination - url
  *  @param treeId         the optionnal tree id
  *  @param bunchOfCommand the bunch of command
  *  @param finalHashMap   the final hash map 
  *  @param completionBlock the completion block
  *  @return the instance.
  */
-- (instancetype)initWithMasterUrl:(NSURL*)masterUrl
-                         slaveUrl:(NSURL*)slaveUrl
+- (instancetype)initWithSourceUrl:(NSURL*)sourceUrl
+                         destinationUrl:(NSURL*)destinationUrl
                            treeId:(NSString*)treeId
                         bunchOfCommand:(NSArray*)bunchOfCommand
                      finalHashMap:(HashMap*)finalHashMap

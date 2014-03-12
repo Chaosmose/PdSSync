@@ -19,7 +19,7 @@ NSString* const updatedPathsKey=@"updatedPaths";
  *
  *  @return a deltaHashMap instance
  */
-+(DeltaPathMap*)deltaHasMap{
++(DeltaPathMap*)instance{
     DeltaPathMap*instance=[[DeltaPathMap alloc]init];
     instance.similarPaths=[NSMutableArray array];
     instance.createdPaths=[NSMutableArray array];

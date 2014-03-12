@@ -105,29 +105,29 @@ NSString*const hashToPathKey=@"hToPth";
 
 
 /**
- *  Computes the delta hash Map form a master to a slave.
+ *  Computes the delta path map form a source to a destination.
  *
- *  @param master the master hashMap
- *  @param slave  the slave hashMap
+ *  @param source the source hashMap
+ *  @param destination  the destination hashMap
  *
  *  @return the DeltaHashMap
  */
-- (DeltaPathMap*)deltaHashMapWithMaster:(HashMap*)master andSlave:(HashMap*)slave{
-    DeltaPathMap*delta=[DeltaPathMap deltaHasMap];
-    for (NSDictionary*path in master->_hashToPath) {
-        if ([slave hashForPath:path]) {
-            if([[master hashForPath:path] isEqualToString:[slave hashForPath:path]]){
+- (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination{
+    DeltaPathMap*delta=[DeltaPathMap instance];
+    for (NSDictionary*path in source->_hashToPath) {
+        if ([destination hashForPath:path]) {
+            if([[source hashForPath:path] isEqualToString:[destination hashForPath:path]]){
                 [delta.similarPaths addObject:[path copy]];
             }else{
                 [delta.updatedPaths addObject:[path copy]];
             }
         }else{
-            // There is no hash in the slave.
+            // There is no hash in the destination.
             [delta.createdPaths addObject:[path copy]];
         }
     }
-    for (NSDictionary*path in slave->_hashToPath) {
-         if (![master hashForPath:path]) {
+    for (NSDictionary*path in destination->_hashToPath) {
+         if (![source hashForPath:path]) {
               [delta.deletedPaths addObject:[path copy]];
          }
     }

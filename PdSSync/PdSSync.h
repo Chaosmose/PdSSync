@@ -57,11 +57,10 @@ typedef NS_ENUM(NSUInteger,
 
 typedef NS_ENUM (NSUInteger,
                  PdSSyncMode) {
-    MasterIsLocalSlaveIsDistant   = 0 ,
-    MasterIsDistantSlaveIsLocal   = 1 ,
-    MasterIsLocalSlaveIsLocal     = 2 ,
-    MasterIsDistantSlaveIsDistant = 3 // Currently not supported ?
-    
+    SourceIsLocalDestinationIsDistant   = 0 ,
+    SourceIsDistantDestinationIsLocal   = 1 ,
+    SourceIsLocalDestinationIsLocal     = 2 ,
+    SourceIsDistantDestinationIsDistant = 3 // currently not supported 
 } ;
 
 

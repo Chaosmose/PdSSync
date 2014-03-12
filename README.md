@@ -49,16 +49,16 @@ Json representation :
 
 ## Synchronization process synopsis ##
 
-With 1 master client (Objc), 1 sync service(php), and n slaves clients(Objc)
+With 1 Source client (Objc), 1 sync service(php), and n Destination clients(Objc)
 
-1. Master -> downloads the **hashMap** (if there is no hasMap the delta will be the current local)
-2. Master -> proceed to **DeltaPathMap** creation and command provisionning
-3. Master -> uploads files with a .upload prefix to the service 
-4. Master -> uploads the hasMap of the current root folder and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans, **Optionaly** the synch server can send a push notification to the slave clients to force the step 5)
-5. Slave -> downloads the current **hashMap**
-6. Slave -> proceed to **DeltaPathMap** creation and command provisionning
-7. Slave -> downloads the files (on any missing file the task list is interrupted, the local hash map is recomputed and we step back to 5)
-8. Slave -> on completion the synchronization is finalized. (We redownload the **hashmap** and compare to conclude if stepping back to 5 is required.)
+1. Source -> downloads the **hashMap** (if there is no hasMap the delta will be the current local)
+2. Source -> proceed to **DeltaPathMap** creation and command provisionning
+3. Source -> uploads files with a .upload prefix to the service 
+4. Source -> uploads the hasMap of the current root folder and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans, **Optionaly** the synch server can send a push notification to the slave clients to force the step 5)
+5. Destination -> downloads the current **hashMap**
+6. Destination -> proceed to **DeltaPathMap** creation and command provisionning
+7. Destination -> downloads the files (on any missing file the task list is interrupted, the local hash map is recomputed and we step back to 5)
+8. Destination -> on completion the synchronization is finalized. (We redownload the **hashmap** and compare to conclude if stepping back to 5 is required.)
 
 
 ## Objective C ##
@@ -106,10 +106,10 @@ Json Encoded command [PdSCopy,<PdSDestination>,<PdSSource>] : [1,'a/a.caf','b/c/
 
 typedef NS_ENUM (NSUInteger,
                   PdSSyncCommand) {
-    PdSCreate   = 0 , // W destination
-    PdSCopy     = 1 , // R source W destination
-    PdSMove     = 2 , // R source W destination
-    PdSDelete   = 3 , // W source
+    PdSCreateOrUpdate   = 0 , // W destination
+    PdSCopy     		= 1 , // R source W destination
+    PdSMove     		= 2 , // R source W destination
+    PdSDelete   		= 3 , // W source
 } ;
 
 typedef NS_ENUM(NSUInteger,

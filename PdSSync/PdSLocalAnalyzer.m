@@ -21,16 +21,6 @@
 @implementation PdSLocalAnalyzer
 
 
-/*
-typedef NS_ENUM (NSUInteger,
-                 PdSSyncMode) {
-    MasterIsLocalSlaveIsDistant   = 0 ,
-    MasterIsDistantSlaveIsLocal   = 1 ,
-    MasterIsLocalSlaveIsLocal     = 2 ,
-    MasterIsDistantSlaveIsDistant = 3 // Currently not supported ?
-    
-} ;
-*/
 
 
 /**

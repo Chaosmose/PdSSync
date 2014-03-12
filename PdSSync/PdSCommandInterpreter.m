@@ -19,8 +19,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 @implementation PdSCommandInterpreter
 
-@synthesize masterUrl = _masterUrl;
-@synthesize slaveUrl = _slaveUrl;
+@synthesize sourceUrl = _sourceUrl;
+@synthesize destinationUrl = _destinationUrl;
 @synthesize treeId = _treeId;
 @synthesize finalHashMap = _finalHashMap;
 @synthesize bunchOfCommand = _bunchOfCommand;
@@ -30,16 +30,16 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 /**
  *  The dedicated initializer.
  *
- *  @param masterUrl      the master url
- *  @param slaveUrl       the slave url
+ *  @param sourceUrl      the source url
+ *  @param destinationUrl the destination url
  *  @param treeId         the optionnal tree id
  *  @param bunchOfCommand the bunch of command
  *  @param finalHashMap   the final hash map
  *  @param completionBlock the completion block
  *  @return the instance.
  */
-- (instancetype)initWithMasterUrl:(NSURL*)masterUrl
-                         slaveUrl:(NSURL*)slaveUrl
+- (instancetype)initWithSourceUrl:(NSURL*)sourceUrl
+                         destinationUrl:(NSURL*)destinationUrl
                            treeId:(NSString*)treeId
                    bunchOfCommand:(NSArray*)bunchOfCommand
                      finalHashMap:(HashMap*)finalHashMap

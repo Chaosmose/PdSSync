@@ -24,9 +24,9 @@ extern NSString* const updatedPathsKey;
 /**
  *  Returns a new instance of a deltaHashMap;
  *
- *  @return a deltaHashMap instance
+ *  @return a DeltaPathMap instance
  */
-+(DeltaPathMap*)deltaHasMap;
++(DeltaPathMap*)instance;
 
 /**
  *  Returns a dictionary representation of the DeltaPathMap

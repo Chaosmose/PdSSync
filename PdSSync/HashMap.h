@@ -65,13 +65,13 @@ extern NSString* const hashToPathKey;
 
 
 /**
- *  Computes the delta path map form a master to a slave.
+ *  Computes the delta path map form a source to a destination.
  *
- *  @param master the master hashMap
- *  @param slave  the slave hashMap
+ *  @param source the source hashMap
+ *  @param destination  the destination hashMap
  *
  *  @return the DeltaHashMap
  */
-- (DeltaPathMap*)deltaHashMapWithMaster:(HashMap*)master andSlave:(HashMap*)slave;
+- (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination;
 
 @end

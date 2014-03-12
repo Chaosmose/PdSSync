@@ -10,8 +10,6 @@
 #import "PdSSync.h"
 
 
-
-
 @interface PdSLocalAnalyzer : NSObject
 
 
