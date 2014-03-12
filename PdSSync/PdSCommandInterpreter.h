@@ -59,7 +59,7 @@
  *  The dedicated initializer.
  *
  *  @param sourceUrl      the source url
- *  @param destinationUrl       the destination - url
+ *  @param destinationUrl the destination - url
  *  @param treeId         the optionnal tree id
  *  @param bunchOfCommand the bunch of command
  *  @param finalHashMap   the final hash map 
@@ -72,6 +72,44 @@
                         bunchOfCommand:(NSArray*)bunchOfCommand
                      finalHashMap:(HashMap*)finalHashMap
                andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock;
+
+
+
+/*
+ 
+ typedef NS_ENUM (NSUInteger,
+ PdSSyncCommand) {
+ PdSCreateOrUpdate   = 0 , // W destination or source
+ PdSCopy             = 1 , // R source W destination
+ PdSMove             = 2 , // R source W destination
+ PdSDelete           = 3 , // W source
+ } ;
+ 
+ typedef NS_ENUM(NSUInteger,
+ PdSSyncCMDParamRank) {
+ PdSDestination = 1,
+ PdSSource      = 2
+ } ;
+ 
+ 
+ typedef NS_ENUM (NSUInteger,
+ PdSAdminCommand) {
+ PdsSanitize    = 4 , // X on tree
+ PdSChmod       = 5 , // X on tree
+ PdSForget      = 6 , // X on tree
+ } ;
+ 
+ */
+
+-(NSString*)encodeCreateOrUpdate:(NSString*)source destination:(NSString*)destination;
+-(NSString*)encodeCopy:(NSString*)source destination:(NSString*)destination;
+-(NSString*)encodeMove:(NSString*)source destination:(NSString*)destination;
+-(NSString*)encodeRemove:(NSString*)destination;
+
+-(void)runCreateOrUpdate:(NSString*)encoded;
+-(void)runCopy:(NSString*)encoded;
+-(void)runMove:(NSString*)encoded;
+-(void)runRemove:(NSString*)encoded;
 
 
 @end
