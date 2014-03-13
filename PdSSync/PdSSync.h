@@ -69,3 +69,6 @@ typedef NS_ENUM (NSUInteger,
 #import "DeltaPathMap.h"
 #import "PdSCommandInterpreter.h"
 #import "PdSLocalAnalyzer.h"
+#import "PdSSyncContext.h"
+
+

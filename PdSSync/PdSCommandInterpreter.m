@@ -6,6 +6,9 @@
 //
 //
 
+// Current implementation relies on http://cocoadocs.org/docsets/AFNetworking/2.2.0/
+
+#import "AFNetworking.h"
 #import "PdSCommandInterpreter.h"
 
 
@@ -13,56 +16,46 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 @interface PdSCommandInterpreter (){
     CompletionBlock_type _completionBlock;
-    
+    NSFileManager *_fileManager;
 }
-
+@property (nonatomic,strong)NSOperationQueue *queue;
 @end
 
 @implementation PdSCommandInterpreter
 
-@synthesize sourceUrl = _sourceUrl;
-@synthesize destinationUrl = _destinationUrl;
-@synthesize treeId = _treeId;
-@synthesize finalHashMap = _finalHashMap;
 @synthesize bunchOfCommand = _bunchOfCommand;
-@synthesize syncMode = _syncMode;
-
+@synthesize context = _context;
 
 /**
- *  The dedicated initializer.
+ *   The dedicated initializer.
  *
- *  @param sourceUrl      the source url
- *  @param destinationUrl the destination url
- *  @param treeId         the optionnal tree id
- *  @param bunchOfCommand the bunch of command
- *  @param finalHashMap   the final hash map
- *  @param completionBlock the completion block
- *  @return the instance.
+ *  @param bunchOfCommand  the bunch of command
+ *  @param context         the interpreter context
+ *  @param completionBlock te completion block
+ *
+ *  @return the interpreter
  */
-- (instancetype)initWithSourceUrl:(NSURL*)sourceUrl
-                         destinationUrl:(NSURL*)destinationUrl
-                           treeId:(NSString*)treeId
-                   bunchOfCommand:(NSArray*)bunchOfCommand
-                     finalHashMap:(HashMap*)finalHashMap
-               andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
-    self=[super init];
+- (instancetype)initWithBunchOfCommand:(NSArray*)bunchOfCommand
+                               context:(PdSSyncContext*)context
+                    andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
     if(self){
-        self->_finalHashMap=[finalHashMap copy];
         self->_bunchOfCommand=[bunchOfCommand copy];
-        self->_syncMode=[self _mode];
+        self->_context=[context copy];
         self->_completionBlock=[completionBlock copy];
-        
-        if(self->_syncMode==SourceIsDistantDestinationIsDistant ){
+        self->_fileManager=[NSFileManager alloc];
+        [self->_fileManager setDelegate:self];
+        if(self->_context.mode==SourceIsDistantDestinationIsDistant ){
             [NSException raise:@"TemporaryException" format:@"SourceIsDistantDestinationIsDistant is currently not supported"];
         }
-        if(self->_syncMode==SourceIsLocalDestinationIsLocal ){
+        if(self->_context.mode==SourceIsLocalDestinationIsLocal ){
             [NSException raise:@"TemporaryException" format:@"SourceIsLocalDestinationIsLocal is currently not supported"];
         }
-        if(sourceUrl && destinationUrl && bunchOfCommand && finalHashMap){
-            PdSCommandInterpreter * __weak weakSelf=self;
-            dispatch_async(dispatch_queue_create("com.pereira-da-silva.PdSSync.CmdInterpreter", NULL), ^{
-                [weakSelf _run];
-            });
+        if([context isValid] && _bunchOfCommand){
+            self->_queue=[[NSOperationQueue alloc] init];
+            _queue.name=[NSString stringWithFormat:@"com.pereira-da-silva.PdSSync.CommandInterpreter.%i",[self hash]];
+            [_queue setMaxConcurrentOperationCount:1];// Sequential
+            [self _run];
+
         }else{
             if(self->_completionBlock){
                 _completionBlock(NO,@"sourceUrl && destinationUrl && bunchOfCommand && finalHashMap are required");
@@ -73,96 +66,318 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 }
 
 
-- (PdSSyncMode)_mode{
-    if([[_sourceUrl absoluteString] rangeOfString:@"http"].location==0){
-        if([[_destinationUrl absoluteString] rangeOfString:@"http"].location==0){
-            return SourceIsDistantDestinationIsDistant;
-        }else{
-            return SourceIsDistantDestinationIsLocal;
++(id)encodeCreateOrUpdate:(NSString*)source destination:(NSString*)destination{
+    if(source && destination){
+        return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCreateOrUpdate,destination,source];
+    }
+    return nil;
+}
+
++(id)encodeCopy:(NSString*)source destination:(NSString*)destination{
+     if(source && destination){
+    return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCopy,destination,source];
+     }else{
+         return nil;
+     }
+}
+
++(id)encodeMove:(NSString*)source destination:(NSString*)destination{
+     if(source && destination){
+    return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSMove,destination,source];
+     }else{
+         return nil;
+     }
+}
+
++(id)encodeRemove:(NSString*)destination{
+     if(destination){
+    return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSDelete,destination];
+     }else{
+         return nil;
+     }
+}
+
++(id)encodeSanitize:(NSString*)destination{
+     if(destination){
+    return [NSString stringWithFormat:@"[%i,\"%@\"]", PdsSanitize,destination];
+     }else{
+         return nil;
+     }
+}
+
++(id)encodeChmode:(NSString*)destination mode:(int)mode{
+     if(destination && (0<=mode && mode<777)){
+    return [NSString stringWithFormat:@"[%i,\"%@\",\"%i\"]", PdSChmod,destination,mode];
+     }else{
+         return nil;
+     }
+}
+
++(id)encodeForget:(NSString*)destination{
+     if(destination){
+    return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSForget,destination];
+     }else{
+         return nil;
+     }
+}
+
+
+#pragma mark - private methods
+
+- (void)_run{
+    if([_bunchOfCommand count]>0){
+        PdSCommandInterpreter * __weak weakSelf=self;
+        NSMutableArray*creativeCommands=[NSMutableArray array];
+        NSMutableArray*unCreativeCommands=[NSMutableArray array];
+        // First pass we dicriminate creative for un creative commands
+        // Creative commands requires for example download or an upload.
+        // Copy is "not creative" as we copy a existing resource
+        for (id encodedCommand in _bunchOfCommand) {
+            NSArray*cmdAsAnArray=[self _encodedCommandToArray:encodedCommand];
+            if(cmdAsAnArray){
+                if([[cmdAsAnArray objectAtIndex:0] intValue]==PdSCreateOrUpdate){
+                    [creativeCommands addObject:cmdAsAnArray];
+                }else{
+                    [unCreativeCommands addObject:cmdAsAnArray];
+                }
+            }
+            if([encodedCommand isKindOfClass:[NSString class]]){
+                
+            }else{
+                [self _interruptOnFault:[NSString stringWithFormat:@"Illegal command %@",encodedCommand]];
+            }
         }
+        for (NSArray*cmd in creativeCommands) {
+            [self->_queue addOperationWithBlock:^{
+                [weakSelf _runCommandFromArrayOfArgs:cmd];
+            }];
+        }
+        for (NSArray*cmd in unCreativeCommands) {
+            [self->_queue addOperationWithBlock:^{
+                [weakSelf _runCommandFromArrayOfArgs:cmd];
+            }];
+        }
+        // Finaly we add the completion block
+        [self->_queue addOperationWithBlock:^{
+            _completionBlock(YES,nil);
+        }];
+        
     }else{
-        if([[_destinationUrl absoluteString] rangeOfString:@"http"].location==0){
-            return SourceIsLocalDestinationIsDistant;
-        }else{
-            return SourceIsLocalDestinationIsLocal;
-        }
+        _completionBlock(YES,@"There was no command to execute");
+    }
+}
+
+
+- (void)_interruptOnFault:(NSString*)faultMessage{
+    [self->_queue cancelAllOperations];
+    self->_completionBlock(NO,faultMessage);
+}
+
+
+- (NSArray*)_encodedCommandToArray:(NSString*)encoded{
+    NSData *data = [encoded dataUsingEncoding:NSUTF8StringEncoding];
+    NSError *error;
+    id cmd = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+    if(error && !encoded){
+        // We stop the process on any error
+        [self _interruptOnFault:[NSString stringWithFormat:@"Cmd deserialization failed %@ : %@",encoded,[error localizedDescription]]];
+    }
+    if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd length]>0){
+        return cmd;
+    }else{
+        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %@",encoded]];
     }
     return nil;
 }
 
 
-- (void)_run{
+-(void)_runCommandFromArrayOfArgs:(NSArray*)cmd{
+    if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd count]>0){
+        int cmdName=[[cmd objectAtIndex:0] intValue];
+        NSString*arg1= [cmd count]>1?[cmd objectAtIndex:1]:nil;
+        NSString*arg2=[cmd count]>2?[cmd objectAtIndex:2]:nil;
+        switch (cmdName) {
+            case (PdSCreateOrUpdate):{
+                if(arg1 && arg2){
+                    [self _runCreateOrUpdate:arg2 destination:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            case (PdSCopy):{
+                if(arg1 && arg2){
+                    [self _runCopy:arg2 destination:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            case (PdSMove):{
+                if(arg1 && arg2){
+                    [self _runMove:arg2 destination:arg1];
+                }else{
+                   [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            case (PdSDelete):{
+                if(arg1){
+                      [self _runDelete:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
+                }
+                break;
+            }
+            case (PdsSanitize):{
+                if(arg1){
+                    [self _runSanitize:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
+                }
+                break;
+            }
+            case (PdSChmod):{
+                if(arg1 && arg2){
+                    [self _runChmod:arg1 mode:[arg2 intValue]];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            case (PdSForget):{
+                if(arg1 && arg2){
+                    [self _runForget:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            default:
+                [self _interruptOnFault:[NSString stringWithFormat:@"The command %i is currently not supported",cmdName]];
+                break;
+        }
+    }else{
+        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command %@",cmd?cmd:@"nil"]];
+    }
+}
+
+
+#pragma  mark - command runtime 
+
+
+-(void)_runCreateOrUpdate:(NSString*)source destination:(NSString*)destination{
+    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        // UPLOAD
+    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal){
+        // DOWNLOAD
+    }else if (self->_context.mode==SourceIsLocalDestinationIsLocal){
+        // It is a copy
+        [self _runCopy:source destination:destination];
+    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
+        // CURRENTLY NOT SUPPORTED
+    }
+}
+
+-(void)_runCopy:(NSString*)source destination:(NSString*)destination{
+    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        // CALL the PdSync Service
+    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
+              self->_context.mode==SourceIsLocalDestinationIsLocal){
+        // COPY LOCALLY
+    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
+        // CURRENTLY NOT SUPPORTED
+    }
+}
+
+
+-(void)_runMove:(NSString*)source destination:(NSString*)destination{
+    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        // CALL the PdSync Service
+    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
+              self->_context.mode==SourceIsLocalDestinationIsLocal){
+        // MOVE LOCALLY
+    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
+        // CURRENTLY NOT SUPPORTED
+    }
+}
+
+-(void)_runDelete:(NSString*)destination{
+    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        // CALL the PdSync Service
+    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
+              self->_context.mode==SourceIsLocalDestinationIsLocal){
+        // DELETE LOCALLY
+    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
+        // CURRENTLY NOT SUPPORTED
+    }
+}
+
+-(void)_runSanitize:(NSString*)destination{
+    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        // CALL the PdSync Service
+    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
+              self->_context.mode==SourceIsLocalDestinationIsLocal){
+        // SANITIZE LOCALLY
+    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
+        // CURRENTLY NOT SUPPORTED
+    }
+}
+
+-(void)_runChmod:(NSString*)destination mode:(int)mode{
+    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        // CALL the PdSync Service
+    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
+              self->_context.mode==SourceIsLocalDestinationIsLocal){
+        // CHMOD LOCALLY
+    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
+        // CURRENTLY NOT SUPPORTED
+    }
+}
+
+-(void)_runForget:(NSString*)destination{
+    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        // CALL the PdSync Service
+    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
+              self->_context.mode==SourceIsLocalDestinationIsLocal){
+        // FORGET LOCALLY
+    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
+        // CURRENTLY NOT SUPPORTED
+    }
+}
+
+
+#pragma mark - NSFileManagerDelegate
+
+
+- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error copyingItemAtPath:(NSString *)srcPath toPath:(NSString *)dstPath{
+    if ([error code] == NSFileWriteFileExistsError)
+        return YES;
+    else
+        return NO;
+}
+- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error copyingItemAtURL:(NSURL *)srcURL toURL:(NSURL *)dstURL{
+    if ([error code] == NSFileWriteFileExistsError)
+        return YES;
+    else
+        return NO;
     
 }
 
-
-//-(void)interpretBunchOfCommand($treeId, $syncIdentifier, array $bunchOfCommand,  $finalHashMap);
-
-// _finalize($treeId, $syncIdentifier,$finalHashMap
-
-// _decodeAndRunCommand($syncIdentifier, array $cmd , $treeId)
-
-
-/*
- 
- typedef NS_ENUM (NSUInteger,
- PdSSyncCommand) {
- PdSCreateOrUpdate   = 0 , // W destination or source
- PdSCopy             = 1 , // R source W destination
- PdSMove             = 2 , // R source W destination
- PdSDelete           = 3 , // W source
- } ;
- 
- typedef NS_ENUM(NSUInteger,
- PdSSyncCMDParamRank) {
- PdSDestination = 1,
- PdSSource      = 2
- } ;
- 
- 
- typedef NS_ENUM (NSUInteger,
- PdSAdminCommand) {
- PdsSanitize    = 4 , // X on tree
- PdSChmod       = 5 , // X on tree
- PdSForget      = 6 , // X on tree
- } ;
- 
- */
-
--(NSString*)encodeCreateOrUpdate:(NSString*)source destination:(NSString*)destination{
-    return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCreateOrUpdate,destination,source];
-}
--(NSString*)encodeCopy:(NSString*)source destination:(NSString*)destination{
-    return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCopy,destination,source];;
-}
--(NSString*)encodeMove:(NSString*)source destination:(NSString*)destination{
-    return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSMove,destination,source];;
-}
--(NSString*)encodeRemove:(NSString*)destination{
-    return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSDelete,destination];;
-}
-
-
--(void)_runCommand:(NSString*)encoded{
-// NSArray *cmd=[NSJSONSerialization d]
+- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error movingItemAtPath:(NSString *)srcPath toPath:(NSString *)dstPath{
+    if ([error code] == NSFileWriteFileExistsError)
+        return YES;
+    else
+        return NO;
     
 }
-
-
--(void)runCreateOrUpdate:(NSString*)encoded{
+- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error movingItemAtURL:(NSURL *)srcURL toURL:(NSURL *)dstURL{
+    if ([error code] == NSFileWriteFileExistsError)
+        return YES;
+    else
+        return NO;
     
 }
--(void)runCopy:(NSString*)encoded{
-    
-}
--(void)runMove:(NSString*)encoded{
-    
-}
--(void)runRemove:(NSString*)encoded{
-    
-}
-
-
 
 
 @end
