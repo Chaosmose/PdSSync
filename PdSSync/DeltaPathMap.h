@@ -35,5 +35,4 @@ extern NSString* const updatedPathsKey;
  */
 - (NSDictionary*)dictionaryRepresentation;
 
-
 @end

@@ -7,8 +7,9 @@ Pod::Spec.new do |s|
   s.source      = { :git => 'https://github.com/benoit-pereira-da-silva/PdSSync.git'}
   s.license     = { :type => "LGPL", :file => "LICENSE" }
 
-  s.ios.deployment_target = '5.0'
+  s.ios.deployment_target = '7.0'
   s.osx.deployment_target = '10.9'
+  s.dependency 'AFNetworking', '~>2.0'
   s.requires_arc = true
   s.source_files =  'PdSSync/*.{h,m}'
   s.public_header_files = 'PdSSync/**/*.h'

@@ -35,7 +35,7 @@
  *  @param completionBlock the completion block.
  *
  */
-- (void)createFileDescriptorFromLocalFolderURL:(NSURL*)folderURL
+- (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
                                      dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
                                  progressBlock:(void(^)(uint32_t crc32,NSString*path, NSUInteger index))progressBlock
                             andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock{

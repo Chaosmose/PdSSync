@@ -1,11 +1,17 @@
 //
 //  PdSSync.h
-//   PdSSync
+//  PdSSync
 //
 //  Created by Benoit Pereira da Silva on 15/02/2014.
 //
 
-// UNIX like permissions
+
+// VERSION 1.0 Of the ObjC & PHP version
+
+
+// ROAD MAP FOR THE VERSION 2.0
+
+// 1- UNIX like permissions
 // Permission applies to a tree
 
 // A tree    ==     "trunk" [ branch :  [ leaf , branch : [ leaf, leaf ] ];
@@ -13,8 +19,24 @@
 // 1 trunk   =      1 owner (the creator)
 // 1 owner  <->     N groups
 
+
+// 2- Gonna support server sent events :
+// http://en.wikipedia.org/wiki/Server-sent_events
+// http://nshipster.com/afnetworking-2/ real time http://rocket.github.io
+// Check : https://github.com/licson0729/libSSE-php
+// Check : http://stackoverflow.com/questions/14564903/server-sent-events-and-php-what-triggers-events-on-the-server
+
+
+// 3- Discreet doer, undoer
+
 // Each leaf can historizized [ state : [ [ doer , undoer ] , ... ]
 // we use for history : state, .PdSync/<relativepath>/counter , .PdSync/<relativepath>/history/0000000001.doer,000000001.undoer
+
+
+// 4-SourceIsDistantDestinationIsDistant
+
+
+// 5- Message pack
 
 
 // Encoding
@@ -61,7 +83,7 @@ typedef NS_ENUM (NSUInteger,
     SourceIsDistantDestinationIsLocal   = 1 ,
     SourceIsLocalDestinationIsLocal     = 2 ,
     SourceIsDistantDestinationIsDistant = 3 // currently not supported 
-} ;
+};
 
 
 
@@ -70,5 +92,4 @@ typedef NS_ENUM (NSUInteger,
 #import "PdSCommandInterpreter.h"
 #import "PdSLocalAnalyzer.h"
 #import "PdSSyncContext.h"
-
 

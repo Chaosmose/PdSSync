@@ -15,16 +15,20 @@
 typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 @interface PdSCommandInterpreter (){
-    CompletionBlock_type _completionBlock;
-    NSFileManager *_fileManager;
+    CompletionBlock_type             _completionBlock;
+    NSFileManager                   *_fileManager;
+    AFHTTPSessionManager            *_HTTPsessionManager;
+    
+    NSProgress*__autoreleasing * _unitaryCommandProgress;
+    
 }
 @property (nonatomic,strong)NSOperationQueue *queue;
 @end
 
 @implementation PdSCommandInterpreter
 
-@synthesize bunchOfCommand = _bunchOfCommand;
-@synthesize context = _context;
+@synthesize bunchOfCommand  = _bunchOfCommand;
+@synthesize context         = _context;
 
 /**
  *   The dedicated initializer.
@@ -40,7 +44,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                     andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
     if(self){
         self->_bunchOfCommand=[bunchOfCommand copy];
-        self->_context=[context copy];
+        self->_context=context;
         self->_completionBlock=[completionBlock copy];
         self->_fileManager=[NSFileManager alloc];
         [self->_fileManager setDelegate:self];
@@ -54,8 +58,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             self->_queue=[[NSOperationQueue alloc] init];
             _queue.name=[NSString stringWithFormat:@"com.pereira-da-silva.PdSSync.CommandInterpreter.%i",[self hash]];
             [_queue setMaxConcurrentOperationCount:1];// Sequential
+            [self _setUpManager];
             [self _run];
-
+            
         }else{
             if(self->_completionBlock){
                 _completionBlock(NO,@"sourceUrl && destinationUrl && bunchOfCommand && finalHashMap are required");
@@ -74,51 +79,51 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 }
 
 +(id)encodeCopy:(NSString*)source destination:(NSString*)destination{
-     if(source && destination){
-    return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCopy,destination,source];
-     }else{
-         return nil;
-     }
+    if(source && destination){
+        return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCopy,destination,source];
+    }else{
+        return nil;
+    }
 }
 
 +(id)encodeMove:(NSString*)source destination:(NSString*)destination{
-     if(source && destination){
-    return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSMove,destination,source];
-     }else{
-         return nil;
-     }
+    if(source && destination){
+        return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSMove,destination,source];
+    }else{
+        return nil;
+    }
 }
 
 +(id)encodeRemove:(NSString*)destination{
-     if(destination){
-    return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSDelete,destination];
-     }else{
-         return nil;
-     }
+    if(destination){
+        return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSDelete,destination];
+    }else{
+        return nil;
+    }
 }
 
 +(id)encodeSanitize:(NSString*)destination{
-     if(destination){
-    return [NSString stringWithFormat:@"[%i,\"%@\"]", PdsSanitize,destination];
-     }else{
-         return nil;
-     }
+    if(destination){
+        return [NSString stringWithFormat:@"[%i,\"%@\"]", PdsSanitize,destination];
+    }else{
+        return nil;
+    }
 }
 
 +(id)encodeChmode:(NSString*)destination mode:(int)mode{
-     if(destination && (0<=mode && mode<777)){
-    return [NSString stringWithFormat:@"[%i,\"%@\",\"%i\"]", PdSChmod,destination,mode];
-     }else{
-         return nil;
-     }
+    if(destination && (0<=mode && mode<777)){
+        return [NSString stringWithFormat:@"[%i,\"%@\",\"%i\"]", PdSChmod,destination,mode];
+    }else{
+        return nil;
+    }
 }
 
 +(id)encodeForget:(NSString*)destination{
-     if(destination){
-    return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSForget,destination];
-     }else{
-         return nil;
-     }
+    if(destination){
+        return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSForget,destination];
+    }else{
+        return nil;
+    }
 }
 
 
@@ -169,6 +174,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 - (void)_interruptOnFault:(NSString*)faultMessage{
+    // This method is never called on reachability issues.
     [self->_queue cancelAllOperations];
     self->_completionBlock(NO,faultMessage);
 }
@@ -182,7 +188,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         // We stop the process on any error
         [self _interruptOnFault:[NSString stringWithFormat:@"Cmd deserialization failed %@ : %@",encoded,[error localizedDescription]]];
     }
-    if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd length]>0){
+    if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd count]>0){
         return cmd;
     }else{
         [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %@",encoded]];
@@ -190,8 +196,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     return nil;
 }
 
-
 -(void)_runCommandFromArrayOfArgs:(NSArray*)cmd{
+    [self _commandInProgress];
     if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd count]>0){
         int cmdName=[[cmd objectAtIndex:0] intValue];
         NSString*arg1= [cmd count]>1?[cmd objectAtIndex:1]:nil;
@@ -217,13 +223,13 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 if(arg1 && arg2){
                     [self _runMove:arg2 destination:arg1];
                 }else{
-                   [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
                 }
                 break;
             }
             case (PdSDelete):{
                 if(arg1){
-                      [self _runDelete:arg1];
+                    [self _runDelete:arg1];
                 }else{
                     [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
                 }
@@ -263,14 +269,85 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 }
 
 
-#pragma  mark - command runtime 
+- (void)_commandInProgress{
+    [_queue setSuspended:YES];
+}
+
+- (void)_nextCommand{
+    [_queue setSuspended:NO];
+}
+
+
+
+
+#pragma  mark - command runtime
 
 
 -(void)_runCreateOrUpdate:(NSString*)source destination:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        
         // UPLOAD
+        //_context.destinationBaseUrl;
+        
+       // http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/
+       // destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
+
+    
+        NSString *URLString =[[_context.destinationBaseUrl absoluteString] stringByAppendingFormat:@"uploadFileTo/tree/%@/",_context.destinationTreeId];
+        NSDictionary *parameters = @{
+                                     @"syncIdentifier": _context.syncID,
+                                     @"destination":destination,
+                                     @"doers":@"",
+                                     @"undoers":@""};// @todo find a solution for doers / undoers if possible
+        
+
+        NSMutableURLRequest *request = [[AFHTTPRequestSerializer serializer] multipartFormRequestWithMethod:@"POST"
+                                                                                                  URLString:URLString
+                                                                                                 parameters:parameters
+                                                                                  constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
+            [formData appendPartWithFileURL:[NSURL fileURLWithPath:source]
+                                       name:@"source"
+                                   fileName:[destination lastPathComponent]
+                                   mimeType:@"application/octet-stream"
+                                      error:nil];
+                    
+        } error:nil];
+        
+        _unitaryCommandProgress = nil;
+        NSURLSessionUploadTask *uploadTask = [_HTTPsessionManager uploadTaskWithStreamedRequest:request
+                                                                           progress:&_unitaryCommandProgress
+                                                                  completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+            if (error) {
+                NSLog(@"Error: %@", error);
+            } else {
+                NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
+                NSLog(@"%@ %@", response, s);
+                [self _nextCommand];
+            }
+        }];
+        
+        [uploadTask resume];
+        
+        
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal){
+        
         // DOWNLOAD
+        //_context.sourceBaseUrl;
+        // http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt direct=false
+        
+        NSString *URLString =[[_context.sourceBaseUrl absoluteString] stringByAppendingFormat:@"file/tree/%@/?path=%@&direct=false",_context.destinationTreeId,source];
+        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:URLString]];
+        _unitaryCommandProgress = nil;
+        NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:request
+                                                                                     progress:&_unitaryCommandProgress
+                                                                      destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
+                    return [self _absoluteLocalPathFromRelativePath:source toLocalUrl:_context.sourceBaseUrl];
+        } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
+            NSLog(@"File downloaded to: %@", filePath);
+        }];
+        [downloadTask resume];
+        
+        
     }else if (self->_context.mode==SourceIsLocalDestinationIsLocal){
         // It is a copy
         [self _runCopy:source destination:destination];
@@ -286,7 +363,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // COPY LOCALLY
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
-        // CURRENTLY NOT SUPPORTED
+        // CURRENTLY NOT SUPPORTEDa
     }
 }
 
@@ -347,6 +424,11 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 }
 
 
+- (NSString*)_absoluteLocalPathFromRelativePath:(NSString*)relativePath toLocalUrl:(NSURL*)localUrl{
+    return [NSString stringWithFormat:@"%@%@",localUrl,relativePath];
+}
+
+
 #pragma mark - NSFileManagerDelegate
 
 
@@ -361,7 +443,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         return YES;
     else
         return NO;
-    
 }
 
 - (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error movingItemAtPath:(NSString *)srcPath toPath:(NSString *)dstPath{
@@ -377,6 +458,48 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     else
         return NO;
     
+}
+
+#pragma mark - AFNetworking 
+
+
+// We currently support ONE MANAGER ONLY
+// @todo SourceIsDistantDestinationIsDistant
+
+- (BOOL)_setUpManager{
+    if(self->_context.mode!=SourceIsLocalDestinationIsLocal &&
+       self->_context.mode!=SourceIsDistantDestinationIsDistant){
+        //_SessionManager
+        NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+        if(self->_context.mode==SourceIsLocalDestinationIsDistant ){
+            _HTTPsessionManager=[[AFHTTPSessionManager alloc]initWithBaseURL:_context.destinationBaseUrl sessionConfiguration:configuration];
+        }else if(self->_context.mode==SourceIsDistantDestinationIsLocal){
+            _HTTPsessionManager=[[AFHTTPSessionManager alloc]initWithBaseURL:_context.sourceBaseUrl sessionConfiguration:configuration];
+        }
+        if(_HTTPsessionManager){
+            
+            _HTTPsessionManager.responseSerializer = [AFHTTPResponseSerializer serializer];
+            NSSet*acceptable= [NSSet setWithArray:@[@"application/json",@"text/html"]];
+            [_HTTPsessionManager.responseSerializer setAcceptableContentTypes:acceptable];
+            // REACHABILITY SUPPORT
+            NSOperationQueue *operationQueue = _HTTPsessionManager.operationQueue;
+            [_HTTPsessionManager.reachabilityManager setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status) {
+                switch (status) {
+                    case AFNetworkReachabilityStatusReachableViaWWAN:
+                    case AFNetworkReachabilityStatusReachableViaWiFi:
+                        [operationQueue setSuspended:NO];
+                        break;
+                    case AFNetworkReachabilityStatusNotReachable:
+                    default:
+                        [operationQueue setSuspended:YES];
+                        break;
+                }
+            }];
+            return YES;
+        }
+    }
+    return NO;
+
 }
 
 

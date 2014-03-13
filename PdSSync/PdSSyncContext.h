@@ -1,6 +1,6 @@
 //
 //  PdSSyncContext.h
-//  Pods
+//  PdSSync
 //
 //  Created by Benoit Pereira da Silva on 13/03/2014.
 //
@@ -18,6 +18,12 @@
 @property (nonatomic,readonly)NSString*sourceTreeId;
 @property (nonatomic,readonly)NSString*destinationTreeId;
 
+@property (nonatomic,readonly)NSURL*sourceBaseUrl;
+@property (nonatomic,readonly)NSURL*destinationBaseUrl;
+
+// A unique sync identifier
+@property (nonatomic,readonly)NSString*syncID;
+
 // Informational properties
 
 @property (nonatomic)int numberOfCompletedCommands;
@@ -33,11 +39,12 @@
 @property (nonatomic)int groupID;
 @property (nonatomic)int userID;
 
+
 /**
  * The url are considerated as the repository root
  *
- *  for example     : http://PdsSync.api.local/api/v1/tree/unique-public-id-1293
- *  or              : file://localfilepathToTheFileTreeFolder/
+ *  for example     : @"http://PdsSync.api.local/api/v1/tree/unique-public-id-1293"
+ *  or              : @"~/Entrepot/Git/Public-projects/PdSSync/PdSSyncPhp/Repository/"
  *
  *  If the url is distant we extract the tree id.
  *
