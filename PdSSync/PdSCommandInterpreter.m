@@ -162,6 +162,11 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 [weakSelf _runCommandFromArrayOfArgs:cmd];
             }];
         }
+        [_queue addOperationWithBlock:^{
+            [self _finalizeWithCreativeCommands:creativeCommands];
+        }];
+
+        
         // Finaly we add the completion block
         [self->_queue addOperationWithBlock:^{
             _completionBlock(YES,nil);
@@ -171,6 +176,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         _completionBlock(YES,@"There was no command to execute");
     }
 }
+
 
 
 - (void)_interruptOnFault:(NSString*)faultMessage{
@@ -356,6 +362,45 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }
 }
 
+
+
+- (void)_finalizeWithCreativeCommands:(NSArray*)creativeCommands{
+    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        // CALL the PdSync Service
+        
+        //http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/unique-public-id-1293/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap='[]'
+        NSString *URLString =[NSString stringWithFormat:@"finalizeTransactionIn/file/tree/%@/%@",_context.destinationTreeId,@"?start_debug=1&debug_host=127.0.0.1&debug_port=10137"];
+        NSDictionary *parameters = @{
+                                    @"syncIdentifier": _context.syncID,
+                                    @"commands":creativeCommands,
+                                    @"hashMap":[_context.finalHashMap dictionaryRepresentation]
+                                    };
+        
+        AFJSONRequestSerializer*r=[AFJSONRequestSerializer serializer];
+      [_HTTPsessionManager setRequestSerializer:r];
+        
+       [_HTTPsessionManager POST:URLString
+                      parameters:parameters
+                         success:^(NSURLSessionDataTask *task, id responseObject) {
+                             [self _nextCommand];
+                         } failure:^(NSURLSessionDataTask *task, NSError *error) {
+                             NSLog(@"\n%@\n%@\n%@",[task.currentRequest.URL absoluteString],task.currentRequest.HTTPBody,task.response);
+                             [self _interruptOnFault:[error localizedDescription]];
+                         }];
+        
+    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
+              self->_context.mode==SourceIsLocalDestinationIsLocal){
+       // NEED TO QUALIFY IF THE FINALIZATION IS USEFULL
+    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
+        // CURRENTLY NOT SUPPORTED
+    }
+
+}
+
+
+
+
+
 -(void)_runCopy:(NSString*)source destination:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
         // CALL the PdSync Service
@@ -495,11 +540,35 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                         break;
                 }
             }];
+        
+            
+            NSMutableDictionary *cookieProperties = [NSMutableDictionary dictionary];
+            [cookieProperties setObject:@"someValue123456" forKey:NSHTTPCookieValue];
+            [cookieProperties setObject:@"www.example.com" forKey:NSHTTPCookieDomain];
+            [cookieProperties setObject:@"www.example.com" forKey:NSHTTPCookieOriginURL];
+            [cookieProperties setObject:@"/" forKey:NSHTTPCookiePath];
+            [cookieProperties setObject:@"0" forKey:NSHTTPCookieVersion];
+            
             return YES;
         }
     }
     return NO;
+}
 
+- (NSString*)_encodetoJson:(id)object{
+    NSError *error;
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:object
+                                                       options:0
+                                                         error:&error];
+    
+    if (!jsonData) {
+           return [error localizedDescription];
+    } else {
+       return [[NSString alloc]initWithBytes:[jsonData bytes]
+                                      length:[jsonData length] encoding:NSUTF8StringEncoding];
+    }
+    
+ 
 }
 
 

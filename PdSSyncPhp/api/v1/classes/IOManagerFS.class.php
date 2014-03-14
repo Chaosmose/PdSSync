@@ -1,5 +1,6 @@
 <?php
 
+require_once 'IOManager.class.php';
 
 /**
  * Concrete IOManager using a file system
@@ -39,10 +40,7 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 	}
 	
 	public function move_uploaded($filename, $destination) {
-		$dir = dirname ( $destination );
-		if (! file_exists ( $dir )) {
-			mkdir ( $dir );
-		}
+		 $this->mkdir( dirname ( $destination ));
 		return move_uploaded_file ( $filename, $destination );
 	}
 	

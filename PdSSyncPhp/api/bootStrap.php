@@ -8,6 +8,9 @@ try {
 	$API = new PdSSyncAPI ();
 	echo $API->run ();
 } catch ( Exception $e ) {
+	$status=500;
+	$header = 'HTTP/1.1 ' . $status . ' ' . $API->requestStatus ( $status );
+	header ( $header );
 	echo json_encode ( Array (
 			'error' => $e->getMessage ()
 	) );

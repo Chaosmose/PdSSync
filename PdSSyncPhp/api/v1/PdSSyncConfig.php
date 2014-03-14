@@ -13,9 +13,9 @@ define ( 'REPOSITORY_WRITING_PATH'		,	dirname( dirname(__DIR__)). '/Repository/'
 // PERSITENCY
 ///////////////////////
 
-//require_once 'v1/classes/IOManagerFS.class.php';  // Default adapter
-require_once 'v1/classes/IOManagerRedis.class.php';
-define('PERSISTENCY_CLASSNAME'								,	 'IOManagerRedis');
+require_once 'v1/classes/IOManagerFS.class.php';  // Default adapter
+//require_once 'v1/classes/IOManagerRedis.class.php';
+define('PERSISTENCY_CLASSNAME'								,	 'IOManagerFS');
 
 ///////////////////////
 // KEYS

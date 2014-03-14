@@ -121,7 +121,7 @@ class PdSSyncAPI {
 	// //////////////
 	
 	
-	// http GET PdsSync.api.local/api/v1/reachable/
+	// http GET PdsSync.api.local/api/v1/reachable/?start_debug=1&debug_host=127.0.0.1&debug_port=10137
 	
 	
 	protected function reachable() {
@@ -350,6 +350,7 @@ class PdSSyncAPI {
 			try {
 				// http://www.php.net/manual/en/wrappers.php.php
 				$post= json_decode( file_get_contents('php://input'),true ) ;// A raw post  not a Multi part form.
+
 			} catch (Exception $e) {
 				return $this->_response ( 'commands must be a valid json array : '.$post ['commands'], 400 );
 			}
@@ -381,7 +382,7 @@ class PdSSyncAPI {
 						 );
 			}
 		} else {
-			open . $infos = array ();
+			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method POST required';
 			$infos [METHOD_KEY] =$this->method ;
 			return $this->_response ( $infos, 405 );
@@ -402,7 +403,7 @@ class PdSSyncAPI {
 		header ( "Access-Control-Allow-Orgin: *" );
 		header ( "Access-Control-Allow-Methods: *" );
 		header ( "Content-Type: application/json" );
-		$header = 'HTTP/1.1 ' . $status . ' ' . $this->_requestStatus ( $status );
+		$header = 'HTTP/1.1 ' . $status . ' ' . $this->requestStatus ( $status );
 		header ( $header );
 		if (isset ( $data )) {
 			return json_encode ( $data );
@@ -438,7 +439,7 @@ class PdSSyncAPI {
 	 * @param int $code        	
 	 * @return string
 	 */
-	protected function _requestStatus($code) {
+	public function requestStatus($code) {
 		$status = array (
 				100 => 'Continue',
 				101 => 'Switching Protocols',
