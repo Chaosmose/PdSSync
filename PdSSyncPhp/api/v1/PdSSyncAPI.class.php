@@ -357,12 +357,12 @@ class PdSSyncAPI {
 			if( isset ($post) && isset ( $post ['syncIdentifier'] )  && isset($post ['commands']) && isset($post ['hashMap']) ) {
 				if (is_array ($post['commands'])){
 					if (isset ( $this->verb ) && count ( $this->args ) > 0) {
-						$treeId = $this->args [0];
+						$treeId = $this->args [1];
 					} else { 
 						return $this->_response ( 'Undefined treeId', 404 );
 					}
 					if (strlen ( $treeId ) < 20) {
-						return $this->_response ( NULL, 406 );
+						return $this->_response ( "" , 406 );
 					}
 					// @todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
 					$errors=$this->getInterpreter()->interpretBunchOfCommand ($treeId, $post ['syncIdentifier'], $post['commands'], $post ['hashMap'] );

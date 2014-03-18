@@ -9,6 +9,7 @@
 // Current implementation relies on http://cocoadocs.org/docsets/AFNetworking/2.2.0/
 
 #import "AFNetworking.h"
+#import "JSONResponseSerializerWithData.h"
 #import "PdSCommandInterpreter.h"
 
 
@@ -369,22 +370,20 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         // CALL the PdSync Service
         
         //http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/unique-public-id-1293/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap='[]'
-        NSString *URLString =[NSString stringWithFormat:@"finalizeTransactionIn/file/tree/%@/%@",_context.destinationTreeId,@"?start_debug=1&debug_host=127.0.0.1&debug_port=10137"];
+        NSString *URLString =[NSString stringWithFormat:@"finalizeTransactionIn/file/tree/%@/%@",_context.destinationTreeId,@""];//@"?start_debug=1&debug_host=127.0.0.1&debug_port=10137"
         NSDictionary *parameters = @{
                                     @"syncIdentifier": _context.syncID,
                                     @"commands":creativeCommands,
                                     @"hashMap":[_context.finalHashMap dictionaryRepresentation]
                                     };
         
-        AFJSONRequestSerializer*r=[AFJSONRequestSerializer serializer];
-      [_HTTPsessionManager setRequestSerializer:r];
-        
+
        [_HTTPsessionManager POST:URLString
                       parameters:parameters
                          success:^(NSURLSessionDataTask *task, id responseObject) {
                              [self _nextCommand];
                          } failure:^(NSURLSessionDataTask *task, NSError *error) {
-                             NSLog(@"\n%@\n%@\n%@",[task.currentRequest.URL absoluteString],task.currentRequest.HTTPBody,task.response);
+                             NSLog(@"\n%@\n%@",[task.currentRequest.URL absoluteString],[self _stringFromError:error]);
                              [self _interruptOnFault:[error localizedDescription]];
                          }];
         
@@ -398,7 +397,12 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 }
 
 
-
+- (NSString*)_stringFromError:(NSError*)error{
+       NSData *d=[[error userInfo] objectForKey:JSONResponseSerializerWithDataKey];
+    return [[NSString alloc] initWithBytes:[d bytes]
+                                    length:[d length]
+                                  encoding:NSUTF8StringEncoding];
+}
 
 
 -(void)_runCopy:(NSString*)source destination:(NSString*)destination{
@@ -448,7 +452,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runChmod:(NSString*)destination mode:(int)mode{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
-        // CALL the PdSync Service
+        // CALL the PdSync Servicepas 
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // CHMOD LOCALLY
@@ -522,8 +526,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             _HTTPsessionManager=[[AFHTTPSessionManager alloc]initWithBaseURL:_context.sourceBaseUrl sessionConfiguration:configuration];
         }
         if(_HTTPsessionManager){
-            
-            _HTTPsessionManager.responseSerializer = [AFHTTPResponseSerializer serializer];
+            AFJSONRequestSerializer*r=[AFJSONRequestSerializer serializer];
+            [_HTTPsessionManager setRequestSerializer:r];
+            _HTTPsessionManager.responseSerializer = [[JSONResponseSerializerWithData alloc]init];
             NSSet*acceptable= [NSSet setWithArray:@[@"application/json",@"text/html"]];
             [_HTTPsessionManager.responseSerializer setAcceptableContentTypes:acceptable];
             // REACHABILITY SUPPORT
@@ -541,14 +546,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 }
             }];
         
-            
-            NSMutableDictionary *cookieProperties = [NSMutableDictionary dictionary];
-            [cookieProperties setObject:@"someValue123456" forKey:NSHTTPCookieValue];
-            [cookieProperties setObject:@"www.example.com" forKey:NSHTTPCookieDomain];
-            [cookieProperties setObject:@"www.example.com" forKey:NSHTTPCookieOriginURL];
-            [cookieProperties setObject:@"/" forKey:NSHTTPCookiePath];
-            [cookieProperties setObject:@"0" forKey:NSHTTPCookieVersion];
-            
             return YES;
         }
     }
