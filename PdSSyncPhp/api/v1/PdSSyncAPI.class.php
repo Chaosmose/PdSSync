@@ -214,39 +214,58 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	
-	
-	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293 direct=true
+		
+	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293 redirect=true  returnValue=false
 	
 	/**
 	 * Returns the hash map
 	 * By default direct=true
+	 * By default returnValue=false
+	 * 
 	 * @return multitype: string
 	 */
 	protected function hashMap() {
 		if ($this->method == 'GET') {
-			$this->ioManager = $this->getIoManager();
-				if (isset ( $this->verb ) && count ( $this->args ) > 0) {
-					$treeId = $this->args [0];
-				} else {
-					return $this->_response ( 'Undefined treeId', 404 );
-				}
-				
-				if (strlen ( $treeId ) < 20) {
-					return $this->_response ( NULL, 406 );
-				}
-				
-				$direct=true;
-				if(isset($this->request['direct'])){
-					$direct=(bool)$this->request['direct'];
-				}
-				
-				// This method can interupt the flow
-				// And redirect  according to the context with a 307 status code
-				$result = $this->ioManager->uriFor($treeId, METADATA_FOLDER.HASHMAP_FILENAME,(!$direct));
-				return	$this->_response ( $result, $this->ioManager->status );
-				
+
+			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+				$treeId = $this->args [0];
+			} else {
+				return $this->_response ( 'Undefined treeId', 404 );
+			}
 			
+			if (strlen ( $treeId ) < 20) {
+				return $this->_response ( NULL, 406 );
+			}
+			
+			$redirect=true;
+				if(isset($this->request['redirect'])){
+					$redirect=(strtolower( $this->request['redirect'])=='true');
+				}
+				
+				$returnValue=false;
+				if(isset($this->request['returnValue'])){
+					$returnValue=(strtolower( $this->request['returnValue'])=='true');
+				}
+			$this->ioManager = $this->getIoManager ();
+			if ($returnValue && ! $redirect) {
+				$path = $this->ioManager->absolutePath ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
+				if ($this->ioManager->exists ( $path )) {
+					$result = $this->ioManager->get_contents ( $path );
+					return $this->_response ( $result, $this->ioManager->status );
+				} else {
+					return $this->_response ( NULL, 404 );
+				}
+			}
+			
+			$uri = $this->ioManager->uriFor ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
+			if ($redirect) {
+				header ( 'Location:  ' . $uri, true, 307 );
+				exit ();
+			} else {
+					$infos = array ();
+					$infos["uri"]=$uri;
+					return	$this->_response ( $infos, 200 );
+			}
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method GET required';
@@ -255,11 +274,12 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt direct=false
+	// http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt redirect=false returnValue=false
 	
 	/**
 	 * Redirects to a file
-	 * By default direct=false
+	 * By default redirect=false
+	 * By default returnValue=false
 	 * @return multitype: string
 	 */
 	protected function file() {
@@ -270,20 +290,41 @@ class PdSSyncAPI {
 				} else {
 					return $this->_response ( 'Undefined treeId', 404 );
 				}
+
 				if (strlen ( $treeId ) < 20) {
 					return $this->_response ( NULL, 406 );
 				}
-				$direct=false;
-				if(isset($this->request['direct'])){
-					$direct=(bool)$this->request['direct'];
+				
+
+				$redirect=true;
+				if(isset($this->request['redirect'])){
+					$redirect=(strtolower( $this->request['redirect'])=='true');
+				}
+				
+				$returnValue=false;
+				if(isset($this->request['returnValue'])){
+					$returnValue=(strtolower( $this->request['returnValue'])=='true');
 				}
 				
 				$this->ioManager = $this->getIoManager ();
-				// This method can interupt the flow
-				// And redirect according to the context with a 307 status code
-				$result = $this->ioManager->uriFor ( $treeId, $this->request ['path'] ,$direct);
-				return	$this->_response ( $result, $this->ioManager->status );
-				
+				if($returnValue && !$redirect){
+					$path=$this->ioManager->absolutePath($treeId,  $this->request ['path']);
+					if($this->ioManager->exists($path)){
+						$result=$this->ioManager->get_contents($path);
+						return  	$this->_response ( $result, $this->ioManager->status );
+					}else{
+						return $this->_response (NULL, 404 );
+					}
+				}
+				$uri = $this->ioManager->uriFor($treeId,  $this->request ['path']);
+				if($redirect){
+					header ( 'Location:  ' . $uri, true, 307 );
+					exit ();
+				}else{
+					$infos = array ();
+					$infos["uri"]=$uri;
+					return	$this->_response ( $infos, 200 );
+				}
 			}else{
 				return $this->_response ( 'Undefined path ', 404 );
 			}
@@ -294,6 +335,8 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
+	
+	
 	
 	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
 	

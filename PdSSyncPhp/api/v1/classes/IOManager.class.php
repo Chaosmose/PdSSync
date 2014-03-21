@@ -26,8 +26,6 @@ interface IOManagerPersistency {
 	
 	public function move_uploaded($filename, $destination);
 	
-	public function shouldRedirectURIByDefault();
-	
 }
 
 interface  IOManager extends IOManagerPersistency{
@@ -47,10 +45,9 @@ interface  IOManager extends IOManagerPersistency{
 	 *  Returns the current public uri for a given resource
 	 * @param string $treeId
 	 * @param string $relativePath
-	 * @param boolean $returnValue if set to true reads the contents and returns it
 	 * @return string|NULL
 	 */
-	public function uriFor($treeId, $relativePath,$returnValue=false);
+	public function uriFor($treeId, $relativePath);
 	
 	
 	/**
@@ -124,39 +121,20 @@ abstract  class IOManagerAbstract  {
 	}
 	
 
-	public function uriFor($treeId, $relativePath,$returnValue=false) {
+	public function uriFor($treeId, $relativePath) {
 		$currentId = $this->_currentPublicId ( $treeId );
 		$absolutePath = $this->absolutePath ( $treeId, $relativePath );
 		if ($currentId != NULL) {
 			if ($this->exists ( $absolutePath )) {
 				$uri = REPOSITORY_HOST . $currentId . DIRECTORY_SEPARATOR . $relativePath;
-				$redirectByDefault = $this->shouldRedirectURIByDefault ();
-				if ($redirectByDefault && $returnValue == false) {
-					header ( 'Location:  ' . $uri, true, 307 );
-					exit ();
-				} else {
 					$this->status = 200;
 					// @todo 401 if not authorized;
 					// $this->status=401
-					
-					if ($returnValue == true) {
-						return $this->get_contents ( $absolutePath );
-					} else {
-						return $uri;
-					}
-				}
-			} else {
-				if ($this->shouldRedirectURIByDefault () && $returnValue == false) {
-					header ( 'Location:  ' . $uri, true, 404 );
-				} else {
-					$this->status = 404;
-					return NULL;
-				}
-			}
-		} else {
-			$this->status = 404;
-			return NULL;
+					return $uri;
+			} 
 		}
+		$this->status = 404;
+		return NULL;
 	}
 	
 	public function createTree( $treeId){
@@ -253,9 +231,6 @@ abstract  class IOManagerAbstract  {
 		}
 	}
 
-	public function shouldRedirectURIByDefault(){
-		return false;	
-	}
 	
 	// Protected 
 	

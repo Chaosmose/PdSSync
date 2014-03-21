@@ -44,11 +44,6 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 		return move_uploaded_file ( $filename, $destination );
 	}
 	
-	public function shouldRedirectURIByDefault(){
-		return true;
-	}
-	
-	
 }
 
 ?>

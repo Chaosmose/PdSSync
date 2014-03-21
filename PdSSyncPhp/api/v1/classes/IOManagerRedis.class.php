@@ -45,9 +45,6 @@ class IOManagerRedis extends IOManagerAbstract implements IOManagerPersistency {
 		return move_uploaded_file ( $filename, $destination );
 	}
 	
-	public function shouldRedirectURIByDefault(){
-		return false;
-	}
 }
 
 ?>

@@ -72,9 +72,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 }
 
 
-+(id)encodeCreateOrUpdate:(NSString*)source destination:(NSString*)destination{
-    if(source && destination){
-        return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCreateOrUpdate,destination,source];
++(id)encodeCreateOrUpdate:(NSString*)destination{
+    if(destination){
+        return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSCreateOrUpdate,destination];
     }
     return nil;
 }
@@ -166,7 +166,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         [_queue addOperationWithBlock:^{
             [self _finalizeWithCreativeCommands:creativeCommands];
         }];
-
+        
         
         // Finaly we add the completion block
         [self->_queue addOperationWithBlock:^{
@@ -296,10 +296,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         // UPLOAD
         //_context.destinationBaseUrl;
         
-       // http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/
-       // destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
-
-    
+        // http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/
+        // destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
+        
+        PdSCommandInterpreter *__weak weakSelf=self;
         NSString *URLString =[[_context.destinationBaseUrl absoluteString] stringByAppendingFormat:@"uploadFileTo/tree/%@/",_context.destinationTreeId];
         NSDictionary *parameters = @{
                                      @"syncIdentifier": _context.syncID,
@@ -307,52 +307,87 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                      @"doers":@"",
                                      @"undoers":@""};// @todo find a solution for doers / undoers if possible
         
-
+        
         NSMutableURLRequest *request = [[AFHTTPRequestSerializer serializer] multipartFormRequestWithMethod:@"POST"
                                                                                                   URLString:URLString
                                                                                                  parameters:parameters
                                                                                   constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
-            [formData appendPartWithFileURL:[NSURL fileURLWithPath:source]
-                                       name:@"source"
-                                   fileName:[destination lastPathComponent]
-                                   mimeType:@"application/octet-stream"
-                                      error:nil];
-                    
-        } error:nil];
+                                                                                      [formData appendPartWithFileURL:[NSURL fileURLWithPath:source]
+                                                                                                                 name:@"source"
+                                                                                                             fileName:[destination lastPathComponent]
+                                                                                                             mimeType:@"application/octet-stream"
+                                                                                                                error:nil];
+                                                                                      
+                                                                                  } error:nil];
         
         _unitaryCommandProgress = nil;
         NSURLSessionUploadTask *uploadTask = [_HTTPsessionManager uploadTaskWithStreamedRequest:request
-                                                                           progress:&_unitaryCommandProgress
-                                                                  completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
-            if (error) {
-                NSLog(@"Error: %@", error);
-            } else {
-                NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
-                NSLog(@"%@ %@", response, s);
-                [self _nextCommand];
-            }
-        }];
+                                                                                       progress:&_unitaryCommandProgress
+                                                                              completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+                                                                                  if (error) {
+                                                                                      NSLog(@"Error: %@", error);
+                                                                                  } else {
+                                                                                      NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
+                                                                                      NSLog(@"%@ %@", response, s);
+                                                                                      [weakSelf _nextCommand];
+                                                                                  }
+                                                                              }];
         
         [uploadTask resume];
         
         
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal){
         
+          PdSCommandInterpreter *__weak weakSelf=self;
+        
         // DOWNLOAD
         //_context.sourceBaseUrl;
-        // http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt direct=false
         
-        NSString *URLString =[[_context.sourceBaseUrl absoluteString] stringByAppendingFormat:@"file/tree/%@/?path=%@&direct=false",_context.destinationTreeId,source];
+        // http://pdssync.api.local/api/v1/file/tree/unique-public-id-1293/?path=txt/test/a.txt&redirect=false&returnValue=false
+        
+        NSString*treeId=_context.destinationTreeId;
+        
+        // Decompose in a GET for the URI then a download task
+        
+        NSString *URLString =[[_context.sourceBaseUrl absoluteString] stringByAppendingFormat:@"file/tree/%@/?path=%@&redirect=false&returnValue=false",treeId,source];
         NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:URLString]];
-        _unitaryCommandProgress = nil;
-        NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:request
-                                                                                     progress:&_unitaryCommandProgress
-                                                                      destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
-                    return [self _absoluteLocalPathFromRelativePath:source toLocalUrl:_context.sourceBaseUrl];
-        } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
-            NSLog(@"File downloaded to: %@", filePath);
-        }];
-        [downloadTask resume];
+        [_HTTPsessionManager GET:URLString parameters:nil
+                         success:^(NSURLSessionDataTask *task, id responseObject) {
+                             NSDictionary*d=(NSDictionary*)responseObject;
+                             NSString*uriString=[d objectForKey:@"uri"];
+                             if(uriString){
+                                 NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]];
+                                 _unitaryCommandProgress = nil;
+                                 NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
+                                                                                                              progress:&_unitaryCommandProgress
+                                                                                                           destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
+                                                                                                               NSString*p=[weakSelf _absoluteLocalPathFromRelativePath:destination toLocalUrl:_context.destinationBaseUrl];
+                                                                                                               [weakSelf _createRecursivelyRequiredFolderForPath:p];
+                                                                                                               if([_fileManager fileExistsAtPath:[weakSelf _filter:p]]){
+                                                                                                                   NSError*error=nil;
+                                                                                                                  [_fileManager removeItemAtPath:[weakSelf _filter:p] error:&error];
+                                                                                                                   if(error){
+                                                                                                                       NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[error localizedDescription]];
+                                                                                                                       [weakSelf _interruptOnFault:msg];
+                                                                                                                   }
+                                                                                                               }
+                                                                                                               return [NSURL URLWithString:p];
+                                                                                                           } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
+                                                                                                               NSLog(@"File downloaded to: %@", filePath);
+                                                                                                               [weakSelf _nextCommand];
+                                                                                                           }];
+                                 [downloadTask resume];
+                             }else{
+                                 [weakSelf _interruptOnFault:[NSString stringWithFormat:@"Missing url in response of %@",task.currentRequest.URL.absoluteString]];
+                             }
+                         } failure:^(NSURLSessionDataTask *task, NSError *error) {
+                             NSLog(@"%@",[self _stringFromError:error]);
+                             [weakSelf _interruptOnFault:[weakSelf _stringFromError:error]];
+                         }];
+        
+        
+        
+        
         
         
     }else if (self->_context.mode==SourceIsLocalDestinationIsLocal){
@@ -372,33 +407,33 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         //http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/unique-public-id-1293/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap='[]'
         NSString *URLString =[NSString stringWithFormat:@"finalizeTransactionIn/file/tree/%@/%@",_context.destinationTreeId,@""];//@"?start_debug=1&debug_host=127.0.0.1&debug_port=10137"
         NSDictionary *parameters = @{
-                                    @"syncIdentifier": _context.syncID,
-                                    @"commands":creativeCommands,
-                                    @"hashMap":[_context.finalHashMap dictionaryRepresentation]
-                                    };
+                                     @"syncIdentifier": _context.syncID,
+                                     @"commands":creativeCommands,
+                                     @"hashMap":[_context.finalHashMap dictionaryRepresentation]
+                                     };
         
-
-       [_HTTPsessionManager POST:URLString
-                      parameters:parameters
-                         success:^(NSURLSessionDataTask *task, id responseObject) {
-                             [self _nextCommand];
-                         } failure:^(NSURLSessionDataTask *task, NSError *error) {
-                             NSLog(@"\n%@\n%@",[task.currentRequest.URL absoluteString],[self _stringFromError:error]);
-                             [self _interruptOnFault:[error localizedDescription]];
-                         }];
+        
+        [_HTTPsessionManager POST:URLString
+                       parameters:parameters
+                          success:^(NSURLSessionDataTask *task, id responseObject) {
+                              [self _nextCommand];
+                          } failure:^(NSURLSessionDataTask *task, NSError *error) {
+                              NSLog(@"\n%@\n%@",[task.currentRequest.URL absoluteString],[self _stringFromError:error]);
+                              [self _interruptOnFault:[error localizedDescription]];
+                          }];
         
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
-       // NEED TO QUALIFY IF THE FINALIZATION IS USEFULL
+        // NEED TO QUALIFY IF THE FINALIZATION IS USEFULL
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
-
+    
 }
 
 
 - (NSString*)_stringFromError:(NSError*)error{
-       NSData *d=[[error userInfo] objectForKey:JSONResponseSerializerWithDataKey];
+    NSData *d=[[error userInfo] objectForKey:JSONResponseSerializerWithDataKey];
     return [[NSString alloc] initWithBytes:[d bytes]
                                     length:[d length]
                                   encoding:NSUTF8StringEncoding];
@@ -452,7 +487,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runChmod:(NSString*)destination mode:(int)mode{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
-        // CALL the PdSync Servicepas 
+        // CALL the PdSync Servicepas
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // CHMOD LOCALLY
@@ -474,7 +509,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 - (NSString*)_absoluteLocalPathFromRelativePath:(NSString*)relativePath toLocalUrl:(NSURL*)localUrl{
-    return [NSString stringWithFormat:@"%@%@",localUrl,relativePath];
+    return [NSString stringWithFormat:@"%@%@",[localUrl absoluteString],relativePath];
 }
 
 
@@ -509,7 +544,59 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     
 }
 
-#pragma mark - AFNetworking 
+#pragma mark - File manager selectors
+
+-(BOOL)_createRecursivelyRequiredFolderForPath:(NSString*)path{
+    NSString*filteredPath=[self _filter:path];
+#if TARGET_OS_IPHONE
+    if([path rangeOfString:[self _applicationDocumentsDirectory]].location==NSNotFound){
+        return NO;
+#endif
+    if(![[filteredPath substringFromIndex:filteredPath.length-1] isEqualToString:@"/"])
+        filteredPath=[filteredPath stringByDeletingLastPathComponent];
+    
+    if(![_fileManager fileExistsAtPath:filteredPath]){
+        NSError *error=nil;
+        [_fileManager createDirectoryAtPath:filteredPath
+                    withIntermediateDirectories:YES
+                                     attributes:nil
+                                          error:&error];
+        if(error){
+            return NO;
+        }
+    }
+    return YES;
+}
+
+- (NSString*)_filter:(NSString*)path{
+    if(!path)
+        return path;
+    // Those filtering operations may be necessary sometimes when manipulating IOS FS.
+    NSString *filtered=[[path copy] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+    filtered=[filtered stringByReplacingOccurrencesOfString:@"file:///private" withString:@""];
+    filtered=[filtered stringByReplacingOccurrencesOfString:@"file://" withString:@""];
+    return filtered;
+}
+
+
+
+- (NSString *)_applicationDocumentsDirectory{
+#if TARGET_OS_IPHONE
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
+        _applicationDocumentsDirectory=[self _filter:[basePath stringByAppendingString:@"/"]];
+#else
+        // If the absolute path was nil
+        // We create automatically a data folder
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString *basePath=[paths lastObject];
+        return basePath;
+#endif
+}
+
+
+
+#pragma mark - AFNetworking
 
 
 // We currently support ONE MANAGER ONLY
@@ -545,7 +632,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                         break;
                 }
             }];
-        
+            
             return YES;
         }
     }
@@ -559,14 +646,14 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                          error:&error];
     
     if (!jsonData) {
-           return [error localizedDescription];
+        return [error localizedDescription];
     } else {
-       return [[NSString alloc]initWithBytes:[jsonData bytes]
-                                      length:[jsonData length] encoding:NSUTF8StringEncoding];
+        return [[NSString alloc]initWithBytes:[jsonData bytes]
+                                       length:[jsonData length] encoding:NSUTF8StringEncoding];
     }
-    
- 
 }
+
+
 
 
 @end
