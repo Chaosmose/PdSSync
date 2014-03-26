@@ -83,8 +83,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             _queue.name=[NSString stringWithFormat:@"com.pereira-da-silva.PdSSync.CommandInterpreter.%i",[self hash]];
             [_queue setMaxConcurrentOperationCount:1];// Sequential
             [self _setUpManager];
-            [self _run];
-            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self _run];
+            });
         }else{
             if(self->_completionBlock){
                 _completionBlock(NO,@"sourceUrl && destinationUrl && bunchOfCommand && finalHashMap are required");
@@ -362,7 +363,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         
         [uploadTask resume];
         
-        [progress addObserver:self
+        [progress addObserver:weakSelf
                    forKeyPath:@"fractionCompleted"
                       options:NSKeyValueObservingOptionNew
                       context:NULL];
@@ -386,7 +387,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                          success:^(NSURLSessionDataTask *task, id responseObject) {
                              NSDictionary*d=(NSDictionary*)responseObject;
                              NSString*uriString=[d objectForKey:@"uri"];
-                             if(uriString){
+                             if(uriString && [uriString isKindOfClass:[NSString class]]){
                                  NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]];
                                  NSProgress*progress;
                                  NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
@@ -409,7 +410,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                            }];
                                  [downloadTask resume];
                                  
-                                 [progress addObserver:self
+                                 [progress addObserver:weakSelf
                                             forKeyPath:@"fractionCompleted"
                                                options:NSKeyValueObservingOptionNew
                                                context:NULL];
@@ -418,7 +419,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                  [weakSelf _interruptOnFault:[NSString stringWithFormat:@"Missing url in response of %@",task.currentRequest.URL.absoluteString]];
                              }
                          } failure:^(NSURLSessionDataTask *task, NSError *error) {
-                             NSLog(@"%@",[self _stringFromError:error]);
+                             NSLog(@"%@",[weakSelf _stringFromError:error]);
                              [weakSelf _interruptOnFault:[weakSelf _stringFromError:error]];
                          }];
         
@@ -641,8 +642,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     if ([keyPath isEqualToString:@"fractionCompleted"]) {
         NSProgress *progress = (NSProgress *)object;
         if(_progressBlock){
+            float f=progress.fractionCompleted;
             //dispatch_sync(dispatch_get_main_queue(), ^{
-                _progressBlock(_progressCounter,progress.fractionCompleted);
+                _progressBlock(_progressCounter,f);
             //});
         } else {
             [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
