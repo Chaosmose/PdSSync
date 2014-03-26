@@ -11,7 +11,7 @@ require_once 'v1/classes/IOManager.class.php';
  * Optimized according to google bests practices :  https://developers.google.com/speed/articles/optimizing-php
  * 
  * @author Benoit Pereira da Silva
- * @copyright https://github.com/benoit-pereira-da-silva/PdSSync
+ * @copyright https://github.com/benoit-pereira-da-silva/PdSSync 
  */
 class PdSSyncAPI {
 	
@@ -121,8 +121,8 @@ class PdSSyncAPI {
 	// //////////////
 	
 	
-	// http GET PdsSync.api.local/api/v1/reachable/?start_debug=1&debug_host=127.0.0.1&debug_port=10137
-	
+	// http GET PdsSync.api.local/api/v1/reachable/
+	// http GET http://fluctue.com/PdSSyncPhp/api/v1/reachable/
 	
 	protected function reachable() {
 		if ($this->method == 'GET') {
@@ -161,7 +161,7 @@ class PdSSyncAPI {
 			
 			if (isset ( $this->verb ) && count ( $this->args ) > 0 && $this->verb == "tree") {
 				$treeId = $this->args [0];
-				if(strlen($treeId)<20){
+				if(strlen($treeId)<MIN_TREE_ID_LENGTH){
 					return $this->_response ( NULL, 406 );
 				}
 				if (isset ( $this->request ['key'] ) && $this->request ['key'] == CREATIVE_KEY) {
@@ -194,7 +194,7 @@ class PdSSyncAPI {
 		if ($this->method == 'POST') {
 			if (isset ( $this->verb ) && count ( $this->args ) > 0 && $this->verb == "tree") {
 				$treeId = $this->args [0];
-				if (strlen ( $treeId ) < 20) {
+				if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 					return $this->_response ( NULL, 406 );
 				}	
 				$this->ioManager =  $this->getIoManager();
@@ -215,7 +215,7 @@ class PdSSyncAPI {
 		}
 	}
 		
-	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293 redirect=true  returnValue=false
+	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293&redirect=true&returnValue=false
 	
 	/**
 	 * Returns the hash map
@@ -233,7 +233,7 @@ class PdSSyncAPI {
 				return $this->_response ( 'Undefined treeId', 404 );
 			}
 			
-			if (strlen ( $treeId ) < 20) {
+			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 				return $this->_response ( NULL, 406 );
 			}
 			
@@ -274,7 +274,7 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt redirect=false returnValue=false
+	// http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt&redirect=false&returnValue=false
 	
 	/**
 	 * Redirects to a file
@@ -291,11 +291,10 @@ class PdSSyncAPI {
 					return $this->_response ( 'Undefined treeId', 404 );
 				}
 
-				if (strlen ( $treeId ) < 20) {
+				if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 					return $this->_response ( NULL, 406 );
 				}
 				
-
 				$redirect=true;
 				if(isset($this->request['redirect'])){
 					$redirect=(strtolower( $this->request['redirect'])=='true');
@@ -338,7 +337,7 @@ class PdSSyncAPI {
 	
 	
 	
-	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt doers='' undoers=''
+	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt 
 	
 	// @todo  store a the sync id & relative path to a private zone for the sanitizing procedure.
 	
@@ -354,7 +353,7 @@ class PdSSyncAPI {
 			} else {
 				return $this->_response ( 'Undefined treeId', 404 );
 			}
-			if (strlen ( $treeId ) < 20) {
+			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 				return $this->_response ( NULL, 406 );
 			}
 			// @todo support doers / undoers
@@ -399,13 +398,13 @@ class PdSSyncAPI {
 			}
 			if( isset ($post) && isset ( $post ['syncIdentifier'] )  && isset($post ['commands']) && isset($post ['hashMap']) ) {
 				if (is_array ($post['commands'])){
-					if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+					if ( isset ( $this->verb ) && count ( $this->args ) > 1) {
 						$treeId = $this->args [1];
 					} else { 
 						return $this->_response ( 'Undefined treeId', 404 );
 					}
-					if (strlen ( $treeId ) < 20) {
-						return $this->_response ( "" , 406 );
+					if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
+						return $this->_response (NULL, 406 );
 					}
 					// @todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
 					$errors=$this->getInterpreter()->interpretBunchOfCommand ($treeId, $post ['syncIdentifier'], $post['commands'], $post ['hashMap'] );

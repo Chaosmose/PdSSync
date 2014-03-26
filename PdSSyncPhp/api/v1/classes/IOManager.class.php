@@ -107,6 +107,10 @@ abstract  class IOManagerAbstract  {
 	 */
 	protected   $treeData=NULL;
 	
+	
+	public function __construct(){
+		$this->status = 200;
+	}
 
 	public function repositoryAbsolutePath() {
 		return REPOSITORY_WRITING_PATH;
@@ -127,7 +131,6 @@ abstract  class IOManagerAbstract  {
 		if ($currentId != NULL) {
 			if ($this->exists ( $absolutePath )) {
 				$uri = REPOSITORY_HOST . $currentId . DIRECTORY_SEPARATOR . $relativePath;
-					$this->status = 200;
 					// @todo 401 if not authorized;
 					// $this->status=401
 					return $uri;

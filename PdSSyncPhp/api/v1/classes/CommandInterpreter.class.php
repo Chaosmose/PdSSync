@@ -69,7 +69,7 @@ class CommandInterpreter {
 			if($this->ioManager->exists($protectedPath)){
 				$this->ioManager->rename($protectedPath, $this->ioManager->absolutePath($treeId, $file));
 			}else{
-				$failures[]='Unexisting path : '.$protectedPath;
+				$failures[]='Unexisting path : '.$protectedPath.'->'.$treeId;
 			}
 		}
 		if(count($failures)>0){
