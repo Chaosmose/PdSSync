@@ -5,7 +5,7 @@ PdSSyncPhp/.buildpath
 
 PdSSyncPhp/.project
 
-PdSSyncPhp/.settings/org.eclipse.php.core.prefs
+PdSSyncPhp/.settings*
 
 PdSSyncPhp/Repository/*
 
