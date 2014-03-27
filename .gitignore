@@ -9,4 +9,6 @@ PdSSyncPhp/.settings*
 
 PdSSyncPhp/Repository/*
 
+PdSSyncPhp/dummy.php
+
 PdSSync.xcworkspace/xcuserdata/bpds.xcuserdatad/UserInterfaceState.xcuserstate 
