@@ -1,6 +1,6 @@
 ## Disclaimer ##
 **PdSSync** is still in early development phases do not use in any project !
-Currently the web api is prototyped in PHP, it will be ported to JAVA or PYTHON an will support MessagePack encoding in 2014.
+Currently the web api is prototyped in PHP, it will be ported to JAVA and will support MessagePack in 2014.
 
 # PdSSync #
 
