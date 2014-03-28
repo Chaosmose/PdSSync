@@ -1,8 +1,8 @@
 # PdSSync #
 
 A simple delta synchronizer for documents and data between devices.
-The synchronization relies on a client software and a Restfull service 
-It allows to synchronizes local and distant sets of files grouped in a root folder by using a mediation service.
+The standard synchronization topology relies on a client software and a light blind Restfull service, but can work locally and using P2P.
+It allows to synchronizes local and distant grouped sets of files.
 
 ## Approach ##
 
@@ -87,18 +87,22 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync objc 
 
 ### End points ###
 
+You can use [Httpie](https://github.com/jkbr/httpie) to test the endpoints. 
+```shell
 http GET dev.local/api/v1/reachable/
 
 http -v -f POST dev.local/api/v1/install/ adminKey='YOUR KEY'
 
-http -v -f POST dev.local/api/v1/create/tree/
+http -v -f POST dev.local/api/v1/create/tree/unique-public-id key='YOUR KEY'
 
-http -v GET dev.local/api/v1/hashMap/tree/1
+http -v GET dev.local/api/v1/hashMap/tree/unique-public-id&redirect=true&returnValue=false
 
-http -v -f POST dev.local/api/v1/uploadFileTo/tree/1/ destination='file1.txt'  syncIdentifier='xx' source@~/Documents/text1.txt  doers='' undoers=''
+http -v -f POST dev.local/api/v1/uploadFileTo/tree/unique-public-id/ destination='file1.txt'  syncIdentifier='xx' source@~/Documents/text1.txt
 
-http -v -f POST dev.local/api/v1/finalizeSynchronization/ commands[]='<encodedCommand>'  syncIdentifier='xx' hashMap=''
+http -v -f POST dev.local/api/v1/finalizeSynchronization/ commands[]='<encodedCommand>'  syncIdentifier='xx' hashMap='<hashmap>'
 
+http -v GET dev.local/api/v1/file/tree/unique-public-id/?path=a/file1.txt&redirect=false&returnValue=false
+```
 #### Commands  : ####
 
 Any command is encoded in an array.
