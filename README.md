@@ -1,8 +1,10 @@
+## Disclaimer ##
+**PdSSync** is still in early development phases do not use in any project !
+Currently the web api is prototyped in PHP, it will be ported to JAVA or PYTHON an will support MessagePack encoding in 2014.
+
 # PdSSync #
 
-A simple delta synchronizer for documents and data between devices.
-The standard synchronization topology relies on a client software and a light blind Restfull service, but can work locally and using P2P.
-It allows to synchronizes local and distant grouped sets of files.
+A simple delta synchronizer for documents and data between devices.It allows to synchronizes local and distant grouped sets of files.The standard synchronization topology relies on a client software and a light blind Restfull service, but it can work locally and using P2P. 
 
 ## Approach ##
 
@@ -14,10 +16,6 @@ It allows to synchronizes local and distant grouped sets of files.
 - allow very efficient caching and mem caching strategy (we will provide advanced implementation samples)
 - support hash maps encryption
 - allow advanced hashing strategy ( like considering that a modified file should not be synchronized bec) 
-
-**PdSSync** is still in early development phases do not use in any project !
-Currently the web api is prototyped in PHP , JAVA and Python port would be appreciate feel free to contact me.
-We will support soon MessagePack encoding.
 
 ## HashMap  ##
 
