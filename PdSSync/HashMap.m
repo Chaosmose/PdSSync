@@ -116,9 +116,7 @@ NSString*const hashToPathKey=@"hToPth";
     DeltaPathMap*delta=[DeltaPathMap instance];
     for (NSDictionary*path in source->_hashToPath) {
         if ([destination hashForPath:path]) {
-            if([[source hashForPath:path] isEqualToString:[destination hashForPath:path]]){
-                [delta.similarPaths addObject:[path copy]];
-            }else{
+            if(![[source hashForPath:path] isEqualToString:[destination hashForPath:path]]){
                 [delta.updatedPaths addObject:[path copy]];
             }
         }else{
@@ -133,8 +131,5 @@ NSString*const hashToPathKey=@"hToPth";
     }
     return delta;
 }
-
-
-
 
 @end

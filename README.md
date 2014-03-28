@@ -4,9 +4,10 @@ A simple delta synchronizer for documents and data between devices.
 The synchronization relies on a client software and a Restfull service 
 It allows to synchronizes local and distant sets of files grouped in a root folder by using a mediation service.
 
-## Approach ##   
+## Approach ##
 
 - do not rely on any framework
+- the client should insure the security layer
 - delegate as much as possible the synchronization logic to the clients to distribute the load and to save server charge and bandwidth
 - keep it as minimal and simple as possible
 - do not focus on conflict resolution but on fault resilience (there is no transactional guarantee)
@@ -26,26 +27,27 @@ The master maintains one hashMap per root folder, the hash map is crypted.
 
 Json representation :
 
+```javascript
 	{
 		 "hashToPath" : {
     		 "1952419745" : "47b2e7fb27643408f95f7c66d995fbe9.music",
     		 "2402594160" : "folder1/4fd6de231a723be15375552928c9c52a.track",	
   		}
 	}
-
+```
 ## DeltaPathMap ##
 
-A **DeltaPathMap** references the similarities and differences between two **hashMap** and furnish the logic to planify downloading or uploading command operations for clients according to their role.
+A **DeltaPathMap** references the differences between two **hashMap** and furnish the logic to planify downloading or uploading command operations for clients according to their role.
 
 Json representation : 
 
+```javascript
 	{
-		"similarPaths":["47b2e7fb27643408f95f7c66d995fbe9.music"]
 		"createdPaths":[]
 		"deletedPaths":[]
 		"updatedPaths":["folder1/4fd6de231a723be15375552928c9c52a.track"]
 	}
-
+```
 
 ## Synchronization process synopsis ##
 
@@ -103,7 +105,7 @@ Any command is encoded in an array.
 Json Encoded command [PdSCopy,<PdSDestination>,<PdSSource>] : [1,'a/a.caf','b/c/c.caf'] will copy the file from 'b/c/c.caf' to 'a/a.caf'
 
 ##### Sync CMD ####
-
+```c
 typedef NS_ENUM (NSUInteger,
                   PdSSyncCommand) {
     PdSCreateOrUpdate   = 0 , // W destination
@@ -117,9 +119,9 @@ typedef NS_ENUM(NSUInteger,
     PdSDestination = 0,
     PdSSource      = 1
 } ;
-
+```
 ##### Admin CMD  #####
-
+```c
 typedef NS_ENUM (NSUInteger,
                  PdSAdminCommand) {
     PdsSanitize    = 4 , // X on tree
@@ -133,6 +135,6 @@ typedef NS_ENUM(NSUInteger,
     PdSDepth       = 1,
     PdSValue       = 2
 } ;
-
+```
 
 
