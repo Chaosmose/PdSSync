@@ -398,8 +398,8 @@ class PdSSyncAPI {
 			}
 			if( isset ($post) && isset ( $post ['syncIdentifier'] )  && isset($post ['commands']) && isset($post ['hashMap']) ) {
 				if (is_array ($post['commands'])){
-					if ( isset ( $this->verb ) && count ( $this->args ) > 1) {
-						$treeId = $this->args [1];
+					if ( isset ( $this->verb ) && count ( $this->args ) > 0) {
+						$treeId = $this->args [0];
 					} else { 
 						return $this->_response ( 'Undefined treeId', 404 );
 					}
