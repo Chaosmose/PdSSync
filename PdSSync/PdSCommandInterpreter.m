@@ -18,7 +18,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 @interface PdSCommandInterpreter (){
     CompletionBlock_type             _completionBlock;
     ProgressBlock_type               _progressBlock;
-    PdSFileManager                   * _fileManager;
+    PdSFileManager                   *__weak _fileManager;
     AFHTTPSessionManager            *_HTTPsessionManager;
     
 }

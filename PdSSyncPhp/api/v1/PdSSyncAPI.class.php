@@ -389,7 +389,7 @@ class PdSSyncAPI {
 	 */
 	protected function finalizeTransactionIn() {
 		if ($this->method == 'POST') {
-			try {
+			try { 
 				// http://www.php.net/manual/en/wrappers.php.php
 				$post= json_decode( file_get_contents('php://input'),true ) ;// A raw post  not a Multi part form.
 
@@ -398,8 +398,10 @@ class PdSSyncAPI {
 			}
 			if( isset ($post) && isset ( $post ['syncIdentifier'] )  && isset($post ['commands']) && isset($post ['hashMap']) ) {
 				if (is_array ($post['commands'])){
-					if ( isset ( $this->verb ) && count ( $this->args ) > 0) {
-						$treeId = $this->args [0];
+					if ( isset ( $this->verb ) && count ( $this->args ) > 1) {
+						$treeId = $this->args [1]; // Objective c 
+					}else if ( isset ( $this->verb ) && count ( $this->args ) == 1) {
+						$treeId = $this->args [0]; // Httpie @todo need to be qualified
 					} else { 
 						return $this->_response ( 'Undefined treeId', 404 );
 					}
