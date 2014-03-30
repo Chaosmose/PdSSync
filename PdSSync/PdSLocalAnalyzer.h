@@ -14,6 +14,20 @@
 
 
 /**
+ *  Default is NO
+ *  If set to NO the dataBlock or the standard hash method will be ignored.
+ */
+@property (nonatomic)BOOL recomputeHash;
+
+/**
+ * Default is YES
+ * When the hash is computed it is save to file.extension.kPdSSyncHashFileExtension
+ */
+@property (nonatomic)BOOL saveHashInAFile;
+
+
+
+/**
  *  Creates a dictionary with  relative paths as key and  CRC32 as value
  *
  *  @param url the folder url
@@ -29,25 +43,5 @@
                                 dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
                         progressBlock:(void(^)(uint32_t crc32,NSString*path, NSUInteger index))progressBlock
               andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock;
-
-
-/**
- *  Computes a crc32 from NSData
- *
- *  @param data the data
- *
- *  @return the hash
- */
-- (uint32_t)crc32FromData:(NSData*)data;
-
-/**
- *  Computes a crc32 from a NSDictionary
- *
- *  @param data the data
- *
- *  @return the hash
- */
-- (uint32_t)crc32FromDictionary:(NSDictionary*)dictionary;
-
 
 @end

@@ -85,11 +85,16 @@ typedef NS_ENUM (NSUInteger,
     SourceIsDistantDestinationIsDistant = 3 // currently not supported 
 };
 
+#define kPdSSyncHashFileExtension @".hash"
 
-
+#import "PdSFileManager.h"
 #import "HashMap.h"
 #import "DeltaPathMap.h"
 #import "PdSCommandInterpreter.h"
 #import "PdSLocalAnalyzer.h"
 #import "PdSSyncContext.h"
+
+// PdSCommons 
+#import "NSData+CRC.h"
+#import "NSString+PdSFacilities.h"
 

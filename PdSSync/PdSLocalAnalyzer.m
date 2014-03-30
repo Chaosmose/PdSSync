@@ -7,19 +7,23 @@
 //
 
 #import "PdSLocalAnalyzer.h"
-#import "NSData+CRC.h"
+
 
 @interface PdSLocalAnalyzer(){
-#if TARGET_OS_IPHONE
-    NSString *_applicationDocumentsDirectory;
-#endif
 }
-@property (nonatomic,weak)NSFileManager*fileManager;
 @end
 
 
 @implementation PdSLocalAnalyzer
 
+-(id)init{
+    self=[super init];
+    if(self){
+        self.recomputeHash=NO;
+        self.saveHashInAFile=YES;
+    }
+    return self;
+}
 
 
 
@@ -36,101 +40,102 @@
  *
  */
 - (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
-                                     dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
-                                 progressBlock:(void(^)(uint32_t crc32,NSString*path, NSUInteger index))progressBlock
-                            andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock{
+                              dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
+                          progressBlock:(void(^)(uint32_t crc32,NSString*path, NSUInteger index))progressBlock
+                     andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock{
+    
+    PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
     // Local
-    BOOL exists=[_fileManager fileExistsAtPath:folderURL.absoluteString];
     NSArray*exclusion=@[@".DS_Store"];
-    if (exists){
-        NSMutableDictionary*treeDictionary=[NSMutableDictionary dictionary];
-        NSDirectoryEnumerator *dirEnum =[_fileManager enumeratorAtPath:folderURL.absoluteString];
-        NSString *file;
-        int i=0;
-        while ((file = [dirEnum nextObject])) {
-            if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound){
-                NSString *fp=[folderURL.absoluteString stringByAppendingFormat:@"/%@",file];
-                @autoreleasepool {
-                    NSData *data=nil;
-                    if (dataBlock) {
-                        data=dataBlock(fp,i);
-                    }else{
-                        data=[NSData dataWithContentsOfFile:fp];
-                    }
-                    uint32_t crc32=[data crc32];
-                    if(crc32!=0){// 0 for folders
+    NSMutableDictionary*treeDictionary=[NSMutableDictionary dictionary];
+    NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
+    NSDirectoryEnumerator *dirEnum =[fileManager enumeratorAtURL:folderURL
+                                       includingPropertiesForKeys:keys
+                                                          options:0
+                                                     errorHandler:^BOOL(NSURL *url, NSError *error) {
+                                                         NSLog(@"ERROR when enumerating  %@ %@",url, [error localizedDescription]);
+                                                         return YES;
+                                                     }];
+
+    HashMap*hashMap=[[HashMap alloc]init];
+    
+    NSURL *file;
+    int i=0;
+    while ((file = [dirEnum nextObject])) {
+        NSString *filePath=[NSString filteredFilePathFrom:[file absoluteString]];
+        if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound || [file.pathExtension isEqualToString:kPdSSyncHashFileExtension]){
+            @autoreleasepool {
+                NSData *data=nil;
+                NSString*hashfile=[filePath stringByAppendingString:kPdSSyncHashFileExtension];
+                // we check if there is a file.extension.kPdSSyncHashFileExtension
+                if(!self.recomputeHash && [fileManager fileExistsAtPath:hashfile] ){
+                    NSError*crc32ReadingError=nil;
+                    NSString*crc32String=[NSString stringWithContentsOfFile:filePath
+                                                                   encoding:NSUTF8StringEncoding
+                                                                      error:&crc32ReadingError];
+                    if(!crc32ReadingError){
+                        uint32_t crc32=[crc32String integerValue];
                         NSString *relativePath=file;
                         progressBlock(crc32,relativePath,i);
-                        [treeDictionary setObject:[NSString stringWithFormat:@"%i",crc32] forKey:relativePath];
-                        i++;
+                        
+                    }else{
+                        NSLog(@"ERROR when reading crc32 from %@ %@",filePath,[crc32ReadingError localizedDescription]);
                     }
-                    
+                }else{
+                    if (dataBlock) {
+                        data=dataBlock(file,i);
+                    }else{
+                        data=[NSData dataWithContentsOfFile:filePath];
+                    }
                 }
+                uint32_t crc32=[data crc32];
+                if(crc32!=0){// 0 for folders
+                    NSString *relativePath=filePath;
+#warning relative PATH 
+                    
+                    progressBlock(crc32,relativePath,i);
+                    [hashMap setHash:[NSString stringWithFormat:@"%i",crc32] forPath:relativePath ];
+                    [treeDictionary setObject:[NSString stringWithFormat:@"%i",crc32] forKey:relativePath];
+                    i++;
+                    if(self.saveHashInAFile ){
+                        [self _writeCrc32:crc32 toFileWithPath:hashfile];
+                    }
+                }
+                
+                
+                
             }
-            
         }
-        completionBlock(treeDictionary);
-    }else{
-        NSLog(@"%@ is not a file reference",folderURL);
-        completionBlock(nil);
+        
     }
+    completionBlock(hashMap);
+    
 }
 
 
-
-
-#pragma mark - IOS Only
-#if TARGET_OS_IPHONE
-
-- (NSString *) applicationDocumentsDirectory{
-    if(!_applicationDocumentsDirectory){
-        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-        NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
-        _applicationDocumentsDirectory=[basePath stringByAppendingString:@"/"];
-    }
-    return _applicationDocumentsDirectory;
-}
-
-
-#endif
 
 #pragma mark - private
 
--(BOOL)_createRecursivelyRequiredFolderForPath:(NSString*)path{
-#if TARGET_OS_IPHONE
-    if([path rangeOfString:[self applicationDocumentsDirectory]].location==NSNotFound){
-        return NO;
-    }
-#endif
-    if(![[path substringFromIndex:path.length-1] isEqualToString:@"/"])
-        path=[path stringByDeletingLastPathComponent];
+
+- (BOOL)_writeCrc32:(uint32_t)crc32 toFileWithPath:(NSString*)path{
+    NSError *crc32WritingError=nil;
+    NSString *crc32Path=[path stringByAppendingString:kPdSSyncHashFileExtension];
+    NSString *crc32String=[NSString stringWithFormat:@"%@",@(crc32)];
     
-    if(![self.fileManager fileExistsAtPath:path]){
-        NSError *error=nil;
-        [self.fileManager createDirectoryAtPath:path
-                    withIntermediateDirectories:YES
-                                     attributes:nil
-                                          error:&error];
-        if(error){
-            return NO;
-        }
+    [crc32String writeToFile:crc32Path
+                  atomically:YES
+                    encoding:NSUTF8StringEncoding
+                       error:&crc32WritingError];
+    if(crc32WritingError){
+        return NO;
+    }else{
+        return YES;
     }
-    return YES;
 }
 
 
 
--(uint32_t)crc32FromData:(NSData *)data{
-    return [data crc32];
-}
 
-- (uint32_t)crc32FromDictionary:(NSDictionary*)dictionary{
-    NSMutableData *data = [[NSMutableData alloc]init];
-    NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc]initForWritingWithMutableData:data];
-    [archiver encodeObject:dictionary forKey:@"k"];
-    [archiver finishEncoding];
-    return [data crc32];
-}
 
 
 @end

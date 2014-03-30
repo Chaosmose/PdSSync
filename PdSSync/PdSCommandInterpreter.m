@@ -18,7 +18,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 @interface PdSCommandInterpreter (){
     CompletionBlock_type             _completionBlock;
     ProgressBlock_type               _progressBlock;
-    NSFileManager                   *_fileManager;
+    PdSFileManager                   * _fileManager;
     AFHTTPSessionManager            *_HTTPsessionManager;
     
 }
@@ -69,7 +69,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         self->_context=context;
         self->_progressBlock=progressBlock?[progressBlock copy]:nil;
         self->_completionBlock=completionBlock?[completionBlock copy]:nil;
-        self->_fileManager=[NSFileManager alloc];
+        self->_fileManager=[PdSFileManager sharedInstance];
         [self->_fileManager setDelegate:self];
         self->_progressCounter=0;
         if(self->_context.mode==SourceIsDistantDestinationIsDistant ){
@@ -394,10 +394,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                               progress:&progress
                                                                                                            destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
                                                                                                                NSString*p=[weakSelf _absoluteLocalPathFromRelativePath:destination toLocalUrl:_context.destinationBaseUrl];
-                                                                                                               [weakSelf _createRecursivelyRequiredFolderForPath:p];
-                                                                                                               if([_fileManager fileExistsAtPath:[weakSelf _filter:p]]){
+                                                                                                               [_fileManager createRecursivelyRequiredFolderForPath:p];
+                                                                                                               if([_fileManager fileExistsAtPath:[NSString filteredFilePathFrom:p]]){
                                                                                                                    NSError*error=nil;
-                                                                                                                   [_fileManager removeItemAtPath:[weakSelf _filter:p] error:&error];
+                                                                                                                   [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
                                                                                                                    if(error){
                                                                                                                        NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[error localizedDescription]];
                                                                                                                        [weakSelf _interruptOnFault:msg];
@@ -550,88 +550,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     return [NSString stringWithFormat:@"%@%@",[localUrl absoluteString],relativePath];
 }
 
-
-#pragma mark - NSFileManagerDelegate
-
-
-- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error copyingItemAtPath:(NSString *)srcPath toPath:(NSString *)dstPath{
-    if ([error code] == NSFileWriteFileExistsError)
-        return YES;
-    else
-        return NO;
-}
-- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error copyingItemAtURL:(NSURL *)srcURL toURL:(NSURL *)dstURL{
-    if ([error code] == NSFileWriteFileExistsError)
-        return YES;
-    else
-        return NO;
-}
-
-- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error movingItemAtPath:(NSString *)srcPath toPath:(NSString *)dstPath{
-    if ([error code] == NSFileWriteFileExistsError)
-        return YES;
-    else
-        return NO;
-    
-}
-- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error movingItemAtURL:(NSURL *)srcURL toURL:(NSURL *)dstURL{
-    if ([error code] == NSFileWriteFileExistsError)
-        return YES;
-    else
-        return NO;
-    
-}
-
-#pragma mark - File manager selectors
-
--(BOOL)_createRecursivelyRequiredFolderForPath:(NSString*)path{
-    NSString*filteredPath=[self _filter:path];
-#if TARGET_OS_IPHONE
-    if([path rangeOfString:[self _applicationDocumentsDirectory]].location==NSNotFound){
-        return NO;
-    }
-#endif
-    if(![[filteredPath substringFromIndex:filteredPath.length-1] isEqualToString:@"/"]){
-        filteredPath=[filteredPath stringByDeletingLastPathComponent];
-    }
-    if(![_fileManager fileExistsAtPath:filteredPath]){
-        NSError *error=nil;
-        [_fileManager createDirectoryAtPath:filteredPath
-                withIntermediateDirectories:YES
-                                 attributes:nil
-                                      error:&error];
-        if(error){
-            return NO;
-        }
-    }
-    return YES;
-}
-
-- (NSString*)_filter:(NSString*)path{
-    if(!path)
-        return path;
-    // Those filtering operations may be necessary sometimes when manipulating IOS FS.
-    NSString *filtered=[[path copy] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-    filtered=[filtered stringByReplacingOccurrencesOfString:@"file:///private" withString:@""];
-    filtered=[filtered stringByReplacingOccurrencesOfString:@"file://" withString:@""];
-    return filtered;
-}
-
-
-
-- (NSString *)_applicationDocumentsDirectory{
-#if TARGET_OS_IPHONE
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
-    return [self _filter:[basePath stringByAppendingString:@"/"]];
-#else
-    // If the absolute path was nil
-    // We create automatically a data folder
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *basePath=[paths lastObject];
-    return basePath;
-#endif
-}
 
 
 
