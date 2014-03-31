@@ -12,6 +12,12 @@
 #import "JSONResponseSerializerWithData.h"
 #import "PdSCommandInterpreter.h"
 
+
+// Patch https://github.com/AFNetworking/AFNetworking/issues/1398
+#define USE_AF_POST_MULTIPART_WORKAROUND
+
+
+
 typedef void(^ProgressBlock_type)(uint taskIndex,float progress);
 typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
@@ -336,37 +342,78 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                      @"undoers":@""};// @todo find a solution for doers / undoers if possible
         
         
+        
         NSMutableURLRequest *request = [[AFHTTPRequestSerializer serializer] multipartFormRequestWithMethod:@"POST"
                                                                                                   URLString:URLString
                                                                                                  parameters:parameters
                                                                                   constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
                                                                                       [formData appendPartWithFileURL:[NSURL fileURLWithPath:source]
                                                                                                                  name:@"source"
                                                                                                              fileName:[destination lastPathComponent]
                                                                                                              mimeType:@"application/octet-stream"
                                                                                                                 error:nil];
                                                                                       
+                                                                                      
                                                                                   } error:nil];
         
-        NSProgress*progress;
-        NSURLSessionUploadTask *uploadTask = [_HTTPsessionManager uploadTaskWithStreamedRequest:request
-                                                                                       progress:&progress
-                                                                              completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
-                                                                                  if (error) {
-                                                                                      NSLog(@"Error: %@", error);
-                                                                                  } else {
-                                                                                      NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
-                                                                                      NSLog(@"%@ %@", response, s);
-                                                                                      [weakSelf _nextCommand];
-                                                                                  }
-                                                                              }];
         
-        [uploadTask resume];
+#ifdef USE_AF_POST_MULTIPART_WORKAROUND
         
-        [progress addObserver:weakSelf
-                   forKeyPath:@"fractionCompleted"
-                      options:NSKeyValueObservingOptionNew
-                      context:NULL];
+        NSString* tmpFilename = [NSString stringWithFormat:@"%f", [NSDate timeIntervalSinceReferenceDate]];
+        NSURL* tmpFileUrl = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:tmpFilename]];
+        
+        [[AFHTTPRequestSerializer serializer] requestWithMultipartFormRequest:request
+                                                  writingStreamContentsToFile:tmpFileUrl
+                                                            completionHandler:^(NSError *error) {
+                                                                
+                                                                NSProgress*progress=nil;
+                                                                NSURLSessionUploadTask *uploadTask = [_HTTPsessionManager uploadTaskWithRequest:request
+                                                                                                                                       fromFile:tmpFileUrl
+                                                                                                                                       progress:&progress
+                                                                                                                              completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+                                                                                                                                  if (error) {
+                                                                                                                                      NSString *msg=[NSString stringWithFormat:@"Error when uploading %@",[weakSelf _stringFromError:error]];
+                                                                                                                                      [weakSelf _interruptOnFault:msg];
+                                                                                                                                  } else {
+                                                                                                                                      NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
+                                                                                                                                      NSLog(@"%@ %@", response, s);
+                                                                                                                                      [weakSelf _nextCommand];
+                                                                                                                                  }
+                                                                                                                              }];
+#else
+                                                                
+                                                                
+                                                                NSProgress*progress=nil;
+                                                                NSURLSessionUploadTask *uploadTask = [_HTTPsessionManager uploadTaskWithStreamedRequest:request
+                                                                                                                                               progress:&progress
+                                                                                                                                      completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+                                                                                                                                          if (error) {
+                                                                                                                                              NSString *msg=[NSString stringWithFormat:@"Error when uploading %@",[weakSelf _stringFromError:error]];
+                                                                                                                                              [weakSelf _interruptOnFault:msg];
+                                                                                                                                          } else {
+                                                                                                                                              NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
+                                                                                                                                              NSLog(@"%@ %@", response, s);
+                                                                                                                                              [weakSelf _nextCommand];
+                                                                                                                                          }
+                                                                                                                               }];
+#endif
+                                                                
+                                                                [uploadTask resume];
+                                                                
+                                                                [progress addObserver:weakSelf
+                                                                           forKeyPath:@"fractionCompleted"
+                                                                              options:NSKeyValueObservingOptionNew
+                                                                              context:NULL];
+
+                                                                
+#ifdef USE_AF_POST_MULTIPART_WORKAROUND
+                                                                
+                                                            }];
+#endif
         
         
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal){
@@ -399,14 +446,19 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                                    NSError*error=nil;
                                                                                                                    [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
                                                                                                                    if(error){
-                                                                                                                       NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[error localizedDescription]];
+                                                                                                                       NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[self _stringFromError:error]];
                                                                                                                        [weakSelf _interruptOnFault:msg];
                                                                                                                    }
                                                                                                                }
                                                                                                                return [NSURL URLWithString:p];
                                                                                                            } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
-                                                                                                               NSLog(@"File downloaded to: %@", filePath);
-                                                                                                               [weakSelf _nextCommand];
+                                                                                                               if(error){                                                                                                                   [weakSelf _interruptOnFault:[self _stringFromError:error]];
+                                                                                                                   
+                                                                                                               }else{
+                                                                                                                   NSLog(@"File downloaded to: %@", filePath);
+                                                                                                                   [weakSelf _nextCommand];
+                                                                                                               }
+                                                                                                               
                                                                                                            }];
                                  [downloadTask resume];
                                  
@@ -456,8 +508,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                           success:^(NSURLSessionDataTask *task, id responseObject) {
                               [self _nextCommand];
                           } failure:^(NSURLSessionDataTask *task, NSError *error) {
-                              NSLog(@"\n%@\n%@",[task.currentRequest.URL absoluteString],[self _stringFromError:error]);
-                              [self _interruptOnFault:[error localizedDescription]];
+                              NSString *msg=[NSString stringWithFormat:@"Error when finalizing %@ %@",[task.currentRequest.URL absoluteString],[self _stringFromError:error]];
+                              [self _interruptOnFault:msg];
                           }];
         
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
@@ -562,7 +614,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         if(_progressBlock){
             float f=progress.fractionCompleted;
             //dispatch_sync(dispatch_get_main_queue(), ^{
-                _progressBlock(_progressCounter,f);
+            _progressBlock(_progressCounter,f);
             //});
         } else {
             [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
