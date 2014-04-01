@@ -14,6 +14,7 @@
 
 
 // Patch https://github.com/AFNetworking/AFNetworking/issues/1398
+// Some servers responds a 411 status when there is no content length
 #define USE_AF_POST_MULTIPART_WORKAROUND
 
 
@@ -369,34 +370,41 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         [[AFHTTPRequestSerializer serializer] requestWithMultipartFormRequest:request
                                                   writingStreamContentsToFile:tmpFileUrl
                                                             completionHandler:^(NSError *error) {
-                                                                
-                                                                NSProgress*progress=nil;
+                                                                NSProgress* progress=nil;
                                                                 NSURLSessionUploadTask *uploadTask = [_HTTPsessionManager uploadTaskWithRequest:request
                                                                                                                                        fromFile:tmpFileUrl
                                                                                                                                        progress:&progress
                                                                                                                               completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+                                                                                                                                  [progress removeObserver:weakSelf
+                                                                                                                                                forKeyPath:@"fractionCompleted"
+                                                                                                                                                   context:NULL];
                                                                                                                                   if (error) {
                                                                                                                                       NSString *msg=[NSString stringWithFormat:@"Error when uploading %@",[weakSelf _stringFromError:error]];
                                                                                                                                       [weakSelf _interruptOnFault:msg];
                                                                                                                                   } else {
                                                                                                                                       NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
                                                                                                                                       NSLog(@"%@ %@", response, s);
+                                                                                                                                  
                                                                                                                                       [weakSelf _nextCommand];
                                                                                                                                   }
                                                                                                                               }];
 #else
                                                                 
                                                                 
-                                                                NSProgress*progress=nil;
+                                                                NSProgress* progress=nil;
                                                                 NSURLSessionUploadTask *uploadTask = [_HTTPsessionManager uploadTaskWithStreamedRequest:request
                                                                                                                                                progress:&progress
                                                                                                                                       completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+                                                                                                                                          [progress removeObserver:weakSelf
+                                                                                                                                                        forKeyPath:@"fractionCompleted"
+                                                                                                                                                           context:NULL];
                                                                                                                                           if (error) {
                                                                                                                                               NSString *msg=[NSString stringWithFormat:@"Error when uploading %@",[weakSelf _stringFromError:error]];
                                                                                                                                               [weakSelf _interruptOnFault:msg];
                                                                                                                                           } else {
                                                                                                                                               NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
                                                                                                                                               NSLog(@"%@ %@", response, s);
+                                                                                                                                              
                                                                                                                                               [weakSelf _nextCommand];
                                                                                                                                           }
                                                                                                                                }];
@@ -404,10 +412,11 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                 
                                                                 [uploadTask resume];
                                                                 
-                                                                [progress addObserver:weakSelf
+                                                                [progress addObserver:self
                                                                            forKeyPath:@"fractionCompleted"
                                                                               options:NSKeyValueObservingOptionNew
                                                                               context:NULL];
+                                                             
 
                                                                 
 #ifdef USE_AF_POST_MULTIPART_WORKAROUND
@@ -436,7 +445,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                              NSString*uriString=[d objectForKey:@"uri"];
                              if(uriString && [uriString isKindOfClass:[NSString class]]){
                                  NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]];
-                                 NSProgress*progress;
+                                 NSProgress* progress=nil;
                                  NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
                                                                                                               progress:&progress
                                                                                                            destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
@@ -448,21 +457,28 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                                    if(error){
                                                                                                                        NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[self _stringFromError:error]];
                                                                                                                        [weakSelf _interruptOnFault:msg];
+                                                                                                                       [progress removeObserver:weakSelf
+                                                                                                                                     forKeyPath:@"fractionCompleted"
+                                                                                                                                        context:NULL];
                                                                                                                    }
                                                                                                                }
                                                                                                                return [NSURL URLWithString:p];
                                                                                                            } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
+                                                                                                               [progress removeObserver:weakSelf
+                                                                                                                             forKeyPath:@"fractionCompleted"
+                                                                                                                                context:NULL];
                                                                                                                if(error){                                                                                                                   [weakSelf _interruptOnFault:[self _stringFromError:error]];
                                                                                                                    
                                                                                                                }else{
                                                                                                                    NSLog(@"File downloaded to: %@", filePath);
+                                                                                                                   
                                                                                                                    [weakSelf _nextCommand];
                                                                                                                }
                                                                                                                
                                                                                                            }];
                                  [downloadTask resume];
                                  
-                                 [progress addObserver:weakSelf
+                                 [progress addObserver:self
                                             forKeyPath:@"fractionCompleted"
                                                options:NSKeyValueObservingOptionNew
                                                context:NULL];
@@ -501,7 +517,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                      @"commands":creativeCommands,
                                      @"hashMap":[_context.finalHashMap dictionaryRepresentation]
                                      };
-        
         
         [_HTTPsessionManager POST:URLString
                        parameters:parameters
@@ -609,6 +624,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context{
+    
     if ([keyPath isEqualToString:@"fractionCompleted"]) {
         NSProgress *progress = (NSProgress *)object;
         if(_progressBlock){
@@ -616,11 +632,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             //dispatch_sync(dispatch_get_main_queue(), ^{
             _progressBlock(_progressCounter,f);
             //});
-        } else {
-            [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
         }
+    }else{
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
     }
-    
 }
 
 
