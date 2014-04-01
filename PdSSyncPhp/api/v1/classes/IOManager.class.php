@@ -212,18 +212,9 @@ abstract  class IOManagerAbstract  {
 	}
 	
 
-	public function saveHashMap($treeId, $hashMap) {
-		$filePath = $this->absolutePath ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
-		try {
-			if(is_array($hashMap) ){
-				$hashMap=json_encode($hashMap);
-			}
-			if(($this->put_contents ( $filePath, $hashMap ) != false))
-				return true;
-		} catch ( Exception $e ) {
-			return false;
-		}
-		return true;
+	public function saveHashMap($treeId, $finalHashMapFilePath) {
+		$destination = $this->absolutePath ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
+		return $this->rename($finalHashMapFilePath,$destination);
 	}
 
 

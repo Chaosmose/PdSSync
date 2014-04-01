@@ -338,9 +338,7 @@ class PdSSyncAPI {
 	
 	
 	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt 
-	
 	// @todo  store a the sync id & relative path to a private zone for the sanitizing procedure.
-	
 	/**
 	 * Upload the file to the relative path
 	 *
@@ -356,7 +354,6 @@ class PdSSyncAPI {
 			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 				return $this->_response ( NULL, 406 );
 			}
-			// @todo support doers / undoers
 			if ( isset($this->request ['destination']) && Isset($this->request ['syncIdentifier']) && isset ( $_FILES ['source'] )) {
 				$this->ioManager = $this->getIoManager();
 				$d=  dirname($this->request ['destination']).DIRECTORY_SEPARATOR.$this->request ['syncIdentifier'].basename($this->request ['destination']);
@@ -378,10 +375,9 @@ class PdSSyncAPI {
 	}
 	
 	
-	/*
-		http -v  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/unique-public-id-1293/ commands:='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashMap='[]'
-	 */
-	
+	 
+	  //http -v -f  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/unique-public-id-1293/ commands='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashmap@~/Documents/Samples/hashmap.data 
+	 
 	/**
 	 *  Finalize the synchronization transaction with a bunch, then save the hashMap.
 	 *
@@ -389,46 +385,37 @@ class PdSSyncAPI {
 	 */
 	protected function finalizeTransactionIn() {
 		if ($this->method == 'POST') {
-			try { 
-				// http://www.php.net/manual/en/wrappers.php.php
-				$post= json_decode( file_get_contents('php://input'),true ) ;// A raw post  not a Multi part form.
-
-			} catch (Exception $e) {
-				return $this->_response ( 'commands must be a valid json array : '.$post ['commands'], 400 );
-			}
-			if( isset ($post) && isset ( $post ['syncIdentifier'] )  && isset($post ['commands']) && isset($post ['hashMap']) ) {
-				if (is_array ($post['commands'])){
-					if ( isset ( $this->verb ) && count ( $this->args ) > 1) {
-						$treeId = $this->args [1]; // Objective c 
-					}else if ( isset ( $this->verb ) && count ( $this->args ) == 1) {
-						$treeId = $this->args [0]; // Httpie @todo need to be qualified
-					} else { 
+			if (isset ( $this->request ['syncIdentifier'] ) && isset ( $this->request ['commands'] ) && isset ( $_FILES ['hashmap'] )) {
+				try {
+					$command=json_decode($this->request ['commands']);
+				}catch ( Exception $e ) {
+					return $this->_response ( 'Invalid json command array = ' . $this->request ['commands']  , 400 );
+				}
+				if (is_array ( $command)) {
+					if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+						$treeId = $this->args [0];
+					} else {
 						return $this->_response ( 'Undefined treeId', 404 );
 					}
 					if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
-						return $this->_response (NULL, 406 );
+						return $this->_response ( NULL, 406 );
 					}
-					// @todo We will inject contextual information to deal with acl (current tree owner, current user, ...)
-					$errors=$this->getInterpreter()->interpretBunchOfCommand ($treeId, $post ['syncIdentifier'], $post['commands'], $post ['hashMap'] );
-					if($errors==NULL){
+					$errors = $this->getInterpreter ()->interpretBunchOfCommand ( $treeId, $this->request ['syncIdentifier'], $command, $_FILES ['hashmap'] ['tmp_name'] );
+					if ($errors == NULL) {
 						return $this->_response ( NULL, 200 );
 					} else {
-						return $this->_response ( $errors , 417 );
+						return $this->_response ( $errors, 417 );
 					}
 				} else {
-					return $this->_response ( 'commands must be an array = '.$post, 400 );
+					return $this->_response ( 'commands must be an array = ' . $this->request ['commands']  , 400 );
 				}
 			} else {
-				return $this->_response (
-						 	'commands :' .   $post ['commands']  . 
-							', hashMap:' . $post ['hashMap'] . 
-							',  syncIdentifier:' .$post['syncIdentifier'] . ' are required', 400
-						 );
+				return $this->_response ( 'commands :' . $this->request ['commands'] . ', hashMapSourcePath:' . $_FILES ['hashmap'] . ',  syncIdentifier:' . $this->request ['syncIdentifier'] . ' are required', 400 );
 			}
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method POST required';
-			$infos [METHOD_KEY] =$this->method ;
+			$infos [METHOD_KEY] = $this->method;
 			return $this->_response ( $infos, 405 );
 		}
 	}

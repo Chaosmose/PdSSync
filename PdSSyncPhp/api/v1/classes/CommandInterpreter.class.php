@@ -29,10 +29,10 @@ class CommandInterpreter {
 	 * @param string $treeId
 	 * @param string $syncIdentifier
 	 * @param array $bunchOfCommand
-	 * @param string $finalHashMap
+	 * @param string $finalHashMapFilePath
 	 * @return null on success and a string with the error in case of any error
 	 */
-	function interpretBunchOfCommand($treeId, $syncIdentifier, array $bunchOfCommand,  $finalHashMap) {
+	function interpretBunchOfCommand($treeId, $syncIdentifier, array $bunchOfCommand,  $finalHashMapFilePath) {
 		$failures=array();
 		foreach ($bunchOfCommand as $command) {
 			if(is_array($command)){
@@ -51,7 +51,7 @@ class CommandInterpreter {
 		if(count($failures)>0){
 			return $failures;
 		}else{
-			return $this->_finalize($treeId, $syncIdentifier, $finalHashMap);
+			return $this->_finalize($treeId, $syncIdentifier, $finalHashMapFilePath);
 		}
 	}
 	
@@ -60,15 +60,16 @@ class CommandInterpreter {
 	 *  Finalizes the bunch of command
 	 *  
 	 * @param string $syncIdentifier
-	 * @param string $finalHashMap
+	 * @param string $finalHashMapFilePath
 	 */
-	private function _finalize($treeId, $syncIdentifier,$finalHashMap){
+	private function _finalize($treeId, $syncIdentifier,$finalHashMapFilePath){
 		$failures=array();
 		foreach ($this->listOfFiles  as $file) {
 			$protectedPath= $this->ioManager->absolutePath($treeId, dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file));
 			if($this->ioManager->exists($protectedPath)){
-				$this->ioManager->rename($protectedPath, $this->ioManager->absolutePath($treeId, $file));
+				$success=$this->ioManager->rename($protectedPath, $this->ioManager->absolutePath($treeId, $file));
 			}else{
+
 				$failures[]='Unexisting path : '.$protectedPath.'->'.$treeId;
 			}
 		}
@@ -76,7 +77,7 @@ class CommandInterpreter {
 			return $failures;
 		}else{
 			$this->ioManager->mkdir($this->ioManager-> absolutePath($treeId, METADATA_FOLDER));
-			if($this->ioManager->saveHashMap($treeId,$finalHashMap)){
+			if($this->ioManager->saveHashMap($treeId,$finalHashMapFilePath)){
 				return NULL;
 			}else{
 				$failures[]='Error when saving the hashmap';
