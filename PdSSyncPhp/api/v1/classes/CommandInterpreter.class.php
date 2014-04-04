@@ -65,12 +65,12 @@ class CommandInterpreter {
 	private function _finalize($treeId, $syncIdentifier,$finalHashMapFilePath){
 		$failures=array();
 		foreach ($this->listOfFiles  as $file) {
-			$protectedPath= $this->ioManager->absolutePath($treeId, dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file));
+			$relativePath=dirname($file).DIRECTORY_SEPARATOR.$syncIdentifier.basename($file);
+			$protectedPath= $this->ioManager->absolutePath($treeId, $relativePath);
 			if($this->ioManager->exists($protectedPath)){
 				$success=$this->ioManager->rename($protectedPath, $this->ioManager->absolutePath($treeId, $file));
 			}else{
-
-				$failures[]='Unexisting path : '.$protectedPath.'->'.$treeId;
+				$failures[]='Unexisting path : '.$protectedPath.'->'.$treeId.' ('.$relativePath.')';
 			}
 		}
 		if(count($failures)>0){

@@ -359,7 +359,7 @@ class PdSSyncAPI {
 				$d=  dirname($this->request ['destination']).DIRECTORY_SEPARATOR.$this->request ['syncIdentifier'].basename($this->request ['destination']);
 				$uploadfile = $this->ioManager->absolutePath($treeId,$d) ;
 				if ($this->ioManager->move_uploaded ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
-					return $this->_response ( NULL, 201 );
+					return $this->_response (NULL, 201 );
 				} else {
 					return $this->_response ( NULL, 201 );
 				}
@@ -386,15 +386,21 @@ class PdSSyncAPI {
 	protected function finalizeTransactionIn() {
 		if ($this->method == 'POST') {
 			if (isset ( $this->request ['syncIdentifier'] ) && isset ( $this->request ['commands'] ) && isset ( $_FILES ['hashmap'] )) {
-				try {
-					$command=json_decode($this->request ['commands']);
-				}catch ( Exception $e ) {
-					return $this->_response ( 'Invalid json command array = ' . $this->request ['commands']  , 400 );
+				$command=$this->request ['commands'];
+				if(!is_array($command)){
+					try {
+						$command=json_decode($this->request ['commands']);
+					}catch ( Exception $e ) {
+						return $this->_response ( 'Invalid json command array = ' . $this->request ['commands']  , 400 );
+					}
 				}
 				if (is_array ( $command)) {
-					if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+					if (isset ( $this->verb ) && count ( $this->args ) > 1) {
+						$treeId = $this->args [1];
+					} else  if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 						$treeId = $this->args [0];
-					} else {
+					}else{
+						$treeId = $this->args [1];
 						return $this->_response ( 'Undefined treeId', 404 );
 					}
 					if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
