@@ -61,9 +61,6 @@ With 1 Source client (Objc), 1 sync service(php), and n Destination clients(Objc
 8. Destination -> on completion the synchronization is finalized. (We redownload the **hashmap** and compare to conclude if stepping back to 5 is required.)
 
 
-## Objective C ##
-The objective c lib 
-
 ## PdSSyncPhp ##
 A very simple PHP sync restfull service to use in conjonction with PdSSync objc client
 
@@ -121,24 +118,22 @@ typedef NS_ENUM(NSUInteger,
 } ;
 ```
 
-# How to proceed to basic tests 
+## How to proceed to basic tests with httpie ##
 
-### using HTTPIE : 
-
-## Install httpie 
+### Install httpie ###
 https://github.com/jkbr/httpie
 
-### You can update those keys on  in PdSSyncPhp/api/v1/PdSSyncConfig.php
+### You can update those keys on  in PdSSyncPhp/api/v1/PdSSyncConfig.php ###
 
-REPOSITORY_HOST 
 CREATIVE_KEY
 SECRET
 
-### Create local files : 
+### Create local files : ###
 
 ```shell
 touch ~/Documents/Samples/text1.txt
 echo "Eureka1" > ~/Documents/Samples/text1.txt
+
 touch ~/Documents/Samples/text2.txt
 echo "Eureka2" > ~/Documents/Samples/text2.txt
 
@@ -146,51 +141,51 @@ touch ~/Documents/Samples/hashmap.data
 echo  "[]" > ~/Documents/Samples/hashmap.data 
 ```
 
-###  A simple sequence :  
-Replace <your-base-url> with your base url
+###  A simple sequence :  ###
+Replace your-base-url with your own base url
 
 
-1. // Verify the reachability
+1.  Verify the reachability
 ```shell
 http GET <your-base-url>api/v1/reachable/
 ```
 
-2. // Install
+2.  Install
 ```shell
 http -v -f POST <your-base-url>api/v1/install/ key='6ca0c48126a15939-2c938833d4678913'
 ```
 
-3. // Create a one tree per channel 
+3. Create a files trees 
 ```shell
 http -v -f POST  <your-base-url>api/v1/create/tree/1 key='6ca0c48126a15939-2c938833d4678913'
 http -v -f POST  <your-base-url>api/v1/create/tree/2 key='6ca0c48126a15939-2c938833d4678913'
 ```
 
-4. // Touch the ginger tree to reset the public id
+4. Touch the 1 tree to reset the public id
 ```shell
-http -v -f POST <your-base-url>api/v1/touch/tree/unexisting-tree
 http -v -f POST <your-base-url>api/v1/touch/tree/1
+http -v -f POST <your-base-url>api/v1/touch/tree/unexisting-tree
 ```
-5.
+5. Grab the hashmap
 ```shell
 http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==false
 ```
-6. 
+6. Upload the files
 ```shell
 http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination==‘a/file1.txt' syncIdentifier==‘your-syncID_' source@~/Documents/Samples/text1.txt
 http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination==‘a/file2.txt' syncIdentifier==‘your-syncID_' source@~/Documents/Samples/text2.txt
 ```
 
-7.
+7. Finalize the upload session
 ```shell
-http -v -f POST <your-base-url>api/v1/finalizeTransactionIn/tree/1/ commands='[[0 ,"a/file1.txt"]]' syncIdentifier='your-syncID_' hashmap@~/Documents/Samples/hashmap.data 
+http -v -f POST <your-base-url>api/v1/finalizeTransactionIn/tree/1/ commands='[[0 ,"a/file1.txt"],[0 ,"a/file2.txt"]]' syncIdentifier='your-syncID_' hashmap@~/Documents/Samples/hashmap.data 
 ```
-8.
+8. Grab the file1
 ```shell
-http -v GET <your-base-url>api/v1/file/tree/ginger/?path=‘a/file1.txt’&redirect=‘false’&returnValue=‘true’
-``
+http -v GET <your-base-url>api/v1/file/tree/ginger/ path==‘a/file1.txt’ redirect==false returnValue==true
+```
 
-### How to use PdSSync in objective C: 
+### How to use PdSSync in objective C: ###
 
 ```objc 
 - (void)_upTest{
