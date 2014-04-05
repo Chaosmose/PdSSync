@@ -5,9 +5,7 @@
 ///////////////////////
 
 
-//define ( 'REPOSITORY_HOST'										,	'http://PdsSync.repository.local/' );
-//define ( 'REPOSITORY_HOST'										,	'http://PdsSync.api.local/Repository/' );
-define ( 'REPOSITORY_HOST'										,	'http://fluctue.com/PdSSyncPhp/Repository/' );
+define ( 'REPOSITORY_HOST'										,	($_SERVER['HTTPS']?'https://':'http://').$_SERVER['SERVER_NAME'].'/PdSSyncPhp/Repository/' );
 define ( 'REPOSITORY_WRITING_PATH'		                ,	dirname( dirname(__DIR__)). '/Repository/'  );
 
 ///////////////////////
@@ -22,8 +20,8 @@ define('PERSISTENCY_CLASSNAME'								,	 'IOManagerFS');
 // KEYS
 ///////////////////////
 
-define ( 'CREATIVE_KEY'												,	'6ca0c48126a15939-2c938833d4678913' ); // Used to validate a tree creation
-define ( 'SECRET'															,	'S-DEKuLAL088986HHDkKDODE02039DKOPZD?' ); // Used create the data system folder
+define ( 'CREATIVE_KEY'												,	'default-creative-key' ); // Used to validate a tree creation
+define ( 'SECRET'															,	'default-secret-key' ); // Used create the data system folder
 
 
 

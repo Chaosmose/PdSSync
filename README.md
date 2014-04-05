@@ -8,14 +8,14 @@ A simple delta synchronizer for documents and data between devices.It allows to 
 
 ## Approach ##
 
-- do not rely on any framework
+- do not rely on any server side framework
 - the client should insure the security layer
-- delegate as much as possible the synchronization logic to the clients to distribute the load and to save server charge and bandwidth
+- delegate as much as possible of the synchronization logic to the clients to distribute the load and to save server charge and bandwidth
 - keep it as minimal and simple as possible
 - do not focus on conflict resolution but on fault resilience (there is no transactional guarantee)
 - allow very efficient caching and mem caching strategy (we will provide advanced implementation samples)
-- support hash maps encryption
-- allow advanced hashing strategy ( like considering that a modified file should not be synchronized bec) 
+- support any encryption and cryptographic strategy
+- allow advanced hashing strategy ( like : considering that a modified file should not be synchronized because the modification is not significant) 
 
 ## HashMap  ##
 
@@ -125,8 +125,8 @@ https://github.com/jkbr/httpie
 
 ### You can update those keys on  in PdSSyncPhp/api/v1/PdSSyncConfig.php ###
 
-CREATIVE_KEY
-SECRET
+1.CREATIVE_KEY
+2.SECRET
 
 ### Create local files : ###
 
@@ -141,9 +141,9 @@ touch ~/Documents/Samples/hashmap.data
 echo  "[]" > ~/Documents/Samples/hashmap.data 
 ```
 
-###  A simple sequence :  ###
-Replace your-base-url with your own base url
+###  Usage sample of the end points ###
 
+Replace your-base-url with your own base url
 
 1.  Verify the reachability
 ```shell
@@ -152,45 +152,57 @@ http GET <your-base-url>api/v1/reachable/
 
 2.  Install
 ```shell
-http -v -f POST <your-base-url>api/v1/install/ key='6ca0c48126a15939-2c938833d4678913'
+http -v -f POST <your-base-url>api/v1/install/ key='default-creative-key'
 ```
 
 3. Create a files trees 
 ```shell
-http -v -f POST  <your-base-url>api/v1/create/tree/1 key='6ca0c48126a15939-2c938833d4678913'
-http -v -f POST  <your-base-url>api/v1/create/tree/2 key='6ca0c48126a15939-2c938833d4678913'
+http -v -f POST  <your-base-url>api/v1/create/tree/1 key='default-creative-key'
+http -v -f POST  <your-base-url>api/v1/create/tree/2 key='default-creative-key'
 ```
 
-4. Touch the 1 tree to reset the public id
+4. Touch the 1 tree to reset the public id, then try an unexisting ID
 ```shell
 http -v -f POST <your-base-url>api/v1/touch/tree/1
 http -v -f POST <your-base-url>api/v1/touch/tree/unexisting-tree
 ```
-5. Grab the hashmap
+5. Grab the hashmap that should not exists
 ```shell
 http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==false
 ```
 6. Upload the files
 ```shell
-http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination==‘a/file1.txt' syncIdentifier==‘your-syncID_' source@~/Documents/Samples/text1.txt
-http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination==‘a/file2.txt' syncIdentifier==‘your-syncID_' source@~/Documents/Samples/text2.txt
+http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination=='a/file1.txt' syncIdentifier=='your-syncID_' source@~/Documents/Samples/text1.txt
+```
+
+```shell
+http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination=='a/file2.txt' syncIdentifier=='your-syncID_' source@~/Documents/Samples/text2.txt
 ```
 
 7. Finalize the upload session
 ```shell
 http -v -f POST <your-base-url>api/v1/finalizeTransactionIn/tree/1/ commands='[[0 ,"a/file1.txt"],[0 ,"a/file2.txt"]]' syncIdentifier='your-syncID_' hashmap@~/Documents/Samples/hashmap.data 
 ```
-8. Grab the file1
+8. Download the file1
 ```shell
-http -v GET <your-base-url>api/v1/file/tree/ginger/ path==‘a/file1.txt’ redirect==false returnValue==true
+http -v GET <your-base-url>api/v1/file/tree/1/ path=='a/file1.txt' redirect==false returnValue==true
 ```
 
-### How to use PdSSync in objective C: ###
+9. Download the hashmap that should now exist
+```shell
+http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==false
+``` 
+
+### PdSSync in objective C: ###
 
 ```objc 
+
+#import "PdSSync.h"
+...
+
 - (void)_upTest{
-    HashMap *hashMap=[[HashMap alloc]init];
-    
+	// You should compute a valid HashMap
+    HashMap *hashMap=[[HashMap alloc]init];    
     NSString*sourcePath=[@"~/Desktop/" stringByExpandingTildeInPath];
     PdSSyncContext *synchronisationContext=[[PdSSyncContext alloc] initWithFinalHashMap:hashMap
                                                                               sourceURL:[NSURL fileURLWithPath:sourcePath]
@@ -219,6 +231,7 @@ http -v GET <your-base-url>api/v1/file/tree/ginger/ path==‘a/file1.txt’ redi
 
 
 - (void)_downTest{
+	// You should download first the current HashMap
     HashMap *hashMap=[[HashMap alloc]init];
     NSString*destinationTreePath=[@"~/Desktop/" stringByExpandingTildeInPath];
     PdSSyncContext *synchronisationContext=[[PdSSyncContext alloc] initWithFinalHashMap:hashMap
@@ -226,7 +239,7 @@ http -v GET <your-base-url>api/v1/file/tree/ginger/ path==‘a/file1.txt’ redi
                                             andDestinationUrl:[NSURL fileURLWithPath:destinationTreePath]];
     
     // The context is SourceIsDistantDestinationIsLocal
-    // The destination must map the
+    // The destination must match
     NSMutableArray *bunchOfCommands=[NSMutableArray array];
     [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:@"txt/test/a.txt" destination:@"txt/test/a.txt"]];
     [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:@"txt/test/b.txt" destination:@"txt/test/b.txt"]];

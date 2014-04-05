@@ -121,7 +121,8 @@ abstract  class IOManagerAbstract  {
 		$currentId=$this->_currentPublicId($treeId);
 		if($currentId!=NULL){
 			return $this->repositoryAbsolutePath () . $this->_currentPublicId($currentId). DIRECTORY_SEPARATOR . $relativePath;
-		}return NULL;
+		}
+		return NULL;
 	}
 	
 

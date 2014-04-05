@@ -6,7 +6,7 @@ require_once 'v1/classes/IOManager.class.php';
 
 /**
  * A simple API facade in one file
- * Inspired by http://coreymaynard.com/blog/creating-a-restful-api-with-php/
+ * Inspired by v
  * 
  * Optimized according to google bests practices :  https://developers.google.com/speed/articles/optimizing-php
  * 
@@ -120,10 +120,6 @@ class PdSSyncAPI {
 	// End points
 	// //////////////
 	
-	
-	// http GET PdsSync.api.local/api/v1/reachable/
-	// http GET http://fluctue.com/PdSSyncPhp/api/v1/reachable/
-	
 	protected function reachable() {
 		if ($this->method == 'GET') {
 			return $this->_response ( NULL, 200 );
@@ -135,7 +131,6 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST PdsSync.api.local/api/v1/install/ key='6ca0c48126a15939-2c938833d4678913'
 	
 	protected function install() {
 		if ($this->method == 'POST') {
@@ -154,7 +149,6 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v -f POST PdsSync.api.local/api/v1/create/tree/unique-public-id-1293 key='6ca0c48126a15939-2c938833d4678913'
 
 	protected function create() {
 		if ($this->method == 'POST') {
@@ -187,7 +181,6 @@ class PdSSyncAPI {
 	}
 	
 	
-	// http -v -f POST PdsSync.api.local/api/v1/touch/tree/unique-public-id-1293
 	// @todo ACL for touch
 	
 	protected function touch(){
@@ -215,7 +208,6 @@ class PdSSyncAPI {
 		}
 	}
 		
-	// http -v GET PdsSync.api.local/api/v1/hashMap/tree/unique-public-id-1293&redirect=true&returnValue=false
 	
 	/**
 	 * Returns the hash map
@@ -226,35 +218,30 @@ class PdSSyncAPI {
 	 */
 	protected function hashMap() {
 		if ($this->method == 'GET') {
-
 			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 				$treeId = $this->args [0];
 			} else {
 				return $this->_response ( 'Undefined treeId', 404 );
 			}
-			
 			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 				return $this->_response ( NULL, 406 );
 			}
-			
-			$redirect=true;
-				if(isset($this->request['redirect'])){
-					$redirect=(strtolower( $this->request['redirect'])=='true');
-				}
-				
-				$returnValue=false;
-				if(isset($this->request['returnValue'])){
-					$returnValue=(strtolower( $this->request['returnValue'])=='true');
-				}
+			$redirect = true;
+			if (array_key_exists ( 'redirect', $this->request )) {
+				$redirect = (strtolower ( $this->request ['redirect'] ) == 'true');
+			}
+			$returnValue = false;
+			if (array_key_exists ( 'returnValue', $this->request )) {
+				$returnValue = (strtolower ( $this->request ['returnValue'] ) == 'true');
+			}
 			$this->ioManager = $this->getIoManager ();
+			$path = $this->ioManager->absolutePath ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
+			if (!$this->ioManager->exists ( $path )) {
+				return $this->_response ( NULL, 404 );
+			}
 			if ($returnValue && ! $redirect) {
-				$path = $this->ioManager->absolutePath ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
-				if ($this->ioManager->exists ( $path )) {
 					$result = $this->ioManager->get_contents ( $path );
 					return $this->_response ( $result, $this->ioManager->status );
-				} else {
-					return $this->_response ( NULL, 404 );
-				}
 			}
 			
 			$uri = $this->ioManager->uriFor ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
@@ -262,9 +249,9 @@ class PdSSyncAPI {
 				header ( 'Location:  ' . $uri, true, 307 );
 				exit ();
 			} else {
-					$infos = array ();
-					$infos["uri"]=$uri;
-					return	$this->_response ( $infos, 200 );
+				$infos = array ();
+				$infos ["uri"] = $uri;
+				return $this->_response ( $infos, 200 );
 			}
 		} else {
 			$infos = array ();
@@ -274,8 +261,6 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// http -v GET PdsSync.api.local/api/v1/file/tree/unique-public-id-1293/?path=a/file1.txt&redirect=false&returnValue=false
-	
 	/**
 	 * Redirects to a file
 	 * By default redirect=false
@@ -284,47 +269,45 @@ class PdSSyncAPI {
 	 */
 	protected function file() {
 		if ($this->method == 'GET') {
-			if (isset ( $this->request ['path']  )) {
+			if (isset ( $this->request ['path'] )) {
 				if (isset ( $this->verb ) && ($this->verb == "tree") && count ( $this->args ) > 0) {
 					$treeId = $this->args [0];
 				} else {
 					return $this->_response ( 'Undefined treeId', 404 );
 				}
-
+				
 				if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 					return $this->_response ( NULL, 406 );
 				}
-				
-				$redirect=true;
-				if(isset($this->request['redirect'])){
-					$redirect=(strtolower( $this->request['redirect'])=='true');
+			
+				$redirect = true;
+				if (array_key_exists ( 'redirect', $this->request )) {
+					$redirect = (strtolower ( $this->request ['redirect'] ) == 'true');
 				}
-				
-				$returnValue=false;
-				if(isset($this->request['returnValue'])){
-					$returnValue=(strtolower( $this->request['returnValue'])=='true');
+				$returnValue = false;
+				if (array_key_exists ( 'returnValue', $this->request )) {
+					$returnValue = (strtolower ( $this->request ['returnValue'] ) == 'true');
 				}
 				
 				$this->ioManager = $this->getIoManager ();
-				if($returnValue && !$redirect){
-					$path=$this->ioManager->absolutePath($treeId,  $this->request ['path']);
-					if($this->ioManager->exists($path)){
-						$result=$this->ioManager->get_contents($path);
-						return  	$this->_response ( $result, $this->ioManager->status );
-					}else{
-						return $this->_response (NULL, 404 );
-					}
+				$path = $this->ioManager->absolutePath ( $treeId, $this->request ['path'] );
+				if (! $this->ioManager->exists ( $path )) {
+					return $this->_response ( NULL, 404 );
 				}
-				$uri = $this->ioManager->uriFor($treeId,  $this->request ['path']);
-				if($redirect){
+				if ($returnValue && ! $redirect) {
+					$result = $this->ioManager->get_contents ( $path );
+					return $this->_response ( $result, $this->ioManager->status );
+				}
+				$uri = $this->ioManager->uriFor ( $treeId, $this->request ['path'] );
+				if ($redirect) {
 					header ( 'Location:  ' . $uri, true, 307 );
 					exit ();
-				}else{
+				} else {
 					$infos = array ();
-					$infos["uri"]=$uri;
-					return	$this->_response ( $infos, 200 );
+					$infos ["uri"] = $uri;
+					return $this->_response ( $infos, 200 );
 				}
-			}else{
+			} else {
 				return $this->_response ( 'Undefined path ', 404 );
 			}
 		} else {
@@ -336,8 +319,7 @@ class PdSSyncAPI {
 	}
 	
 	
-	
-	// http -v -f POST PdsSync.api.local/api/v1/uploadFileTo/tree/unique-public-id-1293/ destination='a/file1.txt' syncIdentifier='your-syncID_' source@~/Documents/Samples/text1.txt 
+
 	// @todo  store a the sync id & relative path to a private zone for the sanitizing procedure.
 	/**
 	 * Upload the file to the relative path
@@ -345,7 +327,7 @@ class PdSSyncAPI {
 	 * @return multitype: string
 	 */
 	protected function uploadFileTo() {
-		if ($this->method == 'POST' ) {
+		if ($this->method == 'POST') {
 			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 				$treeId = $this->args [0];
 			} else {
@@ -354,14 +336,20 @@ class PdSSyncAPI {
 			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 				return $this->_response ( NULL, 406 );
 			}
-			if ( isset($this->request ['destination']) && Isset($this->request ['syncIdentifier']) && isset ( $_FILES ['source'] )) {
-				$this->ioManager = $this->getIoManager();
-				$d=  dirname($this->request ['destination']).DIRECTORY_SEPARATOR.$this->request ['syncIdentifier'].basename($this->request ['destination']);
-				$uploadfile = $this->ioManager->absolutePath($treeId,$d) ;
-				if ($this->ioManager->move_uploaded ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
-					return $this->_response (NULL, 201 );
+			if (isset ( $this->request ['destination'] ) && Isset ( $this->request ['syncIdentifier'] ) && isset ( $_FILES ['source'] )) {
+				$this->ioManager = $this->getIoManager ();
+				$treeFolder = $this->ioManager->absolutePath ( $treeId, '' ); 
+				if (isset($treeFolder) && $this->ioManager->exists ( $treeFolder )) {
+					
+					$d = dirname ( $this->request ['destination'] ) . DIRECTORY_SEPARATOR . $this->request ['syncIdentifier'] . basename ( $this->request ['destination'] );
+					$uploadfile = $this->ioManager->absolutePath ( $treeId, $d );
+					if ($this->ioManager->move_uploaded ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
+						return $this->_response ( NULL, 201 );
+					} else {
+						return $this->_response ( NULL, 201 );
+					}
 				} else {
-					return $this->_response ( NULL, 201 );
+					return $this->_response ( 'Unexisting tree id '.$treeFolder , 400 );
 				}
 			} else {
 				return $this->_response ( 'destination, source and syncIdentifier are required', 400 );
@@ -369,15 +357,13 @@ class PdSSyncAPI {
 		} else {
 			$infos = array ();
 			$infos [INFORMATIONS_KEY] = 'Method POST required';
-			$infos [METHOD_KEY] = $this->method ;
+			$infos [METHOD_KEY] = $this->method;
 			return $this->_response ( $infos, 405 );
 		}
 	}
 	
 	
-	 
-	  //http -v -f  POST PdsSync.api.local/api/v1/finalizeTransactionIn/tree/unique-public-id-1293/ commands='[ [   0 ,"a/file1.txt" ]]' syncIdentifier='your-syncID_' hashmap@~/Documents/Samples/hashmap.data 
-	 
+
 	/**
 	 *  Finalize the synchronization transaction with a bunch, then save the hashMap.
 	 *
@@ -387,6 +373,8 @@ class PdSSyncAPI {
 		if ($this->method == 'POST') {
 			if (isset ( $this->request ['syncIdentifier'] ) && isset ( $this->request ['commands'] ) && isset ( $_FILES ['hashmap'] )) {
 				$command=$this->request ['commands'];
+				
+				// We accept encoded string
 				if(!is_array($command)){
 					try {
 						$command=json_decode($this->request ['commands']);
@@ -394,19 +382,22 @@ class PdSSyncAPI {
 						return $this->_response ( 'Invalid json command array = ' . $this->request ['commands']  , 400 );
 					}
 				}
+				
+				
+				
 				if (is_array ( $command)) {
-					if (isset ( $this->verb ) && count ( $this->args ) > 1) {
-						$treeId = $this->args [1];
-					} else  if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+				  if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 						$treeId = $this->args [0];
 					}else{
-						$treeId = $this->args [1];
 						return $this->_response ( 'Undefined treeId', 404 );
 					}
+
+					
 					if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 						return $this->_response ( NULL, 406 );
 					}
-					$errors = $this->getInterpreter ()->interpretBunchOfCommand ( $treeId, $this->request ['syncIdentifier'], $command, $_FILES ['hashmap'] ['tmp_name'] );
+
+						
 					if ($errors == NULL) {
 						return $this->_response ( NULL, 200 );
 					} else {
@@ -456,6 +447,8 @@ class PdSSyncAPI {
 	 * @return Ambigous <string, multitype:NULL >
 	 */
 	private function _cleanInputs($data) {
+		return $data ;
+		/*
 		$clean_input = Array ();
 		if (is_array ( $data )) {
 			foreach ( $data as $k => $v ) {
@@ -465,6 +458,7 @@ class PdSSyncAPI {
 			$clean_input = trim ( strip_tags ( $data ) );
 		}
 		return $clean_input;
+		*/
 	}
 	
 	// ///////////////
