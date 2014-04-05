@@ -340,7 +340,6 @@ class PdSSyncAPI {
 				$this->ioManager = $this->getIoManager ();
 				$treeFolder = $this->ioManager->absolutePath ( $treeId, '' ); 
 				if (isset($treeFolder) && $this->ioManager->exists ( $treeFolder )) {
-					
 					$d = dirname ( $this->request ['destination'] ) . DIRECTORY_SEPARATOR . $this->request ['syncIdentifier'] . basename ( $this->request ['destination'] );
 					$uploadfile = $this->ioManager->absolutePath ( $treeId, $d );
 					if ($this->ioManager->move_uploaded ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
@@ -382,22 +381,15 @@ class PdSSyncAPI {
 						return $this->_response ( 'Invalid json command array = ' . $this->request ['commands']  , 400 );
 					}
 				}
-				
-				
-				
 				if (is_array ( $command)) {
 				  if (isset ( $this->verb ) && count ( $this->args ) > 0) {
 						$treeId = $this->args [0];
 					}else{
 						return $this->_response ( 'Undefined treeId', 404 );
 					}
-
-					
 					if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 						return $this->_response ( NULL, 406 );
 					}
-
-						
 					if ($errors == NULL) {
 						return $this->_response ( NULL, 200 );
 					} else {
