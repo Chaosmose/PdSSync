@@ -83,24 +83,6 @@ A very simple PHP sync restfull service to use in conjonction with PdSSync objc 
 ##### Status code references ####
 [www.w3.org] (http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html), [www.ietf.org] (http://www.ietf.org/assignments/http-status-codes/http-status-codes.xml)
 
-### End points ###
-
-You can use [Httpie](https://github.com/jkbr/httpie) to test the endpoints. 
-```shell
-http GET dev.local/api/v1/reachable/
-
-http -v -f POST dev.local/api/v1/install/ adminKey='YOUR KEY'
-
-http -v -f POST dev.local/api/v1/create/tree/unique-public-id key='YOUR KEY'
-
-http -v GET dev.local/api/v1/hashMap/tree/unique-public-id&redirect=true&returnValue=false
-
-http -v -f POST dev.local/api/v1/uploadFileTo/tree/unique-public-id/ destination='file1.txt'  syncIdentifier='xx' source@~/Documents/text1.txt
-
-http -v -f POST dev.local/api/v1/finalizeSynchronization/ commands[]='<encodedCommand>'  syncIdentifier='xx' hashMap='<hashmap>'
-
-http -v GET dev.local/api/v1/file/tree/unique-public-id/?path=a/file1.txt&redirect=false&returnValue=false
-```
 #### Commands  : ####
 
 Any command is encoded in an array.
@@ -137,6 +119,139 @@ typedef NS_ENUM(NSUInteger,
     PdSDepth       = 1,
     PdSValue       = 2
 } ;
+```
+
+# How to proceed to basic tests 
+
+### using HTTPIE : 
+
+## Install httpie 
+https://github.com/jkbr/httpie
+
+### You can update those keys on  in PdSSyncPhp/api/v1/PdSSyncConfig.php
+
+REPOSITORY_HOST 
+CREATIVE_KEY
+SECRET
+
+### Create local files : 
+
+```shell
+touch ~/Documents/Samples/text1.txt
+echo "Eureka1" > ~/Documents/Samples/text1.txt
+touch ~/Documents/Samples/text2.txt
+echo "Eureka2" > ~/Documents/Samples/text2.txt
+
+touch ~/Documents/Samples/hashmap.data 
+echo  "[]" > ~/Documents/Samples/hashmap.data 
+```
+
+###  A simple sequence :  
+Replace <your-base-url> with your base url
+
+
+1. // Verify the reachability
+```shell
+http GET <your-base-url>api/v1/reachable/
+```
+
+2. // Install
+```shell
+http -v -f POST <your-base-url>api/v1/install/ key='6ca0c48126a15939-2c938833d4678913'
+```
+
+3. // Create a one tree per channel 
+```shell
+http -v -f POST  <your-base-url>api/v1/create/tree/1 key='6ca0c48126a15939-2c938833d4678913'
+http -v -f POST  <your-base-url>api/v1/create/tree/2 key='6ca0c48126a15939-2c938833d4678913'
+```
+
+4. // Touch the ginger tree to reset the public id
+```shell
+http -v -f POST <your-base-url>api/v1/touch/tree/unexisting-tree
+http -v -f POST <your-base-url>api/v1/touch/tree/1
+```
+5.
+```shell
+http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==false
+```
+6. 
+```shell
+http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination==‘a/file1.txt' syncIdentifier==‘your-syncID_' source@~/Documents/Samples/text1.txt
+http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination==‘a/file2.txt' syncIdentifier==‘your-syncID_' source@~/Documents/Samples/text2.txt
+```
+
+7.
+```shell
+http -v -f POST <your-base-url>api/v1/finalizeTransactionIn/tree/1/ commands='[[0 ,"a/file1.txt"]]' syncIdentifier='your-syncID_' hashmap@~/Documents/Samples/hashmap.data 
+```
+8.
+```shell
+http -v GET <your-base-url>api/v1/file/tree/ginger/?path=‘a/file1.txt’&redirect=‘false’&returnValue=‘true’
+``
+
+### How to use PdSSync in objective C: 
+
+```objc 
+- (void)_upTest{
+    HashMap *hashMap=[[HashMap alloc]init];
+    
+    NSString*sourcePath=[@"~/Desktop/" stringByExpandingTildeInPath];
+    PdSSyncContext *synchronisationContext=[[PdSSyncContext alloc] initWithFinalHashMap:hashMap
+                                                                              sourceURL:[NSURL fileURLWithPath:sourcePath]
+                                                                      andDestinationUrl:[NSURL URLWithString:[self _stringUrlWithRelativePath:@"api/v1/tree/ginger/"]]];
+    NSMutableArray *bunchOfCommands=[NSMutableArray array];
+    [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:[@"~/Documents/Samples/text1.txt" stringByExpandingTildeInPath]
+                                                               destination:@"txt/test/a.txt"]];
+    [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:[@"~/Documents/Samples/text2.txt" stringByExpandingTildeInPath]
+                                                               destination:@"txt/test/b.txt"]];
+    SLYRunnerAppDelegate*__weak weakSelf=self;
+     PdSCommandInterpreter *interpreter=[PdSCommandInterpreter  interpreterWithBunchOfCommand:bunchOfCommands
+                                                                                     context:synchronisationContext
+                                                                                progressBlock:^(uint taskIndex, float progress) {
+                                                                                    NSLog(@"UP %i %f",taskIndex,progress);
+                                                                                }
+                                                                          andCompletionBlock:^(BOOL success, NSString *message) {
+                                                                              NSLog(@"UP Completion Success = %@ Message : %@",success?@"YES":@"NO", message?message:@"");
+                                                                              if(success){
+                                                                                  [weakSelf _downTest];
+                                                                              }
+                                                                          }];
+    
+    NSLog(@"Context is valid : %@",interpreter.context.isValid?@"YES":@"NO");
+}
+
+
+
+- (void)_downTest{
+    HashMap *hashMap=[[HashMap alloc]init];
+    NSString*destinationTreePath=[@"~/Desktop/" stringByExpandingTildeInPath];
+    PdSSyncContext *synchronisationContext=[[PdSSyncContext alloc] initWithFinalHashMap:hashMap
+                                                                        sourceURL:[NSURL URLWithString:[self _stringUrlWithRelativePath:@"api/v1/tree/1/"]]
+                                            andDestinationUrl:[NSURL fileURLWithPath:destinationTreePath]];
+    
+    // The context is SourceIsDistantDestinationIsLocal
+    // The destination must map the
+    NSMutableArray *bunchOfCommands=[NSMutableArray array];
+    [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:@"txt/test/a.txt" destination:@"txt/test/a.txt"]];
+    [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:@"txt/test/b.txt" destination:@"txt/test/b.txt"]];
+    PdSCommandInterpreter *interpreter=[PdSCommandInterpreter  interpreterWithBunchOfCommand:bunchOfCommands
+                                                                                     context:synchronisationContext
+                                                                               progressBlock:^(uint taskIndex, float progress) {
+                                                                                   NSLog(@"DOWN %i %f",taskIndex,progress);
+                                                                               }
+                                                                          andCompletionBlock:^(BOOL success, NSString *message) {
+                                                                               NSLog(@"DOWN Completion Success = %@ Message : %@",success?@"YES":@"NO", message?message:@"");
+                                                                          }];
+    
+     NSLog(@"Context is valid : %@",interpreter.context.isValid?@"YES":@"NO");
+}
+
+
+-(NSString*)_stringUrlWithRelativePath:(NSString*)relativePath{
+    return [NSString stringWithFormat:@"%@%@",<YOUR BASE URL>,relativePath];
+}
+    
 ```
 
 
