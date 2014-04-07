@@ -340,9 +340,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                      @"destination":destination,
                                      @"doers":@"",
                                      @"undoers":@""};// @todo find a solution for doers / undoers if possible
-        
-        
-        
+
         NSMutableURLRequest *request = [[AFHTTPRequestSerializer serializer] multipartFormRequestWithMethod:@"POST"
                                                                                                   URLString:URLString
                                                                                                  parameters:parameters
@@ -371,7 +369,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                   } else {
                                                                                       NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
                                                                                       NSLog(@"%@ %@", response, s);
-                                                                                      
                                                                                       [weakSelf _nextCommand];
                                                                                   }
                                                                               }];
@@ -395,9 +392,16 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         NSString*treeId=_context.sourceTreeId;
         // Decompose in a GET for the URI then a download task
         
-        NSString *URLString =[[_context.sourceBaseUrl absoluteString] stringByAppendingFormat:@"file/tree/%@/?path=%@&redirect=false&returnValue=false",treeId,source];
+        NSString *URLString =[[_context.sourceBaseUrl absoluteString] stringByAppendingFormat:@"file/tree/%@/",treeId];
         NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:URLString]];
-        [_HTTPsessionManager GET:URLString parameters:nil
+        NSDictionary *parameters = @{
+                                     @"path": [source copy],
+                                     @"redirect":@"false",
+                                     @"returnValue":@"false"
+                                    };
+
+        [_HTTPsessionManager GET:URLString
+                      parameters:parameters
                          success:^(NSURLSessionDataTask *task, id responseObject) {
                              NSDictionary*d=(NSDictionary*)responseObject;
                              NSString*uriString=[d objectForKey:@"uri"];
@@ -407,6 +411,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                  NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
                                                                                                               progress:&progress
                                                                                                            destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
+                                                                                                               [progress removeObserver:weakSelf
+                                                                                                                             forKeyPath:@"fractionCompleted"
+                                                                                                                                context:NULL];
                                                                                                                NSString*p=[weakSelf _absoluteLocalPathFromRelativePath:destination toLocalUrl:_context.destinationBaseUrl];
                                                                                                                [_fileManager createRecursivelyRequiredFolderForPath:p];
                                                                                                                if([_fileManager fileExistsAtPath:[NSString filteredFilePathFrom:p]]){
@@ -415,9 +422,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                                    if(error){
                                                                                                                        NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[self _stringFromError:error]];
                                                                                                                        [weakSelf _interruptOnFault:msg];
-                                                                                                                       [progress removeObserver:weakSelf
-                                                                                                                                     forKeyPath:@"fractionCompleted"
-                                                                                                                                        context:NULL];
+                                                                                                                 
                                                                                                                    }
                                                                                                                }
                                                                                                                return [NSURL URLWithString:p];
@@ -503,16 +508,13 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                   [progress removeObserver:weakSelf
                                                                                                 forKeyPath:@"fractionCompleted"
                                                                                                    context:NULL];
-                                                                                   NSLog(@"%i", [(NSHTTPURLResponse*)response statusCode]);
-                                                                                  
                                                                                    if ([(NSHTTPURLResponse*)response statusCode]!=200 && error) {
                                                                                       NSString *msg=[NSString stringWithFormat:@"Error when finalizing %@ ",[self _stringFromError:error]];
                                                                                       [self _interruptOnFault:msg];
                                                                                   } else {
                                                                                       NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
                                                                                       NSLog(@"%@ %@", response, s);
-                                                                                      
-                                                                                      [weakSelf _nextCommand];
+                                                                                     [weakSelf _nextCommand];
                                                                                   }
                                                                               }];
         [uploadTask resume];
@@ -533,10 +535,22 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 - (NSString*)_stringFromError:(NSError*)error{
+    NSMutableString*result=[NSMutableString string];
     NSData *d=[[error userInfo] objectForKey:JSONResponseSerializerWithDataKey];
-    return [[NSString alloc] initWithBytes:[d bytes]
+    if(d && [d length]>0){
+         [result appendFormat:@" JSONResponseSerializerWithDataKey : %@",[[NSString alloc] initWithBytes:[d bytes]
                                     length:[d length]
-                                  encoding:NSUTF8StringEncoding];
+                                  encoding:NSUTF8StringEncoding]];
+
+    }
+        if([error localizedDescription]){
+            [result appendFormat:@" debugDescription : %@",[error localizedDescription]];
+        }
+        if([error debugDescription]){
+            [result appendFormat:@" debugDescription : %@",[error debugDescription]];
+        }
+
+        return result;
 }
 
 
@@ -624,7 +638,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         NSProgress *progress = (NSProgress *)object;
         if(_progressBlock){
             float f=progress.fractionCompleted;
-            dispatch_async(dispatch_get_main_queue(), ^{
+            dispatch_sync(dispatch_get_main_queue(), ^{
                 _progressBlock(_progressCounter,f);
             });
         }
@@ -686,7 +700,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:object
                                                        options:0
                                                          error:&error];
-    
     if (!jsonData) {
         return [error localizedDescription];
     } else {

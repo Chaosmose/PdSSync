@@ -334,7 +334,7 @@ class PdSSyncAPI {
 				return $this->_response ( 'Undefined treeId', 404 );
 			}
 			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
-				return $this->_response ( NULL, 406 );
+				return $this->_response ( NULLgo, 406 );
 			}
 			if (isset ( $this->request ['destination'] ) && Isset ( $this->request ['syncIdentifier'] ) && isset ( $_FILES ['source'] )) {
 				$this->ioManager = $this->getIoManager ();
@@ -390,6 +390,7 @@ class PdSSyncAPI {
 					if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 						return $this->_response ( NULL, 406 );
 					}
+					$errors = $this->getInterpreter ()->interpretBunchOfCommand ( $treeId, $this->request ['syncIdentifier'], $command, $_FILES ['hashmap'] ['tmp_name'] );
 					if ($errors == NULL) {
 						return $this->_response ( NULL, 200 );
 					} else {
