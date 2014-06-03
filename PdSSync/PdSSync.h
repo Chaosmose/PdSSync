@@ -8,7 +8,6 @@
 
 // VERSION 1.0 Of the ObjC & PHP version
 
-
 // ROAD MAP FOR THE VERSION 2.0
 
 // 1- UNIX like permissions
@@ -85,7 +84,15 @@ typedef NS_ENUM (NSUInteger,
     SourceIsDistantDestinationIsDistant = 3 // currently not supported 
 };
 
-#define kPdSSyncHashFileExtension @".hash"
+
+// The extension for a single file hash
+#define kPdSSyncHashFileExtension @(".hash")
+
+// The global hash map name
+#define kPdSSyncHashMashMapFileName @("hashMap")
+
+// The metadata folder
+#define kPdSSyncMetadataFolder @(".PdSSync/")
 
 #import "PdSFileManager.h"
 #import "HashMap.h"

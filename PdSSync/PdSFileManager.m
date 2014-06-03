@@ -26,7 +26,7 @@
 
 -(BOOL)createRecursivelyRequiredFolderForPath:(NSString*)path{
 #if TARGET_OS_IPHONE
-    if([path rangeOfString:[self _applicationDocumentsDirectory]].location==NSNotFound){
+    if([path rangeOfString:[self applicationDocumentsDirectory]].location==NSNotFound){
         return NO;
     }
 #endif

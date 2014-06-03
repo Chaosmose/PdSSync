@@ -50,13 +50,13 @@
     NSMutableDictionary*treeDictionary=[NSMutableDictionary dictionary];
     NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
     NSDirectoryEnumerator *dirEnum =[fileManager enumeratorAtURL:folderURL
-                                       includingPropertiesForKeys:keys
-                                                          options:0
-                                                     errorHandler:^BOOL(NSURL *url, NSError *error) {
-                                                         NSLog(@"ERROR when enumerating  %@ %@",url, [error localizedDescription]);
-                                                         return YES;
-                                                     }];
-
+                                      includingPropertiesForKeys:keys
+                                                         options:0
+                                                    errorHandler:^BOOL(NSURL *url, NSError *error) {
+                                                        NSLog(@"ERROR when enumerating  %@ %@",url, [error localizedDescription]);
+                                                        return YES;
+                                                    }];
+    
     HashMap*hashMap=[[HashMap alloc]init];
     
     NSURL *file;
@@ -91,8 +91,7 @@
                 uint32_t crc32=[data crc32];
                 if(crc32!=0){// 0 for folders
                     NSString *relativePath=filePath;
-#warning relative PATH 
-                    
+#warning relative PATH
                     progressBlock(crc32,relativePath,i);
                     [hashMap setHash:[NSString stringWithFormat:@"%i",crc32] forPath:relativePath ];
                     [treeDictionary setObject:[NSString stringWithFormat:@"%i",crc32] forKey:relativePath];
@@ -107,6 +106,22 @@
             }
         }
         
+    }
+    if(_saveHashInAFile){
+        // We gonna create the hashmap folder and write the serialized Hashmap
+        NSURL *hasMapURL=[folderURL URLByAppendingPathComponent:[NSString stringWithFormat:@"%@%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName]];
+        [fileManager createRecursivelyRequiredFolderForPath:[hasMapURL absoluteString]];
+        NSDictionary*dictionaryHashMap=[hashMap dictionaryRepresentation];
+        NSString*json=[self _encodetoJson:dictionaryHashMap];
+        NSError*error;
+        [json writeToURL:hasMapURL
+              atomically:YES
+                encoding:NSUTF8StringEncoding
+                   error:&error];
+        if(error){
+            NSLog(@"ERROR when writing hashmap to %@ ",hasMapURL);
+
+        }
     }
     completionBlock(hashMap);
     
@@ -133,6 +148,19 @@
     }
 }
 
+
+- (NSString*)_encodetoJson:(id)object{
+    NSError *error;
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:object
+                                                       options:0
+                                                         error:&error];
+    if (!jsonData) {
+        return [error localizedDescription];
+    } else {
+        return [[NSString alloc]initWithBytes:[jsonData bytes]
+                                       length:[jsonData length] encoding:NSUTF8StringEncoding];
+    }
+}
 
 
 
