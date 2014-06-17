@@ -31,17 +31,14 @@
  *  Creates a dictionary with  relative paths as key and  CRC32 as value
  *
  *  @param url the folder url
- *
  *  @param dataBlock if you define this block it will be used to extract the data from the file
- *
  *  @param progressBlock the progress block
- *
  *  @param completionBlock the completion block.
  *
  */
 - (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
                                 dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
-                        progressBlock:(void(^)(uint32_t crc32,NSString*path, NSUInteger index))progressBlock
+                        progressBlock:(void(^)(NSUInteger hash,NSString*path, NSUInteger index))progressBlock
               andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock;
 
 @end

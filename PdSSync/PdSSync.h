@@ -86,7 +86,7 @@ typedef NS_ENUM (NSUInteger,
 
 
 // The extension for a single file hash
-#define kPdSSyncHashFileExtension @(".hash")
+#define kPdSSyncHashFileExtension @("hash")
 
 // The global hash map name
 #define kPdSSyncHashMashMapFileName @("hashMap")

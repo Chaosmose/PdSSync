@@ -31,19 +31,17 @@
  *  Creates a dictionary with  relative paths as key and  CRC32 as value
  *
  *  @param url the folder url
- *
  *  @param dataBlock if you define this block it will be used to extract the data from the file
- *
  *  @param progressBlock the progress block
- *
  *  @param completionBlock the completion block.
  *
  */
 - (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
                               dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
-                          progressBlock:(void(^)(uint32_t crc32,NSString*path, NSUInteger index))progressBlock
+                          progressBlock:(void(^)(NSUInteger hash,NSString*path, NSUInteger index))progressBlock
                      andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock{
     
+    NSString *folderPath=[folderURL path];
     PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
     // Local
     NSArray*exclusion=@[@".DS_Store"];
@@ -66,7 +64,8 @@
         if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound || [file.pathExtension isEqualToString:kPdSSyncHashFileExtension]){
             @autoreleasepool {
                 NSData *data=nil;
-                NSString*hashfile=[filePath stringByAppendingString:kPdSSyncHashFileExtension];
+                NSString*hashfile=[filePath stringByAppendingFormat:@".%@",kPdSSyncHashFileExtension];
+                NSString *relativePath=[filePath stringByReplacingOccurrencesOfString:[folderPath stringByAppendingString:@"/"] withString:@""];
                 // we check if there is a file.extension.kPdSSyncHashFileExtension
                 if(!self.recomputeHash && [fileManager fileExistsAtPath:hashfile] ){
                     NSError*crc32ReadingError=nil;
@@ -75,29 +74,25 @@
                                                                       error:&crc32ReadingError];
                     if(!crc32ReadingError){
                         uint32_t crc32=[crc32String integerValue];
-                        NSString *relativePath=file;
                         progressBlock(crc32,relativePath,i);
-                        
                     }else{
                         NSLog(@"ERROR when reading crc32 from %@ %@",filePath,[crc32ReadingError localizedDescription]);
                     }
                 }else{
                     if (dataBlock) {
-                        data=dataBlock(file,i);
+                        data=dataBlock(filePath,i);
                     }else{
                         data=[NSData dataWithContentsOfFile:filePath];
                     }
                 }
-                uint32_t crc32=[data crc32];
+                NSUInteger crc32=(NSUInteger)[data crc32];
                 if(crc32!=0){// 0 for folders
-                    NSString *relativePath=filePath;
-#warning relative PATH
                     progressBlock(crc32,relativePath,i);
-                    [hashMap setHash:[NSString stringWithFormat:@"%i",crc32] forPath:relativePath ];
-                    [treeDictionary setObject:[NSString stringWithFormat:@"%i",crc32] forKey:relativePath];
+                    [hashMap setHash:[NSString stringWithFormat:@"%lu",crc32] forPath:relativePath];
+                    [treeDictionary setObject:[NSString stringWithFormat:@"%lu",crc32] forKey:relativePath];
                     i++;
                     if(self.saveHashInAFile ){
-                        [self _writeCrc32:crc32 toFileWithPath:hashfile];
+                        [self _writeCrc32:crc32 toFileWithPath:filePath];
                     }
                 }
                 
@@ -107,22 +102,22 @@
         }
         
     }
-    if(_saveHashInAFile){
-        // We gonna create the hashmap folder and write the serialized Hashmap
-        NSURL *hasMapURL=[folderURL URLByAppendingPathComponent:[NSString stringWithFormat:@"%@%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName]];
-        [fileManager createRecursivelyRequiredFolderForPath:[hasMapURL absoluteString]];
-        NSDictionary*dictionaryHashMap=[hashMap dictionaryRepresentation];
-        NSString*json=[self _encodetoJson:dictionaryHashMap];
-        NSError*error;
-        [json writeToURL:hasMapURL
-              atomically:YES
-                encoding:NSUTF8StringEncoding
-                   error:&error];
-        if(error){
-            NSLog(@"ERROR when writing hashmap to %@ ",hasMapURL);
-
-        }
+    
+    // We gonna create the hashmap folder and write the serialized Hashmap
+    NSURL *hasMapURL=[folderURL URLByAppendingPathComponent:[NSString stringWithFormat:@"%@%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName]];
+    [fileManager createRecursivelyRequiredFolderForPath:[hasMapURL absoluteString]];
+    NSDictionary*dictionaryHashMap=[hashMap dictionaryRepresentation];
+    NSString*json=[self _encodetoJson:dictionaryHashMap];
+    NSError*error;
+    [json writeToURL:hasMapURL
+          atomically:YES
+            encoding:NSUTF8StringEncoding
+               error:&error];
+    if(error){
+        NSLog(@"ERROR when writing hashmap to %@ ",hasMapURL);
+        
     }
+    
     completionBlock(hashMap);
     
 }
@@ -132,10 +127,10 @@
 #pragma mark - private
 
 
-- (BOOL)_writeCrc32:(uint32_t)crc32 toFileWithPath:(NSString*)path{
+- (BOOL)_writeCrc32:(NSUInteger)crc32 toFileWithPath:(NSString*)path{
     NSError *crc32WritingError=nil;
-    NSString *crc32Path=[path stringByAppendingString:kPdSSyncHashFileExtension];
-    NSString *crc32String=[NSString stringWithFormat:@"%@",@(crc32)];
+    NSString *crc32Path=[path stringByAppendingFormat:@".%@",kPdSSyncHashFileExtension];
+    NSString *crc32String=[NSString stringWithFormat:@"%lu",crc32];
     
     [crc32String writeToFile:crc32Path
                   atomically:YES
@@ -152,7 +147,7 @@
 - (NSString*)_encodetoJson:(id)object{
     NSError *error;
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:object
-                                                       options:0
+                                                       options:NSJSONWritingPrettyPrinted
                                                          error:&error];
     if (!jsonData) {
         return [error localizedDescription];

@@ -132,4 +132,14 @@ NSString*const hashToPathKey=@"hToPth";
     return delta;
 }
 
+
+/**
+ *  Returns the number of paths in hash path
+ *
+ *  @return the count;
+ */
+- (NSUInteger)count{
+    return [_hashToPath count];
+}
+
 @end

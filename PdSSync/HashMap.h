@@ -74,4 +74,12 @@ extern NSString* const hashToPathKey;
  */
 - (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination;
 
+
+/**
+ *  Returns the number of paths in hash path
+ *
+ *  @return the count;
+ */
+- (NSUInteger)count;
+
 @end
