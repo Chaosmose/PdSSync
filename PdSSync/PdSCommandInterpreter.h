@@ -51,7 +51,7 @@ static NSString * const PdSSyncUnused = @"PdSSyncUnused";
  *
  *  @param bunchOfCommand  the bunch of command
  *  @param context         the interpreter context
-*  @param progressBlock   the progress block
+ *  @param progressBlock   the progress block
  *  @param completionBlock te completion block
  *
  *  @return the interpreter

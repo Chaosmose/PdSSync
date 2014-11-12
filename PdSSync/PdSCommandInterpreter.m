@@ -9,7 +9,6 @@
 // Current implementation relies on http://cocoadocs.org/docsets/AFNetworking/2.2.0/
 
 #import "AFNetworking.h"
-#import "JSONResponseSerializerWithData.h"
 #import "PdSCommandInterpreter.h"
 
 
@@ -536,7 +535,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 - (NSString*)_stringFromError:(NSError*)error{
     NSMutableString*result=[NSMutableString string];
-    NSData *d=[[error userInfo] objectForKey:JSONResponseSerializerWithDataKey];
+    NSData *d=[[error userInfo] objectForKey:AFNetworkingOperationFailingURLResponseDataErrorKey];
     if(d && [d length]>0){
          [result appendFormat:@" JSONResponseSerializerWithDataKey : %@",[[NSString alloc] initWithBytes:[d bytes]
                                     length:[d length]
@@ -671,7 +670,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         if(_HTTPsessionManager){
             AFJSONRequestSerializer*r=[AFJSONRequestSerializer serializer];
             [_HTTPsessionManager setRequestSerializer:r];
-            _HTTPsessionManager.responseSerializer = [[JSONResponseSerializerWithData alloc]init];
+            _HTTPsessionManager.responseSerializer = [[AFJSONResponseSerializer alloc]init];
             NSSet*acceptable= [NSSet setWithArray:@[@"application/json",@"text/html"]];
             [_HTTPsessionManager.responseSerializer setAcceptableContentTypes:acceptable];
             // REACHABILITY SUPPORT
