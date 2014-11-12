@@ -1,5 +1,4 @@
-  <?php
-
+<?php
 require_once 'IOManager.class.php';
 
 /**
@@ -43,7 +42,4 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 		 $this->mkdir( dirname ( $destination ));
 		return move_uploaded_file ( $filename, $destination );
 	}
-	
-}
-
-?>
+}?>

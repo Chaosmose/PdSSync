@@ -1,10 +1,10 @@
 ## Disclaimer ##
 **PdSSync** is still in early development phases do not use in any project !
-Currently the web api is prototyped in PHP, it will be ported to JAVA and will support MessagePack in 2014.
+Currently the web api is prototyped in PHP.
 
 # PdSSync #
 
-A simple delta synchronizer for documents and data between devices.It allows to synchronizes local and distant grouped sets of files.The standard synchronization topology relies on a client software and a light blind Restfull service, but it can work locally and using P2P. 
+A simple delta synchronizer for documents and data between devices.It allows to synchronizes local and distant grouped sets of files.The standard synchronization topology relies on a client software and a light blind Restfull service, but it can work locally and using P2P.
 
 ## Approach ##
 
@@ -15,7 +15,7 @@ A simple delta synchronizer for documents and data between devices.It allows to 
 - do not focus on conflict resolution but on fault resilience (there is no transactional guarantee)
 - allow very efficient caching and mem caching strategy (we will provide advanced implementation samples)
 - support any encryption and cryptographic strategy
-- allow advanced hashing strategy ( like : considering that a modified file should not be synchronized because the modification is not significant) 
+- allow advanced hashing strategy ( like : considering that a modified file should not be synchronized because the modification is not significant)
 
 ## HashMap  ##
 
@@ -29,7 +29,7 @@ Json representation :
 	{
 		 "hashToPath" : {
     		 "1952419745" : "47b2e7fb27643408f95f7c66d995fbe9.music",
-    		 "2402594160" : "folder1/4fd6de231a723be15375552928c9c52a.track",	
+    		 "2402594160" : "folder1/4fd6de231a723be15375552928c9c52a.track",
   		}
 	}
 ```
@@ -37,7 +37,7 @@ Json representation :
 
 A **DeltaPathMap** references the differences between two **hashMap** and furnish the logic to planify downloading or uploading command operations for clients according to their role.
 
-Json representation : 
+Json representation :
 
 ```javascript
 	{
@@ -53,7 +53,7 @@ With 1 Source client (Objc), 1 sync service(php), and n Destination clients(Objc
 
 1. Source -> downloads the **hashMap** (if there is no hasMap the delta will be the current local)
 2. Source -> proceed to **DeltaPathMap** creation and command provisionning
-3. Source -> uploads files with a .upload prefix to the service 
+3. Source -> uploads files with a .upload prefix to the service
 4. Source -> uploads the hasMap of the current root folder and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans, **Optionaly** the synch server can send a push notification to the slave clients to force the step 5)
 5. Destination -> downloads the current **hashMap**
 6. Destination -> proceed to **DeltaPathMap** creation and command provisionning
@@ -137,8 +137,8 @@ echo "Eureka1" > ~/Documents/Samples/text1.txt
 touch ~/Documents/Samples/text2.txt
 echo "Eureka2" > ~/Documents/Samples/text2.txt
 
-touch ~/Documents/Samples/hashmap.data 
-echo  "[]" > ~/Documents/Samples/hashmap.data 
+touch ~/Documents/Samples/hashmap.data
+echo  "[]" > ~/Documents/Samples/hashmap.data
 ```
 
 ###  Usage sample of the end points ###
@@ -155,7 +155,7 @@ http GET <your-base-url>api/v1/reachable/
 http -v -f POST <your-base-url>api/v1/install/ key='default-creative-key'
 ```
 
-3. Create a files trees 
+3. Create a files trees
 ```shell
 http -v -f POST  <your-base-url>api/v1/create/tree/1 key='default-creative-key'
 http -v -f POST  <your-base-url>api/v1/create/tree/2 key='default-creative-key'
@@ -181,7 +181,7 @@ http -v -f POST  <your-base-url>api/v1/uploadFileTo/tree/1/ destination=='a/file
 
 7. Finalize the upload session
 ```shell
-http -v -f POST <your-base-url>api/v1/finalizeTransactionIn/tree/1/ commands='[[0 ,"a/file1.txt"],[0 ,"a/file2.txt"]]' syncIdentifier='your-syncID_' hashmap@~/Documents/Samples/hashmap.data 
+http -v -f POST <your-base-url>api/v1/finalizeTransactionIn/tree/1/ commands='[[0 ,"a/file1.txt"],[0 ,"a/file2.txt"]]' syncIdentifier='your-syncID_' hashmap@~/Documents/Samples/hashmap.data
 ```
 8. Download the file1
 ```shell
@@ -191,18 +191,18 @@ http -v GET <your-base-url>api/v1/file/tree/1/ path=='a/file1.txt' redirect==fal
 9. Download the hashmap that should now exist
 ```shell
 http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==false
-``` 
+```
 
 ### PdSSync in objective C: ###
 
-```objc 
+```objc
 
 #import "PdSSync.h"
 ...
 
 - (void)_upTest{
 	// You should compute a valid HashMap
-    HashMap *hashMap=[[HashMap alloc]init];    
+    HashMap *hashMap=[[HashMap alloc]init];
     NSString*sourcePath=[@"~/Desktop/" stringByExpandingTildeInPath];
     PdSSyncContext *synchronisationContext=[[PdSSyncContext alloc] initWithFinalHashMap:hashMap
                                                                               sourceURL:[NSURL fileURLWithPath:sourcePath]
@@ -224,7 +224,7 @@ http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==f
                                                                                   [weakSelf _downTest];
                                                                               }
                                                                           }];
-    
+
     NSLog(@"Context is valid : %@",interpreter.context.isValid?@"YES":@"NO");
 }
 
@@ -237,7 +237,7 @@ http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==f
     PdSSyncContext *synchronisationContext=[[PdSSyncContext alloc] initWithFinalHashMap:hashMap
                                                                         sourceURL:[NSURL URLWithString:[self _stringUrlWithRelativePath:@"api/v1/tree/1/"]]
                                             andDestinationUrl:[NSURL fileURLWithPath:destinationTreePath]];
-    
+
     // The context is SourceIsDistantDestinationIsLocal
     // The destination must match
     NSMutableArray *bunchOfCommands=[NSMutableArray array];
@@ -251,7 +251,7 @@ http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==f
                                                                           andCompletionBlock:^(BOOL success, NSString *message) {
                                                                                NSLog(@"DOWN Completion Success = %@ Message : %@",success?@"YES":@"NO", message?message:@"");
                                                                           }];
-    
+
      NSLog(@"Context is valid : %@",interpreter.context.isValid?@"YES":@"NO");
 }
 
@@ -259,7 +259,5 @@ http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==f
 -(NSString*)_stringUrlWithRelativePath:(NSString*)relativePath{
     return [NSString stringWithFormat:@"%@%@",<YOUR BASE URL>,relativePath];
 }
-    
+
 ```
-
-

@@ -3,12 +3,8 @@
 require_once 'v1/classes/CommandInterpreter.class.php';
 require_once 'v1/classes/IOManager.class.php';
 
-
 /**
  * A simple API facade in one file
- * Inspired by v
- * 
- * Optimized according to google bests practices :  https://developers.google.com/speed/articles/optimizing-php
  * 
  * @author Benoit Pereira da Silva
  * @copyright https://github.com/benoit-pereira-da-silva/PdSSync 
@@ -27,12 +23,9 @@ class PdSSyncAPI {
 	 */
 	protected $endpoint = '';
 	/**
-	 * Property: verb
-	 * An optional additional descriptor about the endpoint, used for things that can
-	 * not be handled by the basic methods.
-	 * eg: /files/process
+	 * Property: Subject
 	 */
-	protected $verb = '';
+	protected $subject = '';
 	/**
 	 * Property: args
 	 * Any additional URI components after the endpoint and verb have been removed, in our
@@ -41,6 +34,11 @@ class PdSSyncAPI {
 	 * or /<endpoint>/<arg0>
 	 */
 	protected $args = Array ();	
+	
+	/**
+	 * QueryString is used sometimes for filtering GET
+	 */
+	protected $queryStringArray = Array ();
 	
 	/**
 	 * The command interpreter
@@ -54,12 +52,22 @@ class PdSSyncAPI {
 	 * @var IOManager
 	 */
 	
+	
+	/**
+	 * The PUT flow
+	 *
+	 * @var unknown_type
+	 */
+	protected $flow = '';
+	
+	
 	/**
 	 *  
 	 * @var IOManager
 	 */
 	protected $ioManager = NULL;
 	
+
 	/**
 	 * Constructor: __construct
 	 * Allow for CORS, assemble and pre-process the data
@@ -72,11 +80,18 @@ class PdSSyncAPI {
 		$request = $_REQUEST ['request'];
 		$origin = $_SERVER ['HTTP_ORIGIN'];
 		$this->args = explode ( '/', rtrim ( $request, '/' ) );
-		$this->endpoint = array_shift ( $this->args );
-		if (array_key_exists ( 0, $this->args ) && ! is_numeric ( $this->args [0] )) {
-			$this->verb = array_shift ( $this->args );
+		if (array_key_exists ( 0, $this->args ) && in_array ( $this->args [0], $this->_allowedEndPointList () )) {
+			$this->endpoint = array_shift ( $this->args );
+		} else {
+			return $this->_response ( "Endpoint is not allowed", 403 );
 		}
-		$this->method = $_SERVER ['REQUEST_METHOD'];
+		if (array_key_exists ( 0, $this->args ) && in_array ( $this->args [0], $this->_allowedVerbsList () )) {
+			$this->subject = array_shift ( $this->args );
+		}
+		$tmpArray = explode ( '/', $_SERVER ["QUERY_STRING"] );
+		$queryString = urldecode ( end ( $tmpArray ) ); // Url decoded query string
+		parse_str ( $queryString, $this->queryStringArray );
+		$this->method = strtoupper ( $_SERVER ['REQUEST_METHOD'] );
 		if ($this->method == 'POST' && array_key_exists ( 'HTTP_X_HTTP_METHOD', $_SERVER )) {
 			if ($_SERVER ['HTTP_X_HTTP_METHOD'] == 'DELETE') {
 				$this->method = 'DELETE';
@@ -86,6 +101,34 @@ class PdSSyncAPI {
 				throw new Exception ( "Unexpected Header" );
 			}
 		}
+	}
+	
+	/**
+	 * Restricted subject list
+	 *
+	 * @return multitype:string
+	 */
+	private function _allowedSubjectList() {
+		return array (
+				"tree"
+		);
+	}
+	
+	/**
+	 * Restricted endpoint list
+	 *
+	 * @return multitype:string
+	 */
+	private function _allowedEndPointList() {
+		return array (
+				"reachable",
+				"install",
+				"create",
+				"touch",
+				"hashMap",
+				"uploadFileTo",
+				"finalizeTransactionIn"
+		);
 	}
 	
 	/**
@@ -104,14 +147,31 @@ class PdSSyncAPI {
 				break;
 			case 'PUT' :
 				$this->request = $this->_cleanInputs ( $_GET );
-				$this->file = file_get_contents ( "php://input" );
+				$this->flow = file_get_contents ( "php://input" );
 				break;
 			default :
 				return $this->_response ( $this->method, 400 );
 				break;
 		}
+		if (DEBUG_INPUTS) {
+			if ((DEBUG_INPUTS_IS_SELECTIVE == FALSE) or ($this->endpoint == DEBUG_INPUTS_FOR_ENDPOINT && $this->method == DEBUG_INPUTS_FOR_METHOD)) {
+				return $this->_response ( array (
+						method => $this->method,
+						endpoint => $this->endpoint,
+						verb => $this->subject,
+						queryStringArray => $this->queryStringArray,
+						args => $this->args,
+						request => $this->request,
+						file => $this->flow,
+						GET => $_GET,
+						POST => $_POST,
+						REQUEST => $_REQUEST,
+						SERVER => $_SERVER
+				), 200 );
+			}
+		}
 		if (( int ) method_exists ( $this, $this->endpoint ) > 0) {
-			return  $this->{$this->endpoint} ( $this->args );
+			return $this->{$this->endpoint} ( $this->args );
 		}
 		return $this->_response ( '', 400 );
 	}
@@ -154,8 +214,7 @@ class PdSSyncAPI {
 
 	protected function create() {
 		if ($this->method == 'POST') {
-			
-			if (isset ( $this->verb ) && count ( $this->args ) > 0 && $this->verb == "tree") {
+			if (isset ( $this->subject ) && count ( $this->args ) > 0 && $this->subject == "tree") {
 				$treeId = $this->args [0];
 				if(strlen($treeId)<MIN_TREE_ID_LENGTH){
 					return $this->_response ( NULL, 406 );
@@ -187,7 +246,7 @@ class PdSSyncAPI {
 	
 	protected function touch(){
 		if ($this->method == 'POST') {
-			if (isset ( $this->verb ) && count ( $this->args ) > 0 && $this->verb == "tree") {
+			if (isset ( $this->subject ) && count ( $this->args ) > 0 && $this->subject == "tree") {
 				$treeId = $this->args [0];
 				if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 					return $this->_response ( NULL, 406 );
@@ -220,7 +279,7 @@ class PdSSyncAPI {
 	 */
 	protected function hashMap() {
 		if ($this->method == 'GET') {
-			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+			if (isset ( $this->subject ) && count ( $this->args ) > 0) {
 				$treeId = $this->args [0];
 			} else {
 				return $this->_response ( 'Undefined treeId', 404 );
@@ -272,7 +331,7 @@ class PdSSyncAPI {
 	protected function file() {
 		if ($this->method == 'GET') {
 			if (isset ( $this->request ['path'] )) {
-				if (isset ( $this->verb ) && ($this->verb == "tree") && count ( $this->args ) > 0) {
+				if (isset ( $this->subject ) && ($this->subject == "tree") && count ( $this->args ) > 0) {
 					$treeId = $this->args [0];
 				} else {
 					return $this->_response ( 'Undefined treeId', 404 );
@@ -330,13 +389,13 @@ class PdSSyncAPI {
 	 */
 	protected function uploadFileTo() {
 		if ($this->method == 'POST') {
-			if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+			if (isset ( $this->subject ) && count ( $this->args ) > 0) {
 				$treeId = $this->args [0];
 			} else {
 				return $this->_response ( 'Undefined treeId', 404 );
 			}
 			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
-				return $this->_response ( NULLgo, 406 );
+				return $this->_response ( NULL, 406 );
 			}
 			if (isset ( $this->request ['destination'] ) && Isset ( $this->request ['syncIdentifier'] ) && isset ( $_FILES ['source'] )) {
 				$this->ioManager = $this->getIoManager ();
@@ -384,7 +443,7 @@ class PdSSyncAPI {
 					}
 				}
 				if (is_array ( $command)) {
-				  if (isset ( $this->verb ) && count ( $this->args ) > 0) {
+				  if (isset ( $this->subject ) && count ( $this->args ) > 0) {
 						$treeId = $this->args [0];
 					}else{
 						return $this->_response ( 'Undefined treeId', 404 );
@@ -537,5 +596,4 @@ class PdSSyncAPI {
 		}
 		return $this->ioManager;
 	}	
-}
-?>
+}?>

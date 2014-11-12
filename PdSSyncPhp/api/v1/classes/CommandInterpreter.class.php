@@ -181,5 +181,4 @@ class CommandInterpreter {
 		//define ('X_PRIVILEGE', 8);
 		return true;
 	}
-}
-?>
+}?>

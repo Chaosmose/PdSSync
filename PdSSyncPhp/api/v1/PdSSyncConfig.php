@@ -5,7 +5,7 @@
 ///////////////////////
 
 
-define ( 'REPOSITORY_HOST'										,	($_SERVER['HTTPS']?'https://':'http://').$_SERVER['SERVER_NAME'].'/PdSSyncPhp/Repository/' );
+define ( 'REPOSITORY_HOST'										,	((array_key_exists('HTTPS', $_SERVER))?($_SERVER['HTTPS'])?'https://':'http://':'http://').$_SERVER['SERVER_NAME'].'/PdSSyncPhp/Repository/' );
 define ( 'REPOSITORY_WRITING_PATH'		                ,	dirname( dirname(__DIR__)). '/Repository/'  );
 
 ///////////////////////
@@ -30,3 +30,14 @@ define ( 'SECRET'															,	'default-secret-key' ); // Used create the dat
 //////////////////////
 
 define ( 'MIN_TREE_ID_LENGTH'		                ,	1  );
+
+
+
+//////////////////////
+// DEBUG
+//////////////////////
+
+define ('DEBUG_INPUTS',FALSE); // Should be FALSE
+define ('DEBUG_INPUTS_IS_SELECTIVE',TRUE);// Allows to selectively debug inputs calls
+define ('DEBUG_INPUTS_FOR_METHOD','PUT');
+define ('DEBUG_INPUTS_FOR_ENDPOINT','event');
