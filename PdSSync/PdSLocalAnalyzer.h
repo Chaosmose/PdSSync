@@ -22,6 +22,7 @@
 /**
  * Default is YES
  * When the hash is computed it is save to file.extension.kPdSSyncHashFileExtension
+ * Else any file file with kPdSSyncHashFileExtension will be removed.
  */
 @property (nonatomic)BOOL saveHashInAFile;
 

@@ -57,11 +57,14 @@
     
     HashMap*hashMap=[[HashMap alloc]init];
     
+
+    
     NSURL *file;
     int i=0;
     while ((file = [dirEnum nextObject])) {
         NSString *filePath=[NSString filteredFilePathFrom:[file absoluteString]];
-        if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound || [file.pathExtension isEqualToString:kPdSSyncHashFileExtension]){
+        NSString *pathExtension=file.pathExtension;
+        if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound && ![pathExtension isEqualToString:kPdSSyncHashFileExtension]){
             @autoreleasepool {
                 NSData *data=nil;
                 NSString*hashfile=[filePath stringByAppendingFormat:@".%@",kPdSSyncHashFileExtension];
@@ -91,21 +94,25 @@
                     [hashMap setHash:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forPath:relativePath];
                     [treeDictionary setObject:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forKey:relativePath];
                     i++;
-                    if(self.saveHashInAFile ){
+                    if(self.saveHashInAFile){
                         [self _writeCrc32:crc32 toFileWithPath:filePath];
                     }
                 }
-                
-                
-                
             }
         }
         
+        if(!self.saveHashInAFile && [pathExtension isEqualToString:kPdSSyncHashFileExtension]){
+            NSError*removeFile=nil;
+            [fileManager removeItemAtPath:filePath error:&removeFile];
+        }
     }
     
-    // We gonna create the hashmap folder and write the serialized Hashmap
-    NSURL *hasMapURL=[folderURL URLByAppendingPathComponent:[NSString stringWithFormat:@"%@%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName]];
-    [fileManager createRecursivelyRequiredFolderForPath:[hasMapURL absoluteString]];
+    // We gonna create the hashmap folder
+    NSString*hashMapFileP=[[folderURL absoluteString] stringByAppendingFormat:@"/%@%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName];
+    NSURL *hasMapURL=[NSURL fileURLWithPath:hashMapFileP];
+    [fileManager createRecursivelyRequiredFolderForPath:hashMapFileP];
+    
+    // Let s write the serialized HashMap file
     NSDictionary*dictionaryHashMap=[hashMap dictionaryRepresentation];
     NSString*json=[self _encodetoJson:dictionaryHashMap];
     NSError*error;
@@ -114,7 +121,7 @@
             encoding:NSUTF8StringEncoding
                error:&error];
     if(error){
-        NSLog(@"ERROR when writing hashmap to %@ ",hasMapURL);
+        NSLog(@"ERROR when writing hashmap to %@ %@", [error description],hasMapURL);
         
     }
     
