@@ -12,9 +12,9 @@
 @interface PdSSyncContext : NSObject
 
 
-@property (nonatomic,readonly)HashMap *finalHashMap;
+@property (nonatomic,strong)HashMap *finalHashMap;
 
-// Treeid are extracted from the distant url only.
+
 @property (nonatomic,readonly)NSString*sourceTreeId;
 @property (nonatomic,readonly)NSString*destinationTreeId;
 
@@ -49,14 +49,12 @@
  *  If the url is distant we extract the tree id.
  *
  *
- *  @param finalHashMap   finalHashMap description
  *  @param sourceUrl      sourceUrl description
  *  @param destinationUrl destinationUrl description
  *
  *  @return returns the context
  */
--(instancetype)initWithFinalHashMap:(HashMap*)finalHashMap
-                          sourceURL:(NSURL*)sourceUrl
+-(instancetype)initWithSourceURL:(NSURL*)sourceUrl
                   andDestinationUrl:(NSURL*)destinationUrl;
 
 

@@ -11,6 +11,11 @@
 
 @class PdSSyncContext;
 
+typedef NS_ENUM(NSInteger,
+                PdSSyncExtentedStatusError) {
+    PdSStatusErrorHashMapDeserializationTypeMissMatch=1000
+} ;
+
 
 /**
  *  Administration interface.
@@ -22,6 +27,7 @@
  */
 @property (nonatomic,readonly)PdSSyncContext*syncContext;
 
+
 /**
  *  Initialize the admin facade with a contzext
  *
@@ -30,6 +36,24 @@
  *  @return the admin instance
  */
 - (instancetype)initWithContext:(PdSSyncContext*)context;
+
+
+
+#pragma mark - Synchronization
+
+/**
+ *  Synchronizes the source to the destination
+ *
+ *  @param progressBlock   the progress block
+ *  @param completionBlock the completionBlock
+ */
+-(void)synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
+                 andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock;
+
+
+
+
+#pragma mark - Advanced actions
 
 /**
  *  Proceed to installation of the Repository
@@ -41,40 +65,25 @@
 
 /**
  *  Creates a tree
- *
- *  @param identifier with the given identifier
  *  @param block      the completion block
  */
-- (void)createTreeWithId:(NSString*)identifier
-     withCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block;
+- (void)createTreesWithCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block;
 
 /**
- *  Touches the tree (changes the public ID )
+ *  Touches the trees (changes the public ID )
  *
- *  @param identifier the tree to be touched
  *  @param block      the completion block
  */
-- (void)touchTreeWithId:(NSString*)identifier
-     withCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block;
+- (void)touchTreesWithCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block;
 
 /**
  *  Returns the source and destination hashMaps for a given tree
  *
- *  @param identifier the tree identifier
  *  @param block      the result block 
  */
--(void)hashMapsForTreeWithId:(NSString*)identifier
-          withCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block;
+-(void)hashMapsForTreesWithCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block;
 
 
-/**
- *  Synchronizes the source to the destination
- *
- *  @param progressBlock   the progress block
- *  @param completionBlock the completionBlock 
- */
--(void)synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress))progressBlock
-                 andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock;
 
 
 

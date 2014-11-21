@@ -100,6 +100,7 @@ typedef NS_ENUM (NSUInteger,
 #import "PdSCommandInterpreter.h"
 #import "PdSLocalAnalyzer.h"
 #import "PdSSyncContext.h"
+#import "PdSSyncAdmin.h"
 
 // PdSCommons 
 #import "NSData+CRC.h"

@@ -108,7 +108,7 @@
     }
     
     // We gonna create the hashmap folder
-    NSString*hashMapFileP=[[folderURL absoluteString] stringByAppendingFormat:@"/%@%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName];
+    NSString*hashMapFileP=[[folderURL absoluteString] stringByAppendingFormat:@"/%@%@.%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
     NSURL *hasMapURL=[NSURL fileURLWithPath:hashMapFileP];
     [fileManager createRecursivelyRequiredFolderForPath:hashMapFileP];
     

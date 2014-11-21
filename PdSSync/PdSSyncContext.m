@@ -13,19 +13,30 @@
 
 }
 
-@synthesize finalHashMap = _finalHashMap;
 @synthesize syncID = _syncID;
 @synthesize sourceBaseUrl = _sourceBaseUrl;
 @synthesize destinationBaseUrl = _destinationBaseUrl;
 
--(instancetype)initWithFinalHashMap:(HashMap*)finalHashMap
-                          sourceURL:(NSURL*)sourceUrl
-                  andDestinationUrl:(NSURL*)destinationUrl{
+/**
+ * The url are considerated as the repository root
+ *
+ *  for example     : @"http://PdsSync.api.local/api/v1/tree/unique-public-id-1293"
+ *  or              : @"~/Entrepot/Git/Public-projects/PdSSync/PdSSyncPhp/Repository/"
+ *
+ *  If the url is distant we extract the tree id.
+ *
+ *
+ *  @param sourceUrl      sourceUrl description
+ *  @param destinationUrl destinationUrl description
+ *
+ *  @return returns the context
+ */
+-(instancetype)initWithSourceURL:(NSURL*)sourceUrl
+               andDestinationUrl:(NSURL*)destinationUrl{
     self=[super init];
     if(self){
         self->_sourceBaseUrl=[self _baseUrlFromUrl:sourceUrl];
         self->_destinationBaseUrl=[self _baseUrlFromUrl:destinationUrl];
-        self->_finalHashMap=finalHashMap;
         self->_sourceTreeId=[self _treeIDFromUrl:sourceUrl];
         self->_destinationTreeId=[self _treeIDFromUrl:destinationUrl];
         self->_syncID=[self _getNewSyncID];
@@ -34,7 +45,7 @@
 }
 
 - (BOOL)isValid{
-    return (_sourceBaseUrl && _destinationBaseUrl && _finalHashMap);
+    return (_sourceBaseUrl && _destinationBaseUrl);
 }
 
 
@@ -67,7 +78,8 @@
         }
         return nil;
     }else{
-        return nil;
+        NSArray* components=url.pathComponents;
+        return (NSString*)[components lastObject];
     }
 }
 
