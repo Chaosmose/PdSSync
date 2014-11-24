@@ -16,6 +16,7 @@
 @synthesize syncID = _syncID;
 @synthesize sourceBaseUrl = _sourceBaseUrl;
 @synthesize destinationBaseUrl = _destinationBaseUrl;
+@synthesize finalHashMap = _finalHashMap;
 
 /**
  * The url are considerated as the repository root

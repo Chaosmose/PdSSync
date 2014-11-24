@@ -43,7 +43,6 @@
     [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
         if(sourceHashMap && destinationHashMap ){
             DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap andDestination:destinationHashMap];
-            
         }else{
             completionBlock(NO,[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i",statusCode]);
         }
@@ -198,19 +197,17 @@
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant||_syncContext.mode==SourceIsDistantDestinationIsDistant){
         [weakSelf _distantHashMapForTreeWithId:_syncContext.destinationTreeId
                            withCompletionBlock:^(HashMap *hashMap, NSInteger statusCode) {
-#warning ICI
-                                   PdSSyncAdmin*__strong strongSelf=weakSelf;
+                                   PdSSyncAdmin* strongSelf=weakSelf;
                                    HashMap*sourceHashMap=[strongSelf  _localHashMapForSourceUrl:strongSelf->_syncContext.sourceBaseUrl
                                                                                   andTreeWithId:strongSelf->_syncContext.sourceTreeId];
-                                   strongSelf->_syncContext.finalHashMap=sourceHashMap;
+                               
                                    HashMap*destinationHashMap=hashMap;
+                                   strongSelf->_syncContext.finalHashMap=sourceHashMap;
                                    if(!destinationHashMap){
                                        // There is currently no destination hashMap let's create a void one.
                                        destinationHashMap=[[HashMap alloc] init];
                                    }
                                    block(sourceHashMap,destinationHashMap,statusCode);
-                            
-                            
                            }];
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
         HashMap*sourceHashMap=[weakSelf _localHashMapForSourceUrl:_syncContext.sourceBaseUrl

@@ -86,7 +86,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             [NSException raise:@"TemporaryException" format:@"SourceIsLocalDestinationIsLocal is currently not supported"];
         }
         if([context isValid] && _bunchOfCommand){
-            self->_queue=[[NSOperationQueue alloc] init];
+            _queue=[[NSOperationQueue alloc] init];
             _queue.name=[NSString stringWithFormat:@"com.pereira-da-silva.PdSSync.CommandInterpreter.%i",[self hash]];
             [_queue setMaxConcurrentOperationCount:1];// Sequential
             [self _setUpManager];
