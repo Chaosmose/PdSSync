@@ -124,8 +124,13 @@
         NSLog(@"ERROR when writing hashmap to %@ %@", [error description],hasMapURL);
         
     }
-    
     completionBlock(hashMap);
+   
+    /*
+    dispatch_async(dispatch_get_main_queue()), ^{
+        completionBlock(hashMap);
+    });
+    */
     
 }
 

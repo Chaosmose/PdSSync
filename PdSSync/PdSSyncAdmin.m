@@ -21,7 +21,7 @@
 - (instancetype)initWithContext:(PdSSyncContext*)context{
     self=[super init];
     if(self){
-        self->_syncContext=context;
+        self.syncContext=context;
         if(!_syncContext.finalHashMap){
             [NSException raise:@"PdSSyncException" format:@"PdSSyncContext shoul have a finalHashMap to be usable"];
         }
@@ -192,7 +192,7 @@
  *
  *  @param block      the result block
  */
--(void)hashMapsForTreesWithCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block{
+-(void)hashMapsForTreesWithCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block{  
     PdSSyncAdmin*__weak weakSelf=self;
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant||_syncContext.mode==SourceIsDistantDestinationIsDistant){
         [weakSelf _distantHashMapForTreeWithId:_syncContext.destinationTreeId
@@ -202,7 +202,7 @@
                                                                                   andTreeWithId:strongSelf->_syncContext.sourceTreeId];
                                
                                    HashMap*destinationHashMap=hashMap;
-                                   strongSelf->_syncContext.finalHashMap=sourceHashMap;
+                                   [strongSelf->_syncContext setFinalHashMap:sourceHashMap];
                                    if(!destinationHashMap){
                                        // There is currently no destination hashMap let's create a void one.
                                        destinationHashMap=[[HashMap alloc] init];
@@ -230,7 +230,8 @@
 
 -(HashMap*)_localHashMapForSourceUrl:(NSURL*)url andTreeWithId:(NSString*)identifier{
     NSURL*u=[NSURL URLWithString:identifier relativeToURL:url];
-    
+#warning TODO
+    return nil;
 }
 
 -(void)_distantHashMapForTreeWithId:(NSString*)identifier

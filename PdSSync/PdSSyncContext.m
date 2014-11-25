@@ -64,7 +64,6 @@
             return SourceIsLocalDestinationIsLocal;
         }
     }
-    return nil;
 }
 
 
@@ -72,7 +71,7 @@
     if([[url absoluteString] rangeOfString:@"http"].location==0){
         NSArray* components=url.pathComponents;
         if([components indexOfObject:@"tree"]){
-            int tIdx=[components indexOfObject:@"tree"];
+            NSUInteger tIdx=[components indexOfObject:@"tree"];
             if([components count]>tIdx+1){
                 return [components objectAtIndex:tIdx+1];
             }
@@ -89,7 +88,7 @@
     if([[url absoluteString] rangeOfString:@"http"].location==0){
         NSArray* components=url.pathComponents;
         if([components indexOfObject:@"tree"]){
-            int tIdx=[components indexOfObject:@"tree"];
+            NSUInteger tIdx=[components indexOfObject:@"tree"];
             if(tIdx >2 && tIdx!=NSNotFound){
                 NSMutableString*stringUrl=[NSMutableString stringWithFormat:@"%@://%@",[url scheme],[url host]];
                 for (int i=0; i<tIdx; i++) {
