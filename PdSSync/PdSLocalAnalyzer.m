@@ -108,30 +108,23 @@
     }
     
     // We gonna create the hashmap folder
-    NSString*hashMapFileP=[[folderURL absoluteString] stringByAppendingFormat:@"/%@%@.%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
-    NSURL *hasMapURL=[NSURL fileURLWithPath:hashMapFileP];
+    NSString*hashMapFileP=[[folderURL absoluteString] stringByAppendingFormat:@"%@%@.%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
     [fileManager createRecursivelyRequiredFolderForPath:hashMapFileP];
     
     // Let s write the serialized HashMap file
     NSDictionary*dictionaryHashMap=[hashMap dictionaryRepresentation];
     NSString*json=[self _encodetoJson:dictionaryHashMap];
     NSError*error;
-    [json writeToURL:hasMapURL
-          atomically:YES
-            encoding:NSUTF8StringEncoding
-               error:&error];
+    hashMapFileP=[hashMapFileP stringByReplacingOccurrencesOfString:@"file:///" withString:@"/"];
+    [json writeToFile:hashMapFileP
+           atomically:YES
+             encoding:NSUTF8StringEncoding
+                error:&error];
     if(error){
-        NSLog(@"ERROR when writing hashmap to %@ %@", [error description],hasMapURL);
+        NSLog(@"ERROR when writing hashmap to %@ %@", [error description],hashMapFileP);
         
     }
     completionBlock(hashMap);
-   
-    /*
-    dispatch_async(dispatch_get_main_queue()), ^{
-        completionBlock(hashMap);
-    });
-    */
-    
 }
 
 

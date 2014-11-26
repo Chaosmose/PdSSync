@@ -23,7 +23,7 @@
     if(self){
         _syncContext=context;
         if(!_syncContext.finalHashMap){
-            [NSException raise:@"PdSSyncException" format:@"PdSSyncContext shoul have a finalHashMap to be usable"];
+            [NSException raise:@"PdSSyncException" format:@"PdSSyncContext should have a finalHashMap to be usable"];
         }
     }
     return self;
@@ -43,6 +43,16 @@
     [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
         if(sourceHashMap && destinationHashMap ){
             DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap andDestination:destinationHashMap];
+            NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
+            if([commands count]>0){
+                [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
+                                                       progressBlock:^(uint taskIndex, float progress) {
+                                                           progressBlock(taskIndex,progress,@"");
+                                                       } andCompletionBlock:^(BOOL success, NSString *message) {
+                                                           completionBlock(success,message);
+                                                       }];
+            }
+            
         }else{
             completionBlock(NO,[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i",(int)statusCode]);
         }
@@ -203,7 +213,7 @@
                                
                                    HashMap*destinationHashMap=hashMap;
                                    [strongSelf->_syncContext setFinalHashMap:sourceHashMap];
-                                   if(!destinationHashMap){
+                                   if(!destinationHashMap && statusCode==404){
                                        // There is currently no destination hashMap let's create a void one.
                                        destinationHashMap=[[HashMap alloc] init];
                                    }
@@ -229,8 +239,24 @@
 }
 
 -(HashMap*)_localHashMapForSourceUrl:(NSURL*)url andTreeWithId:(NSString*)identifier{
-    NSURL*u=[NSURL URLWithString:identifier relativeToURL:url];
-#warning TODO
+    NSString*hashMapRelativePath=[NSString stringWithFormat:@"%@%@/%@%@.%@",[url absoluteString],identifier,kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
+    hashMapRelativePath=[hashMapRelativePath stringByReplacingOccurrencesOfString:@"file:///" withString:@"/"];
+    NSURL *hashMapUrl=[NSURL fileURLWithPath:hashMapRelativePath];
+    NSData *data=[NSData dataWithContentsOfURL:hashMapUrl];
+    NSError*__block errorJson=nil;
+    @try {
+        // We use mutable containers and leaves by default.
+        id __block result=nil;
+        result=[NSJSONSerialization JSONObjectWithData:data
+                                               options:NSJSONReadingMutableContainers|NSJSONReadingMutableLeaves|NSJSONReadingAllowFragments
+                                                 error:&errorJson];
+        if([result isKindOfClass:[NSDictionary class]]){
+            return [HashMap fromDictionary:result];
+        }
+    }
+    @catch (NSException *exception) {
+        NSLog(@"%@",exception);
+    }
     return nil;
 }
 
@@ -239,9 +265,11 @@
     NSMutableDictionary*parameters=[NSMutableDictionary dictionary];
     if(_syncContext.creationKey)
         [parameters setObject:_syncContext.creationKey forKey:@"key"];
+    [parameters setObject:@(YES) forKey:@"redirect"];
+    [parameters setObject:@(NO) forKey:@"returnValue"];
     AFHTTPRequestOperationManager *manager = [self _operationManager];
     manager.requestSerializer=[AFJSONRequestSerializer serializer];
-    [manager POST:[[_syncContext.destinationBaseUrl absoluteString]stringByAppendingFormat:@"/hashMap/%@/",identifier]
+    [manager GET:[[_syncContext.destinationBaseUrl absoluteString]stringByAppendingFormat:@"hashMap/tree/%@/",identifier]
        parameters: parameters
           success:^(AFHTTPRequestOperation *operation, id responseObject) {
               if( [responseObject isKindOfClass:[NSDictionary class]]){

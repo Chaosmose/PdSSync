@@ -21,8 +21,8 @@
 /**
  * The url are considerated as the repository root
  *
- *  for example     : @"http://PdsSync.api.local/api/v1/tree/unique-public-id-1293"
- *  or              : @"~/Entrepot/Git/Public-projects/PdSSync/PdSSyncPhp/Repository/"
+ *  for example     : @"http://sly.am/PdSSyncPhp/api/v1/tree/folder1/"
+ *  or              : @"file:///Users/bpds/Documents/Samples/folder1/"
  *
  *  If the url is distant we extract the tree id.
  *
@@ -99,7 +99,7 @@
         }
     }
     if(url){
-        return [url copy];
+        return [url URLByDeletingLastPathComponent];
     }
     return nil;
 }

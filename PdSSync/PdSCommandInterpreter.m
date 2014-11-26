@@ -626,6 +626,23 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 
+#pragma mark - 
+
+
++ (NSMutableArray*)commandsFromDeltaPathMap:(DeltaPathMap*)deltaPathMap{
+    NSMutableArray*commands=[NSMutableArray array];
+    for (NSString*identifier in deltaPathMap.createdPaths) {
+        [commands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:identifier destination:identifier]];
+    }
+    for (NSString*identifier in deltaPathMap.updatedPaths) {
+        [commands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:identifier destination:identifier]];
+    }
+    for (NSString*identifier in deltaPathMap.deletedPaths) {
+        [commands addObject:[PdSCommandInterpreter encodeRemove:identifier]];
+    }
+    return commands;
+}
+
 
 #pragma mark - KVO
 

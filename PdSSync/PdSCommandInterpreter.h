@@ -74,4 +74,7 @@ static NSString * const PdSSyncUnused = @"PdSSyncUnused";
 +(id)encodeForget:(NSString*)destination;
 
 
++ (NSMutableArray*)commandsFromDeltaPathMap:(DeltaPathMap*)deltaPathMap;
+
+
 @end

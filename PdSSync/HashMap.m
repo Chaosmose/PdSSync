@@ -42,10 +42,10 @@ NSString*const hashToPathKey=@"hToPth";
             hashMap->_pathToHash=[[dictionary objectForKey:pathToHashKey]copy];
         }else{
             // It is a compact mode we regenerate the homologous map
-            hashMap->_hashToPath=[NSMutableDictionary dictionary];
-            for (NSString*path in hashMap->_pathToHash) {
+            hashMap->_pathToHash=[NSMutableDictionary dictionary];
+            for (NSString*path in hashMap->_hashToPath) {
                 NSString*hash=[hashMap->_hashToPath valueForKey:path];
-                hashMap->_hashToPath[[hash copy]]=[path copy];
+                hashMap->_pathToHash[[hash copy]]=[path copy];
             }
         }
         return hashMap;
@@ -114,7 +114,8 @@ NSString*const hashToPathKey=@"hToPth";
  */
 - (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination{
     DeltaPathMap*delta=[DeltaPathMap instance];
-    for (NSString *path in source->_hashToPath) {
+    for (NSString *key in source->_hashToPath) {
+        NSString*path=[source->_hashToPath objectForKey:key];
         if ([destination hashForPath:path]) {
             if(![[source hashForPath:path] isEqualToString:[destination hashForPath:path]]){
                 [delta.updatedPaths addObject:[path copy]];
@@ -124,7 +125,8 @@ NSString*const hashToPathKey=@"hToPth";
             [delta.createdPaths addObject:[path copy]];
         }
     }
-    for (NSString*path in destination->_hashToPath) {
+    for (NSString*key in destination->_hashToPath) {
+        NSString*path=[source->_hashToPath objectForKey:key];
          if (![source hashForPath:path]) {
               [delta.deletedPaths addObject:[path copy]];
          }
