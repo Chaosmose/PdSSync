@@ -87,7 +87,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         }
         if([context isValid] && _bunchOfCommand){
             _queue=[[NSOperationQueue alloc] init];
-            _queue.name=[NSString stringWithFormat:@"com.pereira-da-silva.PdSSync.CommandInterpreter.%i",[self hash]];
+            _queue.name=[NSString stringWithFormat:@"com.pereira-da-silva.PdSSync.CommandInterpreter.%@",@([self hash])];
             [_queue setMaxConcurrentOperationCount:1];// Sequential
             [self _setUpManager];
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -105,14 +105,14 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 +(id)encodeCreateOrUpdate:(NSString*)source destination:(NSString*)destination{
     if(source && destination){
-        return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCreateOrUpdate,destination,source];
+        return [NSString stringWithFormat:@"[%@,\"%@\",\"%@\"]", @(PdSCreateOrUpdate),destination,source];
     }
     return nil;
 }
 
 +(id)encodeCopy:(NSString*)source destination:(NSString*)destination{
     if(source && destination){
-        return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSCopy,destination,source];
+        return [NSString stringWithFormat:@"[%@,\"%@\",\"%@\"]",@(PdSCopy),destination,source];
     }else{
         return nil;
     }
@@ -120,7 +120,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 +(id)encodeMove:(NSString*)source destination:(NSString*)destination{
     if(source && destination){
-        return [NSString stringWithFormat:@"[%i,\"%@\",\"%@\"]", PdSMove,destination,source];
+        return [NSString stringWithFormat:@"[%@,\"%@\",\"%@\"]", @(PdSMove),destination,source];
     }else{
         return nil;
     }
@@ -128,7 +128,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 +(id)encodeRemove:(NSString*)destination{
     if(destination){
-        return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSDelete,destination];
+        return [NSString stringWithFormat:@"[%@,\"%@\"]", @(PdSDelete),destination];
     }else{
         return nil;
     }
@@ -136,7 +136,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 +(id)encodeSanitize:(NSString*)destination{
     if(destination){
-        return [NSString stringWithFormat:@"[%i,\"%@\"]", PdsSanitize,destination];
+        return [NSString stringWithFormat:@"[%@,\"%@\"]", @(PdsSanitize),destination];
     }else{
         return nil;
     }
@@ -144,7 +144,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 +(id)encodeChmode:(NSString*)destination mode:(int)mode{
     if(destination && (0<=mode && mode<777)){
-        return [NSString stringWithFormat:@"[%i,\"%@\",\"%i\"]", PdSChmod,destination,mode];
+        return [NSString stringWithFormat:@"[%@,\"%@\",\"%i\"]", @(PdSChmod),destination,mode];
     }else{
         return nil;
     }
@@ -152,7 +152,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 +(id)encodeForget:(NSString*)destination{
     if(destination){
-        return [NSString stringWithFormat:@"[%i,\"%@\"]", PdSForget,destination];
+        return [NSString stringWithFormat:@"[%@,\"%@\"]", @(PdSForget),destination];
     }else{
         return nil;
     }
@@ -392,7 +392,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         // Decompose in a GET for the URI then a download task
         
         NSString *URLString =[[_context.sourceBaseUrl absoluteString] stringByAppendingFormat:@"file/tree/%@/",treeId];
-        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:URLString]];
         NSDictionary *parameters = @{
                                      @"path": [source copy],
                                      @"redirect":@"false",

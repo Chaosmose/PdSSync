@@ -21,7 +21,7 @@
 - (instancetype)initWithContext:(PdSSyncContext*)context{
     self=[super init];
     if(self){
-        self.syncContext=context;
+        _syncContext=context;
         if(!_syncContext.finalHashMap){
             [NSException raise:@"PdSSyncException" format:@"PdSSyncContext shoul have a finalHashMap to be usable"];
         }
@@ -39,12 +39,12 @@
  */
 -(void)synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
                  andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
-    PdSSyncAdmin*__weak weakSelf=self;
+   // PdSSyncAdmin*__weak weakSelf=self;
     [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
         if(sourceHashMap && destinationHashMap ){
             DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap andDestination:destinationHashMap];
         }else{
-            completionBlock(NO,[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i",statusCode]);
+            completionBlock(NO,[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i",(int)statusCode]);
         }
     }];
     

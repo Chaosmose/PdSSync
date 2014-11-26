@@ -25,7 +25,7 @@ typedef NS_ENUM(NSInteger,
 /**
  *
  */
-@property (nonatomic,strong)PdSSyncContext*syncContext;
+@property (nonatomic,readonly)PdSSyncContext*syncContext;
 
 
 /**

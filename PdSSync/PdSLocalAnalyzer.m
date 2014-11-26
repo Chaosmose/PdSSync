@@ -76,8 +76,8 @@
                                                                    encoding:NSUTF8StringEncoding
                                                                       error:&crc32ReadingError];
                     if(!crc32ReadingError){
-                        unsigned long crc32=[crc32String longLongValue];
-                        progressBlock(crc32,relativePath,i);
+                        long long crc32=[crc32String longLongValue];
+                        progressBlock((unsigned int)crc32,relativePath,i);
                     }else{
                         NSLog(@"ERROR when reading crc32 from %@ %@",filePath,[crc32ReadingError localizedDescription]);
                     }

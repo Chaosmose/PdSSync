@@ -114,7 +114,7 @@ NSString*const hashToPathKey=@"hToPth";
  */
 - (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination{
     DeltaPathMap*delta=[DeltaPathMap instance];
-    for (NSDictionary*path in source->_hashToPath) {
+    for (NSString *path in source->_hashToPath) {
         if ([destination hashForPath:path]) {
             if(![[source hashForPath:path] isEqualToString:[destination hashForPath:path]]){
                 [delta.updatedPaths addObject:[path copy]];
@@ -124,7 +124,7 @@ NSString*const hashToPathKey=@"hToPth";
             [delta.createdPaths addObject:[path copy]];
         }
     }
-    for (NSDictionary*path in destination->_hashToPath) {
+    for (NSString*path in destination->_hashToPath) {
          if (![source hashForPath:path]) {
               [delta.deletedPaths addObject:[path copy]];
          }
