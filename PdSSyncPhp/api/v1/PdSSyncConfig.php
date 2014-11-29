@@ -37,7 +37,7 @@ define ( 'MIN_TREE_ID_LENGTH'		                ,	1  );
 // DEBUG
 //////////////////////
 
-define ('DEBUG_INPUTS',FALSE); // Should be FALSE
+define ('DEBUG_INPUTS',FALSE); // Should be FALSE and turned to TRUE only for exceptionnal purposes
 define ('DEBUG_INPUTS_IS_SELECTIVE',TRUE);// Allows to selectively debug inputs calls
-define ('DEBUG_INPUTS_FOR_METHOD','PUT');
-define ('DEBUG_INPUTS_FOR_ENDPOINT','event');
+define ('DEBUG_INPUTS_FOR_METHOD','POST');
+define ('DEBUG_INPUTS_FOR_ENDPOINT','create'); 

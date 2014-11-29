@@ -85,7 +85,7 @@ class PdSSyncAPI {
 		} else {
 			return $this->_response ( "Endpoint is not allowed", 403 );
 		}
-		if (array_key_exists ( 0, $this->args ) && in_array ( $this->args [0], $this->_allowedVerbsList () )) {
+		if (array_key_exists ( 0, $this->args )) {
 			$this->subject = array_shift ( $this->args );
 		}
 		$tmpArray = explode ( '/', $_SERVER ["QUERY_STRING"] );
@@ -103,17 +103,7 @@ class PdSSyncAPI {
 		}
 	}
 	
-	/**
-	 * Restricted subject list
-	 *
-	 * @return multitype:string
-	 */
-	private function _allowedSubjectList() {
-		return array (
-				"tree"
-		);
-	}
-	
+
 	/**
 	 * Restricted endpoint list
 	 *
@@ -158,7 +148,7 @@ class PdSSyncAPI {
 				return $this->_response ( array (
 						method => $this->method,
 						endpoint => $this->endpoint,
-						verb => $this->subject,
+						subject => $this->subject,
 						queryStringArray => $this->queryStringArray,
 						args => $this->args,
 						request => $this->request,

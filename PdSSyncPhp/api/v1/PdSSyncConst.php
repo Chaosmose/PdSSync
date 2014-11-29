@@ -5,7 +5,7 @@
 define('INFORMATIONS_KEY','informations');
 define('METHOD_KEY','method');
 
-define ('HASHMAP_FILENAME','hashMap');
+define ('HASHMAP_FILENAME','hashMap.hash');
 define ('TREE_INFOS_FILENAME','treeInfos');
 define('SYSTEM_DATA_PREFIX', '.');
 define('METADATA_FOLDER','.PdSSync/');
