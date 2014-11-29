@@ -115,7 +115,7 @@
     NSDictionary*dictionaryHashMap=[hashMap dictionaryRepresentation];
     NSString*json=[self _encodetoJson:dictionaryHashMap];
     NSError*error;
-    hashMapFileP=[hashMapFileP stringByReplacingOccurrencesOfString:@"file:///" withString:@"/"];
+    hashMapFileP=[hashMapFileP filteredFilePath];
     [json writeToFile:hashMapFileP
            atomically:YES
              encoding:NSUTF8StringEncoding

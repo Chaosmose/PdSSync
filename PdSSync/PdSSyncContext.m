@@ -41,6 +41,7 @@
         self->_sourceTreeId=[self _treeIDFromUrl:sourceUrl];
         self->_destinationTreeId=[self _treeIDFromUrl:destinationUrl];
         self->_syncID=[self _getNewSyncID];
+        self->_autoCreateTrees=YES;
     }
     return self;
 }

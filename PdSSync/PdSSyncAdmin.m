@@ -9,6 +9,12 @@
 #import "PdSSyncAdmin.h"
 #import "AFNetworking.h"
 
+
+
+@interface PdSSyncAdmin (){
+}
+@end
+
 @implementation PdSSyncAdmin
 
 /**
@@ -40,32 +46,53 @@
 -(void)synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
                  andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
    // PdSSyncAdmin*__weak weakSelf=self;
-    [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
-        if(sourceHashMap && destinationHashMap ){
-            DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap andDestination:destinationHashMap];
-            NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
-            if([commands count]>0){
-                [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
-                                                       progressBlock:^(uint taskIndex, float progress) {
-                                                           progressBlock(taskIndex,progress,@"");
-                                                       } andCompletionBlock:^(BOOL success, NSString *message) {
-                                                           completionBlock(success,message);
-                                                       }];
-            }
-            
-        }else{
-            completionBlock(NO,[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i",(int)statusCode]);
-        }
-    }];
     
-    if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
-        
-    }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
-        // CURRENTLY NOT SUPPORTED
-    }else if (_syncContext.mode==SourceIsDistantDestinationIsDistant){
-        // CURRENTLY NOT SUPPORTED
+    void (^executionBlock)(void) = ^(void) {
+        [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
+            if(sourceHashMap && destinationHashMap ){
+                DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
+                                                        andDestination:destinationHashMap];
+                NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
+                if([commands count]>0){
+                    [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
+                                                           progressBlock:^(uint taskIndex, float progress) {
+                                                               NSString*cmd=([commands count]>taskIndex)?[commands objectAtIndex:taskIndex]:@"POST CMD";
+                                                               progressBlock(taskIndex,progress,cmd);
+                                                           } andCompletionBlock:^(BOOL success, NSString *message) {
+                                                               completionBlock(success,message);
+                                                           }];
+                }
+            }else{
+                completionBlock(NO,[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i",(int)statusCode]);
+            }
+        }];
+
+    };
+    
+    
+    if(self.syncContext.autoCreateTrees){
+        [self touchTreesWithCompletionBlock:^(BOOL success, NSInteger statusCode) {
+            if(success){
+                executionBlock();
+            }else{
+                [self createTreesWithCompletionBlock:^(BOOL success, NSInteger statusCode) {
+                    if(success){
+                        // Recursive call
+                        [self synchronizeWithprogressBlock:progressBlock andCompletionBlock:completionBlock];
+                    }else{
+                        
+                    }
+                }];
+            }
+        }];
+    }else{
+        executionBlock();
     }
 }
+
+
+
+
 
 
 
@@ -84,7 +111,6 @@
         if(_syncContext.creationKey)
             [parameters setObject:_syncContext.creationKey forKey:@"key"];
         AFHTTPRequestOperationManager *manager = [self _operationManager];
-        manager.requestSerializer=[AFJSONRequestSerializer serializer];
         [manager POST:[[_syncContext.destinationBaseUrl absoluteString]stringByAppendingFormat:@"install/"]
            parameters: parameters
               success:^(AFHTTPRequestOperation *operation, id responseObject) {
@@ -105,7 +131,6 @@
  */
 - (void)createTreesWithCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block{
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
-        
         [self _createTreeLocalUrl:_syncContext.sourceBaseUrl
                     withId:_syncContext.sourceTreeId];
         
@@ -114,8 +139,10 @@
                       block(success,statusCode);
                  }];
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
-        if([self _createTreeLocalUrl:_syncContext.sourceBaseUrl withId:_syncContext.sourceTreeId]&&
-           [self _createTreeLocalUrl:_syncContext.destinationBaseUrl withId:_syncContext.destinationTreeId]){
+        if([self _createTreeLocalUrl:_syncContext.sourceBaseUrl
+                              withId:_syncContext.sourceTreeId]&&
+           [self _createTreeLocalUrl:_syncContext.destinationBaseUrl
+                              withId:_syncContext.destinationTreeId]){
             block(YES,200);
         }else{
             block(NO,404);
@@ -130,11 +157,13 @@
     NSMutableDictionary*parameters=[NSMutableDictionary dictionary];
     if(_syncContext.creationKey)
         [parameters setObject:_syncContext.creationKey forKey:@"key"];
+    [parameters setObject:@"YO" forKey:@"SINGE"];
     AFHTTPRequestOperationManager *manager = [self _operationManager];
-    manager.requestSerializer=[AFJSONRequestSerializer serializer];
-    [manager POST:[[baseUrl absoluteString]stringByAppendingFormat:@"touch/tree/%@/",identifier]
+    NSString *stringURL=[[baseUrl absoluteString]stringByAppendingFormat:@"create/tree/%@",identifier];
+    [manager POST:stringURL
        parameters: parameters
           success:^(AFHTTPRequestOperation *operation, id responseObject) {
+              NSLog(@"%@",responseObject);//DEBUG WHY NO POST
               block(YES,operation.response.statusCode);
           } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
               block(NO,operation.response.statusCode);
@@ -179,7 +208,6 @@
     if(_syncContext.creationKey)
         [parameters setObject:_syncContext.creationKey forKey:@"key"];
     AFHTTPRequestOperationManager *manager = [self _operationManager];
-    manager.requestSerializer=[AFJSONRequestSerializer serializer];
     [manager POST:[[baseUrl absoluteString]stringByAppendingFormat:@"touch/tree/%@/",identifier]
        parameters: parameters
           success:^(AFHTTPRequestOperation *operation, id responseObject) {
@@ -240,7 +268,7 @@
 
 -(HashMap*)_localHashMapForSourceUrl:(NSURL*)url andTreeWithId:(NSString*)identifier{
     NSString*hashMapRelativePath=[NSString stringWithFormat:@"%@%@/%@%@.%@",[url absoluteString],identifier,kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
-    hashMapRelativePath=[hashMapRelativePath stringByReplacingOccurrencesOfString:@"file:///" withString:@"/"];
+    hashMapRelativePath=[hashMapRelativePath filteredFilePath];
     NSURL *hashMapUrl=[NSURL fileURLWithPath:hashMapRelativePath];
     NSData *data=[NSData dataWithContentsOfURL:hashMapUrl];
     NSError*__block errorJson=nil;
@@ -265,11 +293,11 @@
     NSMutableDictionary*parameters=[NSMutableDictionary dictionary];
     if(_syncContext.creationKey)
         [parameters setObject:_syncContext.creationKey forKey:@"key"];
-    [parameters setObject:@(YES) forKey:@"redirect"];
-    [parameters setObject:@(NO) forKey:@"returnValue"];
+    [parameters setObject:@(NO) forKey:@"redirect"];
+    [parameters setObject:@(YES) forKey:@"returnValue"];
     AFHTTPRequestOperationManager *manager = [self _operationManager];
-    manager.requestSerializer=[AFJSONRequestSerializer serializer];
-    [manager GET:[[_syncContext.destinationBaseUrl absoluteString]stringByAppendingFormat:@"hashMap/tree/%@/",identifier]
+    NSString *URLString=[[_syncContext.destinationBaseUrl absoluteString]stringByAppendingFormat:@"hashMap/tree/%@/",identifier];
+    [manager GET:URLString
        parameters: parameters
           success:^(AFHTTPRequestOperation *operation, id responseObject) {
               if( [responseObject isKindOfClass:[NSDictionary class]]){

@@ -30,6 +30,8 @@
 @property (nonatomic)int numberOfCommands;
 
 
+@property (nonatomic)BOOL autoCreateTrees;
+
 // Additional properties
 // Usable for acl and credentials and security
 

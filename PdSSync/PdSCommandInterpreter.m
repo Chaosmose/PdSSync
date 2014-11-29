@@ -205,7 +205,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 _completionBlock(YES,nil);
             });
         }];
-        
     }else{
         _completionBlock(YES,@"There was no command to execute");
     }
@@ -333,6 +332,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         //_context.destinationBaseUrl;
         
         PdSCommandInterpreter *__weak weakSelf=self;
+        
+        NSURL *sourceURL=[_context.sourceBaseUrl URLByAppendingPathComponent:[ NSString stringWithFormat:@"%@/%@",_context.sourceTreeId,source]];
         NSString *URLString =[[_context.destinationBaseUrl absoluteString] stringByAppendingFormat:@"uploadFileTo/tree/%@/",_context.destinationTreeId];
         NSDictionary *parameters = @{
                                      @"syncIdentifier": _context.syncID,
@@ -345,7 +346,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                  parameters:parameters
                                                                                   constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
                                                                                       
-                                                                                      [formData appendPartWithFileURL:[NSURL fileURLWithPath:source]
+                                                                                      [formData appendPartWithFileURL:sourceURL
                                                                                                                  name:@"source"
                                                                                                              fileName:[destination lastPathComponent]
                                                                                                              mimeType:@"application/octet-stream"
@@ -367,7 +368,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                       [weakSelf _interruptOnFault:msg];
                                                                                   } else {
                                                                                       NSString *s=[[NSString alloc]initWithData:responseObject encoding:NSUTF8StringEncoding];
-                                                                                      NSLog(@"%@ %@", response, s);
+                                                                                      NSLog(@"%@ %@ (%@)", response, s, @([_queue operationCount]));
                                                                                       [weakSelf _nextCommand];
                                                                                   }
                                                                               }];
@@ -474,7 +475,15 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         
         NSString* hashMapTempFilename = [NSString stringWithFormat:@"%f.hashmap", [NSDate timeIntervalSinceReferenceDate]];
         NSURL* hashMapTempFileUrl = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:hashMapTempFilename]];
-        [[_context.finalHashMap dictionaryRepresentation] writeToURL:hashMapTempFileUrl atomically:YES];
+    
+        NSString*jsonHashMap=[self _encodetoJson:[_context.finalHashMap dictionaryRepresentation]];
+        NSError*error=nil;
+        
+        [jsonHashMap writeToURL:hashMapTempFileUrl
+                     atomically:YES encoding:NSUTF8StringEncoding
+                          error:&error];
+        
+        
         
         PdSCommandInterpreter *__weak weakSelf=self;
         
