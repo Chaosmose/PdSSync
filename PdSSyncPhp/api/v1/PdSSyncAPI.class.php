@@ -279,11 +279,11 @@ class PdSSyncAPI {
 			}
 			$redirect = true;
 			if (array_key_exists ( 'redirect', $this->request )) {
-				$redirect = (strtolower ( $this->request ['redirect'] ) == 'true');
+				$redirect = (strtolower ( $this->request ['redirect'] ) == 'true' || strtolower($this->request ['redirect'] =='1'));
 			}
 			$returnValue = false;
 			if (array_key_exists ( 'returnValue', $this->request )) {
-				$returnValue = (strtolower ( $this->request ['returnValue'] ) == 'true');
+				$returnValue = (strtolower ( $this->request ['returnValue'] ) == 'true' || strtolower($this->request ['returnValue'] =='1'));
 			}
 			$this->ioManager = $this->getIoManager ();
 			$path = $this->ioManager->absolutePath ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
@@ -292,6 +292,7 @@ class PdSSyncAPI {
 			}
 			if ($returnValue && ! $redirect) {
 					$result = $this->ioManager->get_contents ( $path );
+					//$result = json_decode($result);
 					return $this->_response ( $result, $this->ioManager->status );
 			}
 			
@@ -478,7 +479,13 @@ class PdSSyncAPI {
 		$header = 'HTTP/1.1 ' . $status . ' ' . $this->requestStatus ( $status );
 		header ( $header );
 		if (isset ( $data )) {
-			return json_encode ( $data );
+			// We do not encode to json
+			// If a string is not a valid JSON it should be a embedded in a container array
+			if(is_string($data)){
+				return $data;
+			}else{
+				return json_encode ( $data );
+			}
 		} else {
 			return NULL;
 		}
