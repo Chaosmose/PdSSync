@@ -126,7 +126,7 @@ NSString*const hashToPathKey=@"hToPth";
         }
     }
     for (NSString*key in destination->_hashToPath) {
-        NSString*path=[source->_hashToPath objectForKey:key];
+        NSString*path=[destination->_hashToPath objectForKey:key];
          if (![source hashForPath:path]) {
               [delta.deletedPaths addObject:[path copy]];
          }

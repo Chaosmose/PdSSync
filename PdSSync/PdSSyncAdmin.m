@@ -61,6 +61,8 @@
                                                            } andCompletionBlock:^(BOOL success, NSString *message) {
                                                                completionBlock(success,message);
                                                            }];
+                }else{
+                    completionBlock(YES,[NSString stringWithFormat:@"No command to execute"]);
                 }
             }else{
                 completionBlock(NO,[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i",(int)statusCode]);
@@ -296,6 +298,7 @@
     [parameters setObject:@(NO) forKey:@"redirect"];
     [parameters setObject:@(YES) forKey:@"returnValue"];
     AFHTTPRequestOperationManager *manager = [self _operationManager];
+    //manager.requestSerializer=[AFJSONRequestSerializer serializer];
     NSString *URLString=[[_syncContext.destinationBaseUrl absoluteString]stringByAppendingFormat:@"hashMap/tree/%@/",identifier];
     [manager GET:URLString
        parameters: parameters
