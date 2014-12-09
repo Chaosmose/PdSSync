@@ -11,6 +11,10 @@
 #import "AFNetworking.h"
 #import "PdSCommandInterpreter.h"
 
+NSString * const PdSSyncInterpreterWillFinalize = @"PdSSyncInterpreterWillFinalize";
+NSString * const PdSSyncInterpreterHasFinalized = @"PdSSyncInterpreterHasFinalized";
+
+
 
 // We have removed a fix inspired https://github.com/AFNetworking/AFNetworking/issues/1398
 // Some servers responds a 411 status when there is no content length
@@ -27,6 +31,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     ProgressBlock_type               _progressBlock;
     PdSFileManager                   *__weak _fileManager;
     AFHTTPSessionManager            *_HTTPsessionManager;
+    NSMutableArray                  *_allCommands;
     
 }
 @property (nonatomic,strong)NSOperationQueue *queue;
@@ -164,8 +169,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 - (void)_run{
     if([_bunchOfCommand count]>0){
         PdSCommandInterpreter * __weak weakSelf=self;
-        NSMutableArray*creativeCommands=[NSMutableArray array];
-        NSMutableArray*unCreativeCommands=[NSMutableArray array];
+        NSMutableArray*__block creativeCommands=[NSMutableArray array];
+        _allCommands=[NSMutableArray array];
         // First pass we dicriminate creative for un creative commands
         // Creative commands requires for example download or an upload.
         // Copy is "not creative" as we copy a existing resource
@@ -174,9 +179,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             if(cmdAsAnArray){
                 if([[cmdAsAnArray objectAtIndex:0] intValue]==PdSCreateOrUpdate){
                     [creativeCommands addObject:cmdAsAnArray];
-                }else{
-                    [unCreativeCommands addObject:cmdAsAnArray];
                 }
+                [_allCommands addObject:cmdAsAnArray];
             }
             if([encodedCommand isKindOfClass:[NSString class]]){
                 
@@ -189,13 +193,17 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 [weakSelf _runCommandFromArrayOfArgs:cmd];
             }];
         }
-        for (NSArray*cmd in unCreativeCommands) {
-            [self->_queue addOperationWithBlock:^{
-                [weakSelf _runCommandFromArrayOfArgs:cmd];
-            }];
-        }
+        
         [_queue addOperationWithBlock:^{
-            [self _finalizeWithCreativeCommands:creativeCommands];
+            [[NSNotificationCenter defaultCenter] postNotificationName:PdSSyncInterpreterWillFinalize
+                                                                object:self];
+        }];
+        [_queue addOperationWithBlock:^{
+            if(self.finalizationDelegate){
+                [self.finalizationDelegate readyForFinalization:self];
+            }else{
+                [self finalize];
+            }
         }];
         
         
@@ -203,6 +211,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         [self->_queue addOperationWithBlock:^{
             dispatch_sync(dispatch_get_main_queue(), ^{
                 _completionBlock(YES,nil);
+                [[NSNotificationCenter defaultCenter] postNotificationName:PdSSyncInterpreterHasFinalized
+                                                                    object:self];
             });
         }];
     }else{
@@ -210,6 +220,15 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }
 }
 
+
+/**
+ * Called by the delegate to conclude the operations
+ */
+- (void)finalize{
+    // The creative commands will produce UNPREFIXING temp files
+    // The unCreative commands will be executed during finalization
+     [self _finalizeWithCommands:_allCommands];
+}
 
 
 - (void)_interruptOnFault:(NSString*)faultMessage{
@@ -467,7 +486,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 }
 
 
-- (void)_finalizeWithCreativeCommands:(NSArray*)creativeCommands{
+- (void)_finalizeWithCommands:(NSArray*)commands{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
         // CALL the PdSync Service
         // Write the Hashmap to a file
@@ -492,7 +511,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         NSString *URLString =[[_context.destinationBaseUrl absoluteString] stringByAppendingFormat:@"finalizeTransactionIn/tree/%@/",_context.destinationTreeId];
         NSDictionary *parameters = @{
                                      @"syncIdentifier": _context.syncID,
-                                     @"commands":[self  _encodetoJson:creativeCommands]
+                                     @"commands":[self  _encodetoJson:commands]
                                      };
         
         NSMutableURLRequest *request = [[AFHTTPRequestSerializer serializer] multipartFormRequestWithMethod:@"POST"
@@ -563,7 +582,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runCopy:(NSString*)source destination:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
-        // CALL the PdSync Service
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // COPY LOCALLY
@@ -575,7 +593,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runMove:(NSString*)source destination:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
-        // CALL the PdSync Service
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // MOVE LOCALLY
@@ -586,7 +603,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runDelete:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
-        // CALL the PdSync Service
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // DELETE LOCALLY

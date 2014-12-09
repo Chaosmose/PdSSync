@@ -10,10 +10,23 @@
 #import "PdSSync.h"
 
 @class PdSSyncContext;
+@class PdSCommandInterpreter;
+
+@protocol PdSSyncFinalizationDelegate <NSObject>
+-(void)readyForFinalization:(PdSCommandInterpreter*)reference;
+@end
 
 static NSString * const PdSSyncUnused = @"PdSSyncUnused";
+// Notification
+extern NSString * const PdSSyncInterpreterWillFinalize;
+extern NSString * const PdSSyncInterpreterHasFinalized;
+
+
 
 @interface PdSCommandInterpreter : NSObject<NSFileManagerDelegate>
+
+
+@property (nonatomic)id<PdSSyncFinalizationDelegate>finalizationDelegate;
 
 /**
  *  The current bunch of command.
@@ -60,6 +73,12 @@ static NSString * const PdSSyncUnused = @"PdSSyncUnused";
                                context:(PdSSyncContext*)context
                          progressBlock:(void(^)(uint taskIndex,float progress))progressBlock
                     andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock;
+
+
+/**
+ * Called by the delegate to conclude the operations
+ */
+- (void)finalize;
 
 
 // Commands encoding returns the encoded command in the relevant format.
