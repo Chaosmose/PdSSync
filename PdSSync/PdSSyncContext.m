@@ -21,8 +21,8 @@
 /**
  * The url are considerated as the repository root
  *
- *  for example     : @"http://sly.am/PdSSyncPhp/api/v1/tree/folder1/"
- *  or              : @"file:///Users/bpds/Documents/Samples/folder1/"
+ *  for example     : @"http://<domain>/PdSSyncPhp/api/v1/tree/folder1/"
+ *  or              : @"file:///Users/<user>/Documents/Samples/folder1/"
  *
  *  If the url is distant we extract the tree id.
  *
@@ -111,7 +111,7 @@
     CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
     NSString *uuidStr = (__bridge_transfer NSString *)CFUUIDCreateString(kCFAllocatorDefault, uuid);
     CFRelease(uuid);
-    return uuidStr;
+    return [NSString stringWithFormat:@"%@%@",kPdSSyncPrefixSignature,uuidStr];
 }
 
 @end

@@ -23,7 +23,7 @@ extern NSString * const PdSSyncInterpreterHasFinalized;
 
 
 
-@interface PdSCommandInterpreter : NSObject<NSFileManagerDelegate>
+@interface PdSCommandInterpreter : NSObject
 
 
 @property (nonatomic)id<PdSSyncFinalizationDelegate>finalizationDelegate;

@@ -56,19 +56,26 @@
                                                     }];
     
     HashMap*hashMap=[[HashMap alloc]init];
-    
-
-    
     NSURL *file;
     int i=0;
     while ((file = [dirEnum nextObject])) {
         NSString *filePath=[NSString filteredFilePathFrom:[file absoluteString]];
         NSString *pathExtension=file.pathExtension;
-        if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound && ![pathExtension isEqualToString:kPdSSyncHashFileExtension]){
+        NSNumber *isDirectory;
+        [file getResourceValue:&isDirectory
+                        forKey:NSURLIsDirectoryKey error:nil];
+
+        if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound
+           && ![pathExtension isEqualToString:kPdSSyncHashFileExtension]
+           && [filePath rangeOfString:kPdSSyncPrefixSignature].location==NSNotFound
+           ){
             @autoreleasepool {
                 NSData *data=nil;
                 NSString*hashfile=[filePath stringByAppendingFormat:@".%@",kPdSSyncHashFileExtension];
                 NSString *relativePath=[filePath stringByReplacingOccurrencesOfString:[folderPath stringByAppendingString:@"/"] withString:@""];
+                if([isDirectory boolValue]){
+                    relativePath=[relativePath stringByAppendingString:@"/"];
+                }
                 // we check if there is a file.extension.kPdSSyncHashFileExtension
                 if(!self.recomputeHash && [fileManager fileExistsAtPath:hashfile] ){
                     NSError*crc32ReadingError=nil;
@@ -89,7 +96,13 @@
                     }
                 }
                 unsigned long crc32=(unsigned long)[data crc32];
-                if(crc32!=0){// 0 for folders
+                
+                if (crc32==0){
+                    // Include the folders.
+                    // We use the relative path as CRC32
+                    crc32=[[relativePath dataUsingEncoding:NSUTF8StringEncoding] crc32];
+                }
+                if(crc32!=0){
                     progressBlock(crc32,relativePath,i);
                     [hashMap setHash:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forPath:relativePath];
                     [treeDictionary setObject:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forKey:relativePath];
@@ -98,6 +111,7 @@
                         [self _writeCrc32:crc32 toFileWithPath:filePath];
                     }
                 }
+                
             }
         }
         

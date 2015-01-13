@@ -1,5 +1,5 @@
 <?php
-require_once 'IOManager.class.php';
+require_once 'IOManager.php';
 
 /**
  * Concrete IOManager using a file system
@@ -35,8 +35,32 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 	}
 	
 	public function delete($filename){
-		return unlink($filename);
+		if(!file_exists($filename)){
+			return true;
+		}
+		if(is_dir($filename)){
+			return $this->_rmdir($filename,true);
+		}else{
+			return unlink($filename);
+		}
 	}
+	
+	private function _rmdir($dir,$result) {
+		if (is_dir($dir)) {
+			$objects = scandir($dir);
+			foreach ($objects as $object) {
+				if ($object != "." && $object != "..") {
+					if (filetype($dir."/".$object) == "dir") 
+						$result=$result&&$this->_rmdir($dir."/".$object,$result); 
+					else 
+						$result=$result&&unlink($dir."/".$object);
+				}
+			}
+			$result=$result&&rmdir($dir);
+		}
+		return $result;
+	}
+	
 	
 	public function move_uploaded($filename, $destination) {
 		 $this->mkdir( dirname ( $destination ));

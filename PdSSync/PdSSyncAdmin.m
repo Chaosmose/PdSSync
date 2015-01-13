@@ -12,6 +12,7 @@
 
 
 @interface PdSSyncAdmin (){
+    PdSFileManager *__weak _fileManager;
 }
 @end
 
@@ -28,9 +29,11 @@
     self=[super init];
     if(self){
         _syncContext=context;
+        _fileManager=[PdSFileManager sharedInstance];
+        /*
         if(!_syncContext.finalHashMap){
-            [NSException raise:@"PdSSyncException" format:@"PdSSyncContext should have a finalHashMap to be usable"];
-        }
+            //[NSException raise:@"PdSSyncException" format:@"PdSSyncContext should have a finalHashMap to be usable"];
+        }*/
     }
     return self;
 }
@@ -80,9 +83,10 @@
                 [self createTreesWithCompletionBlock:^(BOOL success, NSInteger statusCode) {
                     if(success){
                         // Recursive call
-                        [self synchronizeWithprogressBlock:progressBlock andCompletionBlock:completionBlock];
+                        [self synchronizeWithprogressBlock:progressBlock
+                                        andCompletionBlock:completionBlock];
                     }else{
-                        
+                       completionBlock(NO,[NSString stringWithFormat:@"Failure on createTreesWithCompletionBlock autoCreateTrees==YES with statusCode %i",(int)statusCode]);
                     }
                 }];
             }
@@ -136,7 +140,8 @@
         [self _createTreeLocalUrl:_syncContext.sourceBaseUrl
                     withId:_syncContext.sourceTreeId];
         
-        [self _createTreeDistantUrl:_syncContext.destinationBaseUrl withId:_syncContext.destinationTreeId
+        [self _createTreeDistantUrl:_syncContext.destinationBaseUrl
+                             withId:_syncContext.destinationTreeId
                  andCompletionBlock:^(BOOL success, NSInteger statusCode) {
                       block(success,statusCode);
                  }];
@@ -159,13 +164,11 @@
     NSMutableDictionary*parameters=[NSMutableDictionary dictionary];
     if(_syncContext.creationKey)
         [parameters setObject:_syncContext.creationKey forKey:@"key"];
-    [parameters setObject:@"YO" forKey:@"SINGE"];
     AFHTTPRequestOperationManager *manager = [self _operationManager];
     NSString *stringURL=[[baseUrl absoluteString]stringByAppendingFormat:@"create/tree/%@",identifier];
     [manager POST:stringURL
        parameters: parameters
           success:^(AFHTTPRequestOperation *operation, id responseObject) {
-              NSLog(@"%@",responseObject);//DEBUG WHY NO POST
               block(YES,operation.response.statusCode);
           } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
               block(NO,operation.response.statusCode);
@@ -174,7 +177,10 @@
 }
 
 -(BOOL)_createTreeLocalUrl:(NSURL*)baseUrl withId:(NSString*)identifier{
-    return YES;
+    NSString*p=[baseUrl absoluteString];
+    p=[p stringByAppendingString:identifier];
+    BOOL created=[_fileManager createRecursivelyRequiredFolderForPath:[p filteredFilePath]];
+    return created;
 }
 
 
@@ -187,12 +193,16 @@
  */
 - (void)touchTreesWithCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block{
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
-        [self _touchLocalUrl:_syncContext.sourceBaseUrl andTreeWithId:_syncContext.sourceTreeId];
+        
+        [self _touchLocalUrl:_syncContext.sourceBaseUrl
+               andTreeWithId:_syncContext.sourceTreeId];
+        
         [self _touchDistantUrl:_syncContext.destinationBaseUrl
                 withTreeWithId:_syncContext.destinationTreeId
             andCompletionBlock:^(BOOL success, NSInteger statusCode) {
                 block(success,statusCode);
             }];
+        
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
         if([self _touchLocalUrl:_syncContext.sourceBaseUrl andTreeWithId:_syncContext.sourceTreeId]&&
           [self _touchLocalUrl:_syncContext.destinationBaseUrl andTreeWithId:_syncContext.destinationTreeId]){
@@ -220,11 +230,13 @@
 
 }
 
--(BOOL)_touchLocalUrl:(NSURL*)baseUrl andTreeWithId:(NSString*)identifier{
-    return YES;
+-(BOOL)_touchLocalUrl:(NSURL*)baseUrl
+        andTreeWithId:(NSString*)identifier{
+    NSString*p=[baseUrl absoluteString];
+    p=[p stringByAppendingString:identifier];
+    BOOL treeExists=[_fileManager fileExistsAtPath:[p filteredFilePath]];
+    return treeExists;
 }
-
-
 
 
 /**

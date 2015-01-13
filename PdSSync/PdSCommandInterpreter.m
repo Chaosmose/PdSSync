@@ -82,7 +82,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         self->_progressBlock=progressBlock?[progressBlock copy]:nil;
         self->_completionBlock=completionBlock?[completionBlock copy]:nil;
         self->_fileManager=[PdSFileManager sharedInstance];
-        [self->_fileManager setDelegate:self];
         self->_progressCounter=0;
         if(self->_context.mode==SourceIsDistantDestinationIsDistant ){
             [NSException raise:@"TemporaryException" format:@"SourceIsDistantDestinationIsDistant is currently not supported"];
@@ -347,6 +346,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 -(void)_runCreateOrUpdate:(NSString*)source destination:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
         
+        NSLog(@"_runCreateOrUpdate %@ %@", source,destination);
+        
         // UPLOAD
         //_context.destinationBaseUrl;
         
@@ -364,12 +365,16 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                   URLString:URLString
                                                                                                  parameters:parameters
                                                                                   constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
-                                                                                      
-                                                                                      [formData appendPartWithFileURL:sourceURL
+                                                                                      NSString*lastChar=[source substringFromIndex:[source length]-1];
+                                                                                      if(![lastChar isEqualToString:@"/"]){
+                                                                                          [formData appendPartWithFileURL:sourceURL
                                                                                                                  name:@"source"
                                                                                                              fileName:[destination lastPathComponent]
                                                                                                              mimeType:@"application/octet-stream"
                                                                                                                 error:nil];
+                                                                                      }else{
+                                                                                          // It is a folder.
+                                                                                      }
                                                                                       
                                                                                   } error:nil];
         
@@ -382,6 +387,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                   [progress removeObserver:weakSelf
                                                                                                 forKeyPath:@"fractionCompleted"
                                                                                                    context:NULL];
+                                                                                  if([(NSHTTPURLResponse*)response statusCode]==417){
+                                                                                      NSLog(@"===> %@",responseObject);
+                                                                                  }
                                                                                   if ([(NSHTTPURLResponse*)response statusCode]!=201 && error) {
                                                                                       NSString *msg=[NSString stringWithFormat:@"Error when uploading %@",[weakSelf _stringFromError:error]];
                                                                                       [weakSelf _interruptOnFault:msg];
@@ -534,6 +542,12 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                   [progress removeObserver:weakSelf
                                                                                                 forKeyPath:@"fractionCompleted"
                                                                                                    context:NULL];
+                                                                                  
+                                                                                  
+                                                                                  if([(NSHTTPURLResponse*)response statusCode]==417){
+                                                                                      NSLog(@"===> %@",responseObject);
+                                                                                  }
+                                                                                  
                                                                                    if ([(NSHTTPURLResponse*)response statusCode]!=200 && error) {
                                                                                       NSString *msg=[NSString stringWithFormat:@"Error when finalizing %@ ",[self _stringFromError:error]];
                                                                                       [self _interruptOnFault:msg];

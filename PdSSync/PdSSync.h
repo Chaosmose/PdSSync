@@ -94,6 +94,9 @@ typedef NS_ENUM (NSUInteger,
 // The metadata folder
 #define kPdSSyncMetadataFolder @(".PdSSync/")
 
+// A prefix used to identify easyly a prefixed file.
+#define kPdSSyncPrefixSignature @(".PdSSync")
+
 #import "PdSFileManager.h"
 #import "HashMap.h"
 #import "DeltaPathMap.h"
