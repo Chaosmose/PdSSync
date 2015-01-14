@@ -191,10 +191,20 @@
     
 }
 
--(BOOL)_createTreeLocalUrl:(NSURL*)baseUrl withId:(NSString*)identifier{
+-(BOOL)_createTreeLocalUrl:(NSURL*)baseUrl
+                    withId:(NSString*)identifier{
     NSString*p=[baseUrl absoluteString];
     p=[p stringByAppendingFormat:@"%@/",identifier];
     BOOL created=[_fileManager createRecursivelyRequiredFolderForPath:p];
+    if(created){
+    // By default we create a void hashmap.
+    PdSLocalAnalyzer*analyzer=[[PdSLocalAnalyzer alloc] init];
+    [analyzer createHashMapFromLocalFolderURL:[NSURL URLWithString:p]
+                                    dataBlock:nil
+                                progressBlock:nil
+                           andCompletionBlock:^(FilesHashMap *hashMap) {
+                                   }];
+    }
     return created;
 }
 

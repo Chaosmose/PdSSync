@@ -31,7 +31,7 @@
 /**
  *  Creates a dictionary with  relative paths as key and  CRC32 as value
  *
- *  @param url the folder url
+ *  @param url the folder ur
  *  @param dataBlock if you define this block it will be used to extract the data from the file
  *  @param progressBlock the progress block
  *  @param completionBlock the completion block.
