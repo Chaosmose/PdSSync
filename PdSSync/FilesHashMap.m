@@ -6,13 +6,13 @@
 //
 //
 
-#import "HashMap.h"
+#import "FilesHashMap.h"
 
 NSString*const pathToHashKey=@"pthToH";
 NSString*const hashToPathKey=@"hToPth";
 
 
-@implementation HashMap {
+@implementation FilesHashMap {
     NSMutableDictionary *_pathToHash; // Path is the key
     NSMutableDictionary *_hashToPath; // Hash is the key
 }
@@ -36,7 +36,7 @@ NSString*const hashToPathKey=@"hToPth";
  */
 +(instancetype)fromDictionary:(NSDictionary*)dictionary{
     if([dictionary objectForKey:hashToPathKey]){
-        HashMap *hashMap=[[HashMap alloc] init];
+        FilesHashMap *hashMap=[[FilesHashMap alloc] init];
         hashMap->_hashToPath=[[dictionary objectForKey:hashToPathKey]copy];
         if([dictionary objectForKey:pathToHashKey]){
             hashMap->_pathToHash=[[dictionary objectForKey:pathToHashKey]copy];
@@ -112,7 +112,7 @@ NSString*const hashToPathKey=@"hToPth";
  *
  *  @return the DeltaHashMap
  */
-- (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination{
+- (DeltaPathMap*)deltaHashMapWithSource:(FilesHashMap*)source andDestination:(FilesHashMap*)destination{
     DeltaPathMap*delta=[DeltaPathMap instance];
     for (NSString *key in source->_hashToPath) {
         NSString*path=[source->_hashToPath objectForKey:key];

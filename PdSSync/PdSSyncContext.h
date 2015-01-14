@@ -12,7 +12,7 @@
 @interface PdSSyncContext : NSObject
 
 
-@property (nonatomic,strong)HashMap *finalHashMap;
+@property (nonatomic,strong)FilesHashMap *finalHashMap;
 
 
 @property (nonatomic,readonly)NSString*sourceTreeId;

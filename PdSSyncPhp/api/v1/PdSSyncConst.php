@@ -9,7 +9,7 @@ define ('HASHMAP_FILENAME','hashMap.hash');
 define ('TREE_INFOS_FILENAME','treeInfos');
 define('SYSTEM_DATA_PREFIX', '.');
 define('METADATA_FOLDER','.PdSSync/');
-
+define ('SYNC_PREFIX_SIGNATURE','.PdSSync');
 
 // WE use "UNIX like permissions"
 
@@ -22,8 +22,6 @@ define('METADATA_FOLDER','.PdSSync/');
 // Each leaf can historizized [ state : [ [ doer , undoer ] , ... ]
 // we use for history : state, .PdSync/<relativepath>/counter , .PdSync/<relativepath>/history/0000000001.doer,000000001.undoer
 // .PdSync/hashmap
-
-
 
 ///////////////////////////////
 // PdSSyncPrivilege

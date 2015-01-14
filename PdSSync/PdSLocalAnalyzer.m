@@ -39,7 +39,7 @@
 - (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
                               dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
                           progressBlock:(void(^)(NSUInteger hash,NSString*path, NSUInteger index))progressBlock
-                     andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock{
+                     andCompletionBlock:(void(^)(FilesHashMap*hashMap))completionBlock{
     
     NSString *folderPath=[folderURL path];
     PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
@@ -55,7 +55,7 @@
                                                         return YES;
                                                     }];
     
-    HashMap*hashMap=[[HashMap alloc]init];
+    FilesHashMap*hashMap=[[FilesHashMap alloc]init];
     NSURL *file;
     int i=0;
     while ((file = [dirEnum nextObject])) {

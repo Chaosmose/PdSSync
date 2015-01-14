@@ -13,7 +13,7 @@
 extern NSString* const pathToHashKey;
 extern NSString* const hashToPathKey;
 
-@interface HashMap : NSObject
+@interface FilesHashMap : NSObject
 
 
 /**
@@ -72,7 +72,7 @@ extern NSString* const hashToPathKey;
  *
  *  @return the DeltaHashMap
  */
-- (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination;
+- (DeltaPathMap*)deltaHashMapWithSource:(FilesHashMap*)source andDestination:(FilesHashMap*)destination;
 
 
 /**

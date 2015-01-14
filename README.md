@@ -17,11 +17,11 @@ A simple delta synchronizer for documents and data between devices.It allows to 
 - support any encryption and cryptographic strategy
 - allow advanced hashing strategy ( like : considering that a modified file should not be synchronized because the modification is not significant)
 
-## HashMap  ##
+## FilesHashMap  ##
 
-For PdSSync a **hashMap** is a dictionary with for a given folder the list of all its files relative path as a key and a Hash as a value or the inverse.
+For PdSSync a **FilehashMap** is a dictionary with for a given folder the list of all its files relative path as a key and a Hash as a value or the inverse.
 
-The master maintains one hashMap per root folder, the hash map is crypted.
+The master maintains one FilesHashMap per root folder, the hash map is crypted.
 
 Json representation :
 
@@ -35,7 +35,7 @@ Json representation :
 ```
 ## DeltaPathMap ##
 
-A **DeltaPathMap** references the differences between two **hashMap** and furnish the logic to planify downloading or uploading command operations for clients according to their role.
+A **DeltaPathMap** references the differences between two **FilesHashMap** and furnish the logic to planify downloading or uploading command operations for clients according to their role.
 
 Json representation :
 
@@ -51,14 +51,14 @@ Json representation :
 
 With 1 Source client (Objc), 1 sync service(php), and n Destination clients(Objc)
 
-1. Source -> downloads the **hashMap** (if there is no hasMap the delta will be the current local)
+1. Source -> downloads the **FilesHashMap** (if there is no FilesHashMap the delta will be the current local)
 2. Source -> proceed to **DeltaPathMap** creation and command provisionning
 3. Source -> uploads files with a .upload prefix to the service
 4. Source -> uploads the hasMap of the current root folder and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans, **Optionaly** the synch server can send a push notification to the slave clients to force the step 5)
-5. Destination -> downloads the current **hashMap**
+5. Destination -> downloads the current **FilesHashMap**
 6. Destination -> proceed to **DeltaPathMap** creation and command provisionning
 7. Destination -> downloads the files (on any missing file the task list is interrupted, the local hash map is recomputed and we step back to 5)
-8. Destination -> on completion the synchronization is finalized. (We redownload the **hashmap** and compare to conclude if stepping back to 5 is required.)
+8. Destination -> on completion the synchronization is finalized. (We redownload the **FilesHashMap** and compare to conclude if stepping back to 5 is required.)
 
 
 ## PdSSyncPhp ##

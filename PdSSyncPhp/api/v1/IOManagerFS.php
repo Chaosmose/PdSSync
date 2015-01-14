@@ -34,11 +34,17 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 		return copy($source, $destination);
 	}
 	
+	/**
+	 * Deletes a file or recursively a folder
+	 * Returns true if the file or the folder does not exists.
+	 * @see IOManagerPersistency::delete()
+	 */
 	public function delete($filename){
 		if(!file_exists($filename)){
 			return true;
 		}
 		if(is_dir($filename)){
+			// we delete folders with a recursive deletion method
 			return $this->_rmdir($filename,true);
 		}else{
 			return unlink($filename);

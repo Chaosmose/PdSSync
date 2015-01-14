@@ -81,7 +81,7 @@ typedef NS_ENUM(NSInteger,
  *
  *  @param block      the result block 
  */
--(void)hashMapsForTreesWithCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block;
+-(void)hashMapsForTreesWithCompletionBlock:(void (^)(FilesHashMap*sourceHashMap,FilesHashMap*destinationHashMap,NSInteger statusCode))block;
 
 
 

@@ -1,5 +1,5 @@
 //
-//  DeltaHashMap.m
+//  DeltaPathMap.m
 //  PdSSync
 //
 //  Created by Benoit Pereira da Silva on 15/02/2014.

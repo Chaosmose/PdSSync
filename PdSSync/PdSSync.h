@@ -98,7 +98,7 @@ typedef NS_ENUM (NSUInteger,
 #define kPdSSyncPrefixSignature @(".PdSSync")
 
 #import "PdSFileManager.h"
-#import "HashMap.h"
+#import "FilesHashMap.h"
 #import "DeltaPathMap.h"
 #import "PdSCommandInterpreter.h"
 #import "PdSLocalAnalyzer.h"

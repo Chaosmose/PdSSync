@@ -40,6 +40,6 @@
 - (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
                                 dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
                         progressBlock:(void(^)(NSUInteger hash,NSString*path, NSUInteger index))progressBlock
-              andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock;
+              andCompletionBlock:(void(^)(FilesHashMap*hashMap))completionBlock;
 
 @end

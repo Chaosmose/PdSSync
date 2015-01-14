@@ -51,7 +51,7 @@
    // PdSSyncAdmin*__weak weakSelf=self;
     
     void (^executionBlock)(void) = ^(void) {
-        [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
+        [self hashMapsForTreesWithCompletionBlock:^(FilesHashMap *sourceHashMap, FilesHashMap *destinationHashMap, NSInteger statusCode) {
             if(sourceHashMap && destinationHashMap ){
                 DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
                                                         andDestination:destinationHashMap];
@@ -137,14 +137,29 @@
  */
 - (void)createTreesWithCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block{
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
-        [self _createTreeLocalUrl:_syncContext.sourceBaseUrl
-                    withId:_syncContext.sourceTreeId];
+        if([self _createTreeLocalUrl:_syncContext.sourceBaseUrl
+                              withId:_syncContext.sourceTreeId]){
         
         [self _createTreeDistantUrl:_syncContext.destinationBaseUrl
                              withId:_syncContext.destinationTreeId
                  andCompletionBlock:^(BOOL success, NSInteger statusCode) {
                       block(success,statusCode);
                  }];
+        }else{
+            block(NO,404);
+        }
+    }else if(_syncContext.mode==SourceIsDistantDestinationIsLocal){
+        if([self _createTreeLocalUrl:_syncContext.destinationBaseUrl
+                              withId:_syncContext.destinationTreeId]){
+            
+            [self _createTreeDistantUrl:_syncContext.sourceBaseUrl
+                                 withId:_syncContext.destinationTreeId
+                     andCompletionBlock:^(BOOL success, NSInteger statusCode) {
+                         block(success,statusCode);
+                     }];
+        }else{
+            block(NO,404);
+        }
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
         if([self _createTreeLocalUrl:_syncContext.sourceBaseUrl
                               withId:_syncContext.sourceTreeId]&&
@@ -178,8 +193,8 @@
 
 -(BOOL)_createTreeLocalUrl:(NSURL*)baseUrl withId:(NSString*)identifier{
     NSString*p=[baseUrl absoluteString];
-    p=[p stringByAppendingString:identifier];
-    BOOL created=[_fileManager createRecursivelyRequiredFolderForPath:[p filteredFilePath]];
+    p=[p stringByAppendingFormat:@"%@/",identifier];
+    BOOL created=[_fileManager createRecursivelyRequiredFolderForPath:p];
     return created;
 }
 
@@ -193,15 +208,27 @@
  */
 - (void)touchTreesWithCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block{
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
-        
-        [self _touchLocalUrl:_syncContext.sourceBaseUrl
-               andTreeWithId:_syncContext.sourceTreeId];
-        
+       if( [self _touchLocalUrl:_syncContext.sourceBaseUrl
+                  andTreeWithId:_syncContext.sourceTreeId]){
         [self _touchDistantUrl:_syncContext.destinationBaseUrl
                 withTreeWithId:_syncContext.destinationTreeId
             andCompletionBlock:^(BOOL success, NSInteger statusCode) {
                 block(success,statusCode);
             }];
+       }else{
+            block(NO,404);
+       }
+    }else if (_syncContext.mode==SourceIsDistantDestinationIsLocal){
+        if([self _touchLocalUrl:_syncContext.destinationBaseUrl
+                  andTreeWithId:_syncContext.destinationTreeId]){
+            [self _touchDistantUrl:_syncContext.sourceBaseUrl
+                    withTreeWithId:_syncContext.sourceTreeId
+                andCompletionBlock:^(BOOL success, NSInteger statusCode) {
+                    block(success,statusCode);
+                }];
+        }else{
+            block(NO,404);
+        }
         
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
         if([self _touchLocalUrl:_syncContext.sourceBaseUrl andTreeWithId:_syncContext.sourceTreeId]&&
@@ -244,32 +271,32 @@
  *
  *  @param block      the result block
  */
--(void)hashMapsForTreesWithCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block{  
+-(void)hashMapsForTreesWithCompletionBlock:(void (^)(FilesHashMap*sourceHashMap,FilesHashMap*destinationHashMap,NSInteger statusCode))block{  
     PdSSyncAdmin*__weak weakSelf=self;
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant||_syncContext.mode==SourceIsDistantDestinationIsDistant){
         [weakSelf _distantHashMapForTreeWithId:_syncContext.destinationTreeId
-                           withCompletionBlock:^(HashMap *hashMap, NSInteger statusCode) {
+                           withCompletionBlock:^(FilesHashMap *hashMap, NSInteger statusCode) {
                                    PdSSyncAdmin* strongSelf=weakSelf;
-                                   HashMap*sourceHashMap=[strongSelf  _localHashMapForSourceUrl:strongSelf->_syncContext.sourceBaseUrl
+                                   FilesHashMap*sourceHashMap=[strongSelf  _localHashMapForSourceUrl:strongSelf->_syncContext.sourceBaseUrl
                                                                                   andTreeWithId:strongSelf->_syncContext.sourceTreeId];
                                
-                                   HashMap*destinationHashMap=hashMap;
+                                   FilesHashMap*destinationHashMap=hashMap;
                                    [strongSelf->_syncContext setFinalHashMap:sourceHashMap];
                                    if(!destinationHashMap && statusCode==404){
                                        // There is currently no destination hashMap let's create a void one.
-                                       destinationHashMap=[[HashMap alloc] init];
+                                       destinationHashMap=[[FilesHashMap alloc] init];
                                    }
                                    block(sourceHashMap,destinationHashMap,statusCode);
                            }];
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
-        HashMap*sourceHashMap=[weakSelf _localHashMapForSourceUrl:_syncContext.sourceBaseUrl
+        FilesHashMap*sourceHashMap=[weakSelf _localHashMapForSourceUrl:_syncContext.sourceBaseUrl
                                                     andTreeWithId:_syncContext.sourceTreeId];
         _syncContext.finalHashMap=sourceHashMap;
-        HashMap*destinationHashMap=[weakSelf _localHashMapForSourceUrl:_syncContext.destinationBaseUrl
+        FilesHashMap*destinationHashMap=[weakSelf _localHashMapForSourceUrl:_syncContext.destinationBaseUrl
                                                          andTreeWithId:_syncContext.sourceTreeId];
         if(!destinationHashMap){
             // There is currently no destination hashMap let's create a void one.
-            destinationHashMap=[[HashMap alloc] init];
+            destinationHashMap=[[FilesHashMap alloc] init];
         }
         if(sourceHashMap && destinationHashMap){
             block(sourceHashMap,destinationHashMap,200);
@@ -280,7 +307,7 @@
     
 }
 
--(HashMap*)_localHashMapForSourceUrl:(NSURL*)url andTreeWithId:(NSString*)identifier{
+-(FilesHashMap*)_localHashMapForSourceUrl:(NSURL*)url andTreeWithId:(NSString*)identifier{
     NSString*hashMapRelativePath=[NSString stringWithFormat:@"%@%@/%@%@.%@",[url absoluteString],identifier,kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
     hashMapRelativePath=[hashMapRelativePath filteredFilePath];
     NSURL *hashMapUrl=[NSURL fileURLWithPath:hashMapRelativePath];
@@ -293,7 +320,7 @@
                                                options:NSJSONReadingMutableContainers|NSJSONReadingMutableLeaves|NSJSONReadingAllowFragments
                                                  error:&errorJson];
         if([result isKindOfClass:[NSDictionary class]]){
-            return [HashMap fromDictionary:result];
+            return [FilesHashMap fromDictionary:result];
         }
     }
     @catch (NSException *exception) {
@@ -303,7 +330,7 @@
 }
 
 -(void)_distantHashMapForTreeWithId:(NSString*)identifier
-                withCompletionBlock:(void (^)(HashMap*hashMap,NSInteger statusCode))block{
+                withCompletionBlock:(void (^)(FilesHashMap*hashMap,NSInteger statusCode))block{
     NSMutableDictionary*parameters=[NSMutableDictionary dictionary];
     if(_syncContext.creationKey)
         [parameters setObject:_syncContext.creationKey forKey:@"key"];
@@ -316,7 +343,7 @@
        parameters: parameters
           success:^(AFHTTPRequestOperation *operation, id responseObject) {
               if( [responseObject isKindOfClass:[NSDictionary class]]){
-                  HashMap*hashMap=[HashMap fromDictionary:responseObject];
+                  FilesHashMap*hashMap=[FilesHashMap fromDictionary:responseObject];
                   block(hashMap,operation.response.statusCode);
               }else{
                   block(nil,PdSStatusErrorHashMapDeserializationTypeMissMatch);

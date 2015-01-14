@@ -383,7 +383,6 @@ class PdSSyncAPI {
 					$destination=$this->request ['destination'];
 					$syncIdentifier= $this->request ['syncIdentifier'] ;
 					$isAFolder=(substr ( $destination, - 1 ) == "/");
-	
 					if (isset ( $_FILES ['source'] )) {
 						// there is a source it should be  a file.
 						$d = dirname ( $destination ) . DIRECTORY_SEPARATOR .$syncIdentifier. basename ( $destination );

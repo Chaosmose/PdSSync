@@ -163,7 +163,6 @@ class CommandInterpreter {
 					}
 					break;
 				case PdSChmod :
-					
 					if ($this->_isAllowedTo ( R_PRIVILEGE, $this->ioManager->absolutePath ( $treeId, '' ) )) {
 						// @todo chmod should apply to the whole tree
 					}

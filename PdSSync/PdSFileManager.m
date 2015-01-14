@@ -30,10 +30,11 @@
         return NO;
     }
 #endif
-    NSString*filteredPath=[NSString filteredFilePathFrom:path];
-    if(![[filteredPath substringFromIndex:filteredPath.length-1] isEqualToString:@"/"]){
+    NSString*filteredPath=path;
+    if(![[path substringFromIndex:filteredPath.length-1] isEqualToString:@"/"]){
         filteredPath=[filteredPath stringByDeletingLastPathComponent];
     }
+    filteredPath=[NSString filteredFilePathFrom:filteredPath];
     if(![self fileExistsAtPath:filteredPath]){
         NSError *error=nil;
         [self createDirectoryAtPath:filteredPath
