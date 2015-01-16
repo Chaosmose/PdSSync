@@ -17,11 +17,11 @@ A simple delta synchronizer for documents and data between devices.It allows to 
 - support any encryption and cryptographic strategy
 - allow advanced hashing strategy ( like : considering that a modified file should not be synchronized because the modification is not significant)
 
-## FilesHashMap  ##
+## HashMap  ##
 
-For PdSSync a **FilehashMap** is a dictionary with for a given folder the list of all its files relative path as a key and a Hash as a value or the inverse.
+For PdSSync a **HashMap** is a dictionary with for a given folder the list of all its files relative path as a key and a Hash as a value or the inverse.
 
-The master maintains one FilesHashMap per root folder, the hash map is crypted.
+The master maintains one HashMap per root folder, the hash map is crypted.
 
 Json representation :
 
@@ -35,7 +35,7 @@ Json representation :
 ```
 ## DeltaPathMap ##
 
-A **DeltaPathMap** references the differences between two **FilesHashMap** and furnish the logic to planify downloading or uploading command operations for clients according to their role.
+A **DeltaPathMap** references the differences between two **HashMap** and furnish the logic to planify downloading or uploading command operations for clients according to their role.
 
 Json representation :
 
@@ -51,14 +51,14 @@ Json representation :
 
 With 1 Source client (Objc), 1 sync service(php), and n Destination clients(Objc)
 
-1. Source -> downloads the **FilesHashMap** (if there is no FilesHashMap the delta will be the current local)
+1. Source -> downloads the **HashMap** (if there is no HashMap the delta will be the current local)
 2. Source -> proceed to **DeltaPathMap** creation and command provisionning
 3. Source -> uploads files with a .upload prefix to the service
 4. Source -> uploads the hasMap of the current root folder and finalize the transaction (un prefix the files, and call the sanitizing procedure =  removal of orpheans, **Optionaly** the synch server can send a push notification to the slave clients to force the step 5)
-5. Destination -> downloads the current **FilesHashMap**
+5. Destination -> downloads the current **HashMap**
 6. Destination -> proceed to **DeltaPathMap** creation and command provisionning
 7. Destination -> downloads the files (on any missing file the task list is interrupted, the local hash map is recomputed and we step back to 5)
-8. Destination -> on completion the synchronization is finalized. (We redownload the **FilesHashMap** and compare to conclude if stepping back to 5 is required.)
+8. Destination -> on completion the synchronization is finalized. (We redownload the **HashMap** and compare to conclude if stepping back to 5 is required.)
 
 
 ## PdSSyncPhp ##
@@ -196,68 +196,5 @@ http -v GET  <your-base-url>api/v1/hashMap/tree/1/ redirect==true returnValue==f
 ### PdSSync in objective C: ###
 
 ```objc
-
-#import "PdSSync.h"
-...
-
-- (void)_upTest{
-	// You should compute a valid HashMap
-    HashMap *hashMap=[[HashMap alloc]init];
-    NSString*sourcePath=[@"~/Desktop/" stringByExpandingTildeInPath];
-    PdSSyncContext *synchronisationContext=[[PdSSyncContext alloc] initWithFinalHashMap:hashMap
-                                                                              sourceURL:[NSURL fileURLWithPath:sourcePath]
-                                                                      andDestinationUrl:[NSURL URLWithString:[self _stringUrlWithRelativePath:@"api/v1/tree/ginger/"]]];
-    NSMutableArray *bunchOfCommands=[NSMutableArray array];
-    [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:[@"~/Documents/Samples/text1.txt" stringByExpandingTildeInPath]
-                                                               destination:@"txt/test/a.txt"]];
-    [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:[@"~/Documents/Samples/text2.txt" stringByExpandingTildeInPath]
-                                                               destination:@"txt/test/b.txt"]];
-    SLYRunnerAppDelegate*__weak weakSelf=self;
-     PdSCommandInterpreter *interpreter=[PdSCommandInterpreter  interpreterWithBunchOfCommand:bunchOfCommands
-                                                                                     context:synchronisationContext
-                                                                                progressBlock:^(uint taskIndex, float progress) {
-                                                                                    NSLog(@"UP %i %f",taskIndex,progress);
-                                                                                }
-                                                                          andCompletionBlock:^(BOOL success, NSString *message) {
-                                                                              NSLog(@"UP Completion Success = %@ Message : %@",success?@"YES":@"NO", message?message:@"");
-                                                                              if(success){
-                                                                                  [weakSelf _downTest];
-                                                                              }
-                                                                          }];
-
-    NSLog(@"Context is valid : %@",interpreter.context.isValid?@"YES":@"NO");
-}
-
-
-
-- (void)_downTest{
-	// You should download first the current HashMap
-    HashMap *hashMap=[[HashMap alloc]init];
-    NSString*destinationTreePath=[@"~/Desktop/" stringByExpandingTildeInPath];
-    PdSSyncContext *synchronisationContext=[[PdSSyncContext alloc] initWithFinalHashMap:hashMap
-                                                                        sourceURL:[NSURL URLWithString:[self _stringUrlWithRelativePath:@"api/v1/tree/1/"]]
-                                            andDestinationUrl:[NSURL fileURLWithPath:destinationTreePath]];
-
-    // The context is SourceIsDistantDestinationIsLocal
-    // The destination must match
-    NSMutableArray *bunchOfCommands=[NSMutableArray array];
-    [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:@"txt/test/a.txt" destination:@"txt/test/a.txt"]];
-    [bunchOfCommands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:@"txt/test/b.txt" destination:@"txt/test/b.txt"]];
-    PdSCommandInterpreter *interpreter=[PdSCommandInterpreter  interpreterWithBunchOfCommand:bunchOfCommands
-                                                                                     context:synchronisationContext
-                                                                               progressBlock:^(uint taskIndex, float progress) {
-                                                                                   NSLog(@"DOWN %i %f",taskIndex,progress);
-                                                                               }
-                                                                          andCompletionBlock:^(BOOL success, NSString *message) {
-                                                                               NSLog(@"DOWN Completion Success = %@ Message : %@",success?@"YES":@"NO", message?message:@"");
-                                                                          }];
-
-     NSLog(@"Context is valid : %@",interpreter.context.isValid?@"YES":@"NO");
-}
-
-
--(NSString*)_stringUrlWithRelativePath:(NSString*)relativePath{
-    return [NSString stringWithFormat:@"%@%@",<YOUR BASE URL>,relativePath];
-}
 
 ```

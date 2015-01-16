@@ -80,8 +80,6 @@ class PdSSyncAPI {
 		$this->args = explode ( '/', rtrim ( $request, '/' ) );
 		if (array_key_exists ( 0, $this->args ) && in_array ( $this->args [0], $this->_allowedEndPointList () )) {
 			$this->endpoint = array_shift ( $this->args );
-		} else {
-			return $this->_response ( "Endpoint is not allowed", 403 );
 		}
 		if (array_key_exists ( 0, $this->args )) {
 			$this->subject = array_shift ( $this->args );
@@ -110,6 +108,7 @@ class PdSSyncAPI {
 		return array (
 				"reachable",
 				"install",
+				"file",
 				"create",
 				"touch",
 				"hashMap",
@@ -125,43 +124,46 @@ class PdSSyncAPI {
 	 * @return string
 	 */
 	public function run() {
-		switch ($this->method) {
-			case 'DELETE' :
-			case 'POST' :
-				$this->request = $this->_cleanInputs ( $_POST );
-				break;
-			case 'GET' :
-				$this->request = $this->_cleanInputs ( $_GET );
-				break;
-			case 'PUT' :
-				$this->request = $this->_cleanInputs ( $_GET );
-				$this->flow = file_get_contents ( "php://input" );
-				break;
-			default :
-				return $this->_response ( $this->method, 400 );
-				break;
-		}
-		if (DEBUG_INPUTS) {
-			if ((DEBUG_INPUTS_IS_SELECTIVE == FALSE) or ($this->endpoint == DEBUG_INPUTS_FOR_ENDPOINT && $this->method == DEBUG_INPUTS_FOR_METHOD)) {
-				return $this->_response ( array (
-						method => $this->method,
-						endpoint => $this->endpoint,
-						subject => $this->subject,
-						queryStringArray => $this->queryStringArray,
-						args => $this->args,
-						request => $this->request,
-						file => $this->flow,
-						GET => $_GET,
-						POST => $_POST,
-						REQUEST => $_REQUEST,
-						SERVER => $_SERVER 
-				), 200 );
+		if ($this->endpoint !='') {
+			switch ($this->method) {
+				case 'DELETE' :
+				case 'POST' :
+					$this->request = $this->_cleanInputs ( $_POST );
+					break;
+				case 'GET' :
+					$this->request = $this->_cleanInputs ( $_GET );
+					break;
+				case 'PUT' :
+					$this->request = $this->_cleanInputs ( $_GET );
+					$this->flow = file_get_contents ( "php://input" );
+					break;
+				default :
+					return $this->_response ( 'Unknown Method ' . $this->method, 400 );
 			}
+			if (DEBUG_INPUTS) {
+				if ((DEBUG_INPUTS_IS_SELECTIVE == FALSE) or ($this->endpoint == DEBUG_INPUTS_FOR_ENDPOINT && $this->method == DEBUG_INPUTS_FOR_METHOD)) {
+					return $this->_response ( array (
+							method => $this->method,
+							endpoint => $this->endpoint,
+							subject => $this->subject,
+							queryStringArray => $this->queryStringArray,
+							args => $this->args,
+							request => $this->request,
+							file => $this->flow,
+							GET => $_GET,
+							POST => $_POST,
+							REQUEST => $_REQUEST,
+							SERVER => $_SERVER 
+					), 200 );
+				}
+			}
+			if (( int ) method_exists ( $this, $this->endpoint ) > 0) {
+				return $this->{$this->endpoint} ( $this->args );
+			}
+			return $this->_response ( '', 400 );
+		} else {
+			$this->_response ('End point is not authorized', 401 );
 		}
-		if (( int ) method_exists ( $this, $this->endpoint ) > 0) {
-			return $this->{$this->endpoint} ( $this->args );
-		}
-		return $this->_response ( '', 400 );
 	}
 	
 	// ///////////////
@@ -380,12 +382,12 @@ class PdSSyncAPI {
 				$treeFolder = $this->ioManager->absolutePath ( $treeId, '' );
 				if (isset ( $treeFolder ) && $this->ioManager->exists ( $treeFolder )) {
 					
-					$destination=$this->request ['destination'];
-					$syncIdentifier= $this->request ['syncIdentifier'] ;
-					$isAFolder=(substr ( $destination, - 1 ) == "/");
+					$destination = $this->request ['destination'];
+					$syncIdentifier = $this->request ['syncIdentifier'];
+					$isAFolder = (substr ( $destination, - 1 ) == "/");
 					if (isset ( $_FILES ['source'] )) {
-						// there is a source it should be  a file.
-						$d = dirname ( $destination ) . DIRECTORY_SEPARATOR .$syncIdentifier. basename ( $destination );
+						// there is a source it should be a file.
+						$d = dirname ( $destination ) . DIRECTORY_SEPARATOR . $syncIdentifier . basename ( $destination );
 						$uploadfile = $this->ioManager->absolutePath ( $treeId, $d );
 						if ($this->ioManager->move_uploaded ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
 							return $this->_response ( NULL, 201 );
@@ -393,18 +395,21 @@ class PdSSyncAPI {
 							return $this->_response ( 'Error while moving  ' . $uploadfile, 412 );
 						}
 					} else {
-						//We create directly the folder without the sync identifier
-						$d=$this->ioManager->absolutePath ( $treeId, $destination );
-						if ($isAFolder==true) {
+						// We create directly the folder without the sync identifier
+						$d = $this->ioManager->absolutePath ( $treeId, $destination );
+						if ($isAFolder == true) {
 							if ($this->ioManager->mkdir ( $d )) {
 								return $this->_response ( NULL, 201 );
 							}
 						} else {
-							return $this->_response ( array('There is no file and path seems not to be a folder ', $d), 417 );
+							return $this->_response ( array (
+									'There is no file and path seems not to be a folder ',
+									$d 
+							), 417 );
 						}
 					}
 				} else {
-					return $this->_response ( 'Unexisting tree id ' . $treeFolder, 400 );	
+					return $this->_response ( 'Unexisting tree id ' . $treeFolder, 400 );
 				}
 			} else {
 				return $this->_response ( 'The components destination and syncIdentifier are required', 400 );

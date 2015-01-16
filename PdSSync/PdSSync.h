@@ -5,7 +5,6 @@
 //  Created by Benoit Pereira da Silva on 15/02/2014.
 //
 
-
 // VERSION 1.0 Of the ObjC & PHP version
 
 // ROAD MAP FOR THE VERSION 2.0
@@ -13,10 +12,10 @@
 // 1- UNIX like permissions
 // Permission applies to a tree
 
-// A tree    ==     "trunk" [ branch :  [ leaf , branch : [ leaf, leaf ] ];
-// 1 trunk   =      1 hashmap
-// 1 trunk   =      1 owner (the creator)
-// 1 owner  <->     N groups
+// A tree    is      a graph a file  & folder defined by a root folder
+// 1 tree    ==      1 hashmap
+// 1 tree    ==      1 owner (the creator)
+// 1 owner   <->     N groups
 
 
 // 2- Gonna support server sent events :
@@ -84,6 +83,13 @@ typedef NS_ENUM (NSUInteger,
     SourceIsDistantDestinationIsDistant = 3 // currently not supported 
 };
 
+#define kPdSSyncModeStrings @[\
+                                @("SourceIsLocalDestinationIsDistant"),\
+                                @("SourceIsDistantDestinationIsLocal"),\
+                                @("SourceIsLocalDestinationIsLocal"),\
+                                @("SourceIsDistantDestinationIsDistant")\
+                            ]
+
 
 // The extension for a single file hash
 #define kPdSSyncHashFileExtension @("hash")
@@ -98,7 +104,7 @@ typedef NS_ENUM (NSUInteger,
 #define kPdSSyncPrefixSignature @(".PdSSync")
 
 #import "PdSFileManager.h"
-#import "FilesHashMap.h"
+#import "HashMap.h"
 #import "DeltaPathMap.h"
 #import "PdSCommandInterpreter.h"
 #import "PdSLocalAnalyzer.h"

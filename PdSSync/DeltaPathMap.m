@@ -28,8 +28,6 @@ NSString* const updatedPathsKey=@"updatedPaths";
 }
 
 
-
-
 /**
  *  Returns a dictionary representation of the DeltaPathMap
  *

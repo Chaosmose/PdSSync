@@ -12,7 +12,7 @@
 @interface PdSSyncContext : NSObject
 
 
-@property (nonatomic,strong)FilesHashMap *finalHashMap;
+@property (nonatomic,strong)HashMap *finalHashMap;
 
 
 @property (nonatomic,readonly)NSString*sourceTreeId;
@@ -63,6 +63,8 @@
 - (BOOL)isValid;
 
 - (PdSSyncMode)mode;
+
+- (NSString*)contextDescription;
 
 
 @end

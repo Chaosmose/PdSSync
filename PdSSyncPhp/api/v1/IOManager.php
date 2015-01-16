@@ -147,8 +147,7 @@ abstract  class IOManagerAbstract  {
 		$messages=array();
 		// Create the system data folder
 		if($this->exists($systemDataFolder)){
-			$messages[]= $systemDataFolder.' is already existing';
-			return $messages;
+			return NULL;
 		}
 		 if (!$this->mkdir ($systemDataFolder)){
 			$messages[]= $systemDataFolder.' mkdir error';

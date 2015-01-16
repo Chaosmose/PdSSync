@@ -21,8 +21,6 @@ static NSString * const PdSSyncUnused = @"PdSSyncUnused";
 extern NSString * const PdSSyncInterpreterWillFinalize;
 extern NSString * const PdSSyncInterpreterHasFinalized;
 
-
-
 @interface PdSCommandInterpreter : NSObject
 
 
@@ -74,7 +72,6 @@ extern NSString * const PdSSyncInterpreterHasFinalized;
                          progressBlock:(void(^)(uint taskIndex,float progress))progressBlock
                     andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock;
 
-
 /**
  * Called by the delegate to conclude the operations
  */
@@ -89,9 +86,10 @@ extern NSString * const PdSSyncInterpreterHasFinalized;
 +(id)encodeMove:(NSString*)source destination:(NSString*)destination;
 +(id)encodeRemove:(NSString*)destination;
 +(id)encodeSanitize:(NSString*)destination;
-+(id)encodeChmode:(NSString*)destination mode:(int)mode;
-+(id)encodeForget:(NSString*)destination;
 
+// Those commands May be removed in future version
++(id)encodeChangeMode:(NSString*)destination mode:(int)mode;
++(id)encodeForget:(NSString*)destination;
 
 + (NSMutableArray*)commandsFromDeltaPathMap:(DeltaPathMap*)deltaPathMap;
 

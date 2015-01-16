@@ -8,7 +8,6 @@
 
 #import "PdSLocalAnalyzer.h"
 
-
 @interface PdSLocalAnalyzer(){
 }
 @end
@@ -26,7 +25,6 @@
 }
 
 
-
 /**
  *  Creates a dictionary with  relative paths as key and  CRC32 as value
  *
@@ -39,7 +37,7 @@
 - (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
                               dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
                           progressBlock:(void(^)(NSUInteger hash,NSString*path, NSUInteger index))progressBlock
-                     andCompletionBlock:(void(^)(FilesHashMap*hashMap))completionBlock{
+                     andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock{
     
     NSString *folderPath=[folderURL path];
     PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
@@ -55,7 +53,7 @@
                                                         return YES;
                                                     }];
     
-    FilesHashMap*hashMap=[[FilesHashMap alloc]init];
+    HashMap*hashMap=[[HashMap alloc]init];
     NSURL *file;
     int i=0;
     while ((file = [dirEnum nextObject])) {
@@ -103,13 +101,14 @@
                     crc32=[[relativePath dataUsingEncoding:NSUTF8StringEncoding] crc32];
                 }
                 if(crc32!=0){
-                    progressBlock(crc32,relativePath,i);
                     [hashMap setHash:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forPath:relativePath];
                     [treeDictionary setObject:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forKey:relativePath];
                     i++;
                     if(self.saveHashInAFile){
                         [self _writeCrc32:crc32 toFileWithPath:filePath];
                     }
+                    if(progressBlock)
+                        progressBlock(crc32,relativePath,i);
                 }
                 
             }
@@ -178,7 +177,4 @@
 
 
 
-
-
 @end
-

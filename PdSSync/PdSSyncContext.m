@@ -114,4 +114,18 @@
     return [NSString stringWithFormat:@"%@%@",kPdSSyncPrefixSignature,uuidStr];
 }
 
+
+- (NSString*)contextDescription{
+    NSMutableString*description=[NSMutableString stringWithString:@"\n"];
+    [description appendFormat:@"%@\n",[kPdSSyncModeStrings objectAtIndex:[self mode]]];
+    [description appendFormat:@"Source Base Url : %@\n",_sourceBaseUrl];
+    [description appendFormat:@"Destination Base Url : %@\n",_destinationBaseUrl];
+    [description appendFormat:@"Source Tree Id : %@\n",_sourceTreeId];
+    [description appendFormat:@"Destination Tree Id : %@\n",_destinationTreeId];
+    [description appendFormat:@"Sync Id : %@\n",_sourceBaseUrl];
+    [description appendFormat:@"Auto create trees? %@\n",_autoCreateTrees?@"YES":@"NO"];
+    [description appendString:@"\n"];
+    return description;
+}
+
 @end
