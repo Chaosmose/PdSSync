@@ -49,13 +49,16 @@
                 DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
                                                         andDestination:destinationHashMap];
                 NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
-                    [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
+                
+                   PdSCommandInterpreter*interpreter= [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
                                                            progressBlock:^(uint taskIndex, float progress) {
                                                                NSString*cmd=([commands count]>taskIndex)?[commands objectAtIndex:taskIndex]:@"POST CMD";
                                                                progressBlock(taskIndex,progress,cmd);
                                                            } andCompletionBlock:^(BOOL success, NSString *message) {
                                                                completionBlock(success,message);
                                                            }];
+                interpreter.finalizationDelegate=self.finalizationDelegate;
+                
             }else{
                 BOOL sourceHashMapIsNil=(!sourceHashMap);
                 BOOL destinationHashMapIsNil=(!destinationHashMap);

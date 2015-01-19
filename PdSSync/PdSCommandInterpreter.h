@@ -14,6 +14,7 @@
 
 @protocol PdSSyncFinalizationDelegate <NSObject>
 -(void)readyForFinalization:(PdSCommandInterpreter*)reference;
+-(void)progressMessage:(NSString*)message;
 @end
 
 static NSString * const PdSSyncUnused = @"PdSSyncUnused";

@@ -9,6 +9,7 @@
 
 #import "AFNetworking.h"
 #import "PdSCommandInterpreter.h"
+#include <stdarg.h>
 
 NSString * const PdSSyncInterpreterWillFinalize = @"PdSSyncInterpreterWillFinalize";
 NSString * const PdSSyncInterpreterHasFinalized = @"PdSSyncInterpreterHasFinalized";
@@ -29,6 +30,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     AFHTTPSessionManager            *_HTTPsessionManager;
     NSMutableArray                  *_allCommands;
     BOOL                            _sanitizeAutomatically;// A sanitize command will be sent first.
+    int                             _messageCounter;
     
 }
 @property (nonatomic,strong)NSOperationQueue *queue;
@@ -80,6 +82,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         self->_completionBlock=completionBlock?[completionBlock copy]:nil;
         self->_fileManager=[PdSFileManager sharedInstance];
         self->_progressCounter=0;
+        self->_messageCounter=0;
         self->_sanitizeAutomatically=YES;
         if(self->_context.mode==SourceIsDistantDestinationIsDistant ){
             [NSException raise:@"TemporaryException"
@@ -237,7 +240,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 - (void)_interruptOnFault:(NSString*)faultMessage{
-    NSLog(@"INTERUPT ON FAULT %@",faultMessage);
+    [self _progressMessage:@"INTERUPT ON FAULT %@",faultMessage];
     // This method is never called on reachability issues.
     [self->_queue cancelAllOperations];
     self->_completionBlock(NO,faultMessage);
@@ -342,7 +345,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 - (void)_nextCommand{
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSLog(@"NEXT CMD");
+        //[self _progressMessage:@"NEXT CMD"];
         _progressCounter++;
         [_queue setSuspended:NO];
     });
@@ -367,13 +370,11 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                      @"destination":destination,
                                      @"doers":@"",
                                      @"undoers":@""};// @todo find a solution for doers / undoers if possible
-         NSLog(@"POST URL %@", URLString);
-        
+    
         NSMutableURLRequest *request = [[AFHTTPRequestSerializer serializer] multipartFormRequestWithMethod:@"POST"
                                                                                                   URLString:URLString
                                                                                                  parameters:parameters
                                                                                   constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
-                                                                                      NSLog(@"Define POST file %@",source);
                                                                                       NSString*lastChar=[source substringFromIndex:[source length]-1];
                                                                                       if(![lastChar isEqualToString:@"/"]){
                                                                                           [formData appendPartWithFileURL:sourceURL
@@ -381,17 +382,19 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                                  fileName:[destination lastPathComponent]
                                                                                                                  mimeType:@"application/octet-stream"
                                                                                                                     error:nil];
+                                                                                       
+                                                                                          
+                                                                                        
                                                                                       }else{
                                                                                           // It is a folder.
                                                                                       }
+                                                                                     [self _progressMessage:@"Uploading %@", [sourceURL absoluteString]];
                                                                                   } error:nil];
         
         NSProgress* progress=nil;
         NSURLSessionUploadTask *uploadTask = [_HTTPsessionManager uploadTaskWithStreamedRequest:request
                                                                                        progress:&progress
                                                                               completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
-                                                                                  
-                                                                                  NSLog(@"POSTED");
                                                                                   /*
                                                                                   [progress removeObserver:weakSelf
                                                                                                 forKeyPath:@"fractionCompleted"
@@ -454,19 +457,15 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                              success:^(NSURLSessionDataTask *task, id responseObject) {
                                  NSDictionary*d=(NSDictionary*)responseObject;
                                  NSString*uriString=[d objectForKey:@"uri"];
-                                 
-                                 NSLog(@"GET File URI %@", uriString);
+                                 [self _progressMessage:@"Downloading %@", uriString];
                                  
                                  if(uriString && [uriString isKindOfClass:[NSString class]]){
-                                     
-                                     
-                                     
                                      NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]];
                                      NSProgress* progress=nil;
                                      NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
                                                                                                                   progress:&progress
                                                                                                                destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
-                                                                                                                NSLog(@"Define Local Destination");
+                                                                                        
                                                                                                                    PdSCommandInterpreter *__strong strongSelf=weakSelf;
                                                                                                                    NSString*p=[strongSelf _absoluteLocalPathFromRelativePath:destination
                                                                                                                                                                   toLocalUrl:_context.destinationBaseUrl
@@ -484,7 +483,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                                    }
                                                                                                                    return [NSURL URLWithString:p];
                                                                                                                } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
-                                                                                                                   NSLog(@"GOT File @URI %@", uriString);
+                                                                                                                   
                                                                                                                    
                                                                                                                    PdSCommandInterpreter *__strong strongSelf=weakSelf;
                                                                                                                    /*
@@ -511,11 +510,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                      [downloadTask resume];
                                      
                                  }else{
-                                      NSLog(@"***");
                                      [weakSelf _interruptOnFault:[NSString stringWithFormat:@"Missing url in response of %@",task.currentRequest.URL.absoluteString]];
                                  }
                              } failure:^(NSURLSessionDataTask *task, NSError *error) {
-                                  NSLog(@"FAILURE before GET File @URI %@", URLString);
+                                 [self _progressMessage:@"FAILURE before GET File @URI %@", URLString];
                                  [weakSelf _interruptOnFault:[weakSelf _stringFromError:error]];
                              }];
             
@@ -618,9 +616,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                       toPath:[fileWithoutPrefix filteredFilePath]
                                        error:&error];
                 
-    
+                
                 if(error){
-                    NSLog(@"moveItemAtPath Error %@",[error description]);
+                    [self _progressMessage:@"moveItemAtPath \nfrom %@ \nto %@ Error %@ ",[initialFilePath filteredFilePath],[fileWithoutPrefix filteredFilePath],[error description]];
                     //[self _interruptOnFault:[error description]];
                     //return;
                     error=nil;
@@ -724,7 +722,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                           includingPropertiesForKeys:keys
                                                              options:0
                                                         errorHandler:^BOOL(NSURL *url, NSError *error) {
-                                                            NSLog(@"ERROR when enumerating  %@ %@",url, [error localizedDescription]);
+                                                               [self _progressMessage:@"ERROR when enumerating  %@ %@",url, [error localizedDescription]];
                                                             return YES;
                                                         }];
         NSURL *file;
@@ -783,7 +781,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         lastComponent=[NSString stringWithFormat:@"%@%@",self->_context.syncID,lastComponent];
         [components replaceObjectAtIndex:[components count]-1 withObject:lastComponent];
         NSString*prefixedRelativePath=[components componentsJoinedByString:@"/"];
-        return [NSString stringWithFormat:@"%@%@/%@",[localUrl absoluteString],treeID,prefixedRelativePath];
+        NSString*path= [NSString stringWithFormat:@"%@%@/%@",[localUrl absoluteString],treeID,prefixedRelativePath];
+        path=[path stringByReplacingOccurrencesOfString:@" " withString:@"%20"];
+        return path;
     }
 }
 
@@ -880,7 +880,25 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     } else {
         return [[NSString alloc]initWithBytes:[jsonData bytes]
                                        length:[jsonData length] encoding:NSUTF8StringEncoding];
+
     }
 }
+
+
+
+- (void)_progressMessage:(NSString*)format, ... {
+    _messageCounter++;
+    if(self.finalizationDelegate){
+        va_list vl;
+        va_start(vl, format);
+        NSString* message = [[NSString alloc] initWithFormat:format
+                                                   arguments:vl];
+        [self.finalizationDelegate progressMessage:[NSString stringWithFormat:@"%i# %@",_messageCounter,message]];
+        va_end(vl);
+       
+    }
+    
+}
+
 
 @end

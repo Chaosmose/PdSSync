@@ -10,6 +10,7 @@
 #import "PdSSync.h"
 
 @class PdSSyncContext;
+@protocol PdSSyncFinalizationDelegate;
 
 typedef NS_ENUM(NSInteger,
                 PdSSyncExtentedStatusError) {
@@ -26,6 +27,8 @@ typedef NS_ENUM(NSInteger,
  *
  */
 @property (nonatomic,readonly)PdSSyncContext*syncContext;
+
+@property (nonatomic)id<PdSSyncFinalizationDelegate>finalizationDelegate;
 
 
 /**

@@ -132,6 +132,7 @@ abstract  class IOManagerAbstract  {
 		if ($currentId != NULL) {
 			if ($this->exists ( $absolutePath )) {
 				$uri = REPOSITORY_HOST . $currentId . DIRECTORY_SEPARATOR . $relativePath;
+				$uri= str_replace(" ","%20",$uri );
 					// @todo 401 if not authorized;
 					// $this->status=401
 					return $uri;
