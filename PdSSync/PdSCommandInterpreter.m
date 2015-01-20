@@ -599,31 +599,43 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         
         for (NSArray *cmd in commands) {
             NSString *destination=[cmd objectAtIndex:PdSDestination];
+            NSUInteger command=[[cmd objectAtIndex:PdSCommand] integerValue];
             BOOL isAFolder=[[destination substringFromIndex:[destination length]-1] isEqualToString:@"/"];
-            if(!isAFolder){
-                // UN PREFIX
-                NSString*initialFilePath=[self _absoluteLocalPathFromRelativePath:destination
+            NSString*prefixedFilePath=[self _absoluteLocalPathFromRelativePath:destination
                                                                    toLocalUrl:_context.destinationBaseUrl
                                                                    withTreeId:_context.destinationTreeId
                                                                     addPrefix:YES];
-                
-                NSString*fileWithoutPrefix=[self _absoluteLocalPathFromRelativePath:destination
-                                                                         toLocalUrl:_context.destinationBaseUrl
-                                                                         withTreeId:_context.destinationTreeId
-                                                                          addPrefix:NO];
-                
-                [_fileManager moveItemAtPath:[initialFilePath filteredFilePath]
-                                      toPath:[fileWithoutPrefix filteredFilePath]
-                                       error:&error];
-                
-                
+            NSString*fileWithoutPrefix=[self _absoluteLocalPathFromRelativePath:destination
+                                                                     toLocalUrl:_context.destinationBaseUrl
+                                                                     withTreeId:_context.destinationTreeId
+                                                                      addPrefix:NO];
+            if(command==PdSDelete){
+                [_fileManager removeItemAtPath:[fileWithoutPrefix filteredFilePath] error:&error];
                 if(error){
-                    [self _progressMessage:@"moveItemAtPath \nfrom %@ \nto %@ Error %@ ",[initialFilePath filteredFilePath],[fileWithoutPrefix filteredFilePath],[error description]];
-                    //[self _interruptOnFault:[error description]];
-                    //return;
+                    [self _progressMessage:@"Error on removeItemAtPath \nfrom %@ \n%@ ",[fileWithoutPrefix filteredFilePath],[error description]];
+                    [self _interruptOnFault:[error description]];
+                    return;
                     error=nil;
                 }
+            }else if(command==PdSCreateOrUpdate){
+                if(!isAFolder){
+                    // UN PREFIX
+                    
+                    [_fileManager moveItemAtPath:[prefixedFilePath filteredFilePath]
+                                          toPath:[fileWithoutPrefix filteredFilePath]
+                                           error:&error];
+                    
+                    
+                    if(error){
+                        [self _progressMessage:@"Error on moveItemAtPath \nfrom %@ \nto %@ \n%@ ",[prefixedFilePath filteredFilePath],[fileWithoutPrefix filteredFilePath],[error description]];
+                        [self _interruptOnFault:[error description]];
+                        return;
+                        error=nil;
+                    }
+                }
+
             }
+            
             
             
         }

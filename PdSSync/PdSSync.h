@@ -49,6 +49,7 @@ typedef NS_ENUM (NSUInteger,
 
 typedef NS_ENUM(NSUInteger,
                 PdSSyncCMDParamRank) {
+    PdSCommand     = 0,
     PdSDestination = 1,
     PdSSource      = 2
 } ;

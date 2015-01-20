@@ -65,6 +65,8 @@
 
 
 
+
+
 #pragma mark - NSFileManagerDelegate
 
 
@@ -94,6 +96,29 @@
     else
         return NO;
     
+}
+
+#pragma mark -
+
+/**
+ *  Destructive implementation that Ooverrides the standard behaviour by destroying the dstPath before to proceed to move.
+ *
+ *  @param srcPath srcPath the source path
+ *  @param dstPath dstPath the destination path
+ *  @param error   error description
+ *
+ *  @return the result
+ */
+- (BOOL)moveItemAtPath:(NSString *)srcPath toPath:(NSString *)dstPath error:(NSError **)error{
+    if([self fileExistsAtPath:dstPath]){
+        if(![self removeItemAtPath:dstPath
+                             error:error]){
+            return NO;
+        }
+    }
+    return [super moveItemAtPath:srcPath
+                          toPath:dstPath
+                           error:error];
 }
 
 
