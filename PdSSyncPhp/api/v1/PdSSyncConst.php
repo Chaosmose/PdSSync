@@ -60,7 +60,7 @@ define ('PdSMove'	,					2); 		// R source W destination
 define ('PdSDelete'	,					3);		// W source
 
 // PdSSyncCMDParamsRank
-
+define ('PdSCommand'   , 			0);
 define ('PdSDestination'	,			1);
 define ('PdSSource'			,			2);
 
