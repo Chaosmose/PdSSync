@@ -26,6 +26,8 @@ interface IOManagerPersistency {
 	
 	public function move_uploaded($filename, $destination);
 	
+	public function listRelativePathsIn ($rootPath,$prefix='');
+	
 }
 
 interface  IOManager extends IOManagerPersistency{

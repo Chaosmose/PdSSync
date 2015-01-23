@@ -83,13 +83,14 @@ class CommandInterpreter {
 		} else {
 			$this->ioManager->mkdir ( $this->ioManager->absolutePath ( $treeId, METADATA_FOLDER ) );
 			if ($this->ioManager->saveHashMap ( $treeId, $finalHashMapFilePath )) {
-				return NULL;
+				return $fileList;
 			} else {
 				$failures [] = 'Error when saving the hashmap';
 				return $failures;
 			}
 		}
 	}
+	
 	
 	/**
 	 * Decodes and runs the command

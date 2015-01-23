@@ -72,4 +72,23 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 		 $this->mkdir( dirname ( $destination ));
 		return move_uploaded_file ( $filename, $destination );
 	}
+	
+	
+	public function  listRelativePathsIn ($dirPath,$prefix=''){
+		$dir = rtrim($dirPath, '\\/');
+		$result = array();
+		foreach (scandir($dir) as $f) {
+			if ($f !== '.' and $f !== '..') {
+				if (is_dir("$dir/$f")) {
+					$result = array_merge($result , $this->listRelativePathsIn("$dir/$f", "$prefix$f/"));
+				} else {
+					$result[] = $prefix.$f;
+				}
+			}
+		}
+		return $result;
+	}
+	
+	
+	
 }?>

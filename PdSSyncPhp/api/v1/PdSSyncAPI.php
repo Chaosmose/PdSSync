@@ -113,7 +113,7 @@ class PdSSyncAPI {
 				"touch",
 				"hashMap",
 				"uploadFileTo",
-				"cleanUp",
+				//"cleanUp",
 				"finalizeTransactionIn" 
 		);
 	}
@@ -124,7 +124,7 @@ class PdSSyncAPI {
 	 * @return string
 	 */
 	public function run() {
-		if ($this->endpoint !='') {
+		if ($this->endpoint != '') {
 			switch ($this->method) {
 				case 'DELETE' :
 				case 'POST' :
@@ -162,7 +162,7 @@ class PdSSyncAPI {
 			}
 			return $this->_response ( '', 400 );
 		} else {
-			$this->_response ('End point is not authorized', 401 );
+			$this->_response ( 'End point is not authorized', 401 );
 		}
 	}
 	
@@ -361,7 +361,6 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// @todo store a the sync id & relative path to a private zone for the sanitizing procedure.
 	/**
 	 * Upload the file to the relative path
 	 *
@@ -381,7 +380,6 @@ class PdSSyncAPI {
 				$this->ioManager = $this->getIoManager ();
 				$treeFolder = $this->ioManager->absolutePath ( $treeId, '' );
 				if (isset ( $treeFolder ) && $this->ioManager->exists ( $treeFolder )) {
-					
 					$destination = $this->request ['destination'];
 					$syncIdentifier = $this->request ['syncIdentifier'];
 					$isAFolder = (substr ( $destination, - 1 ) == "/");
@@ -422,43 +420,6 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// @todo => IMPLEMENT
-	
-	/**
-	 * Clean up the server from legacy uncompleted transactions.
-	 *
-	 * @return multitype: string
-	 */
-	protected function cleanUp() {
-		if ($this->method == 'POST') {
-			if (isset ( $this->subject ) && count ( $this->args ) > 0) {
-				$treeId = $this->args [0];
-			} else {
-				return $this->_response ( 'Undefined treeId', 404 );
-			}
-			if (isset ( $this->request ['syncIdentifier'] )) {
-				$errors = $this->getInterpreter (); // IMPLEMENT CLEAN UP HERE
-				if ($errors == NULL) {
-					return $this->_response ( NULL, 200 );
-				} else {
-					return $this->_response ( array (
-							errors => $errors,
-							commands => $commands 
-					), 417 );
-				}
-			} else {
-				return $this->_response ( array (
-						errors => 'syncIdentifier is not set' 
-				), 417 );
-			}
-		} else {
-			$infos = array ();
-			$infos [INFORMATIONS_KEY] = 'Method POST required';
-			$infos [METHOD_KEY] = $this->method;
-			return $this->_response ( $infos, 405 );
-		}
-	}
-	
 	/**
 	 * Finalize the synchronization transaction with a bunch, then save the hashMap.
 	 *
@@ -468,7 +429,6 @@ class PdSSyncAPI {
 		if ($this->method == 'POST') {
 			if (isset ( $this->request ['syncIdentifier'] ) && isset ( $this->request ['commands'] ) && isset ( $_FILES ['hashmap'] )) {
 				$commands = $this->request ['commands'];
-				
 				// We accept encoded string
 				if (! is_array ( $commands )) {
 					try {
@@ -488,6 +448,8 @@ class PdSSyncAPI {
 					}
 					$errors = $this->getInterpreter ()->interpretBunchOfCommand ( $treeId, $this->request ['syncIdentifier'], $commands, $_FILES ['hashmap'] ['tmp_name'] );
 					if ($errors == NULL) {
+						// INVOKE clean UP
+						$this->cleanUp ();
 						return $this->_response ( NULL, 200 );
 					} else {
 						return $this->_response ( array (
@@ -508,6 +470,58 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
+	
+	/**
+	 * @todo security impact and
+	 *       clean up
+	 * @return Ambigous <string, NULL, string>
+	 */
+	private function cleanUp() {
+		if ($this->method == 'POST') {
+			$treeId = NULL;
+			if (isset ( $this->subject ) && count ( $this->args ) > 0) {
+				$treeId = $this->args [0];
+			} else {
+				return $this->_response ( 'Undefined treeId', 404 );
+			}
+			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
+				return $this->_response ( NULL, 406 );
+			}
+			
+			$this->ioManager = $this->getIoManager ();
+			$rootPath = $this->ioManager->absolutePath ( $treeId, '' );
+			$fileList = $this->ioManager->listRelativePathsIn ( $rootPath );
+			$deletedPath = array ();
+			$unModifiedPath=array();
+			foreach ( $fileList as $relativePath ) {
+				if (substr ( $relativePath, - 1 ) != "/") {
+					// It is not a folder.
+					$pathInfos = pathinfo ( $relativePath );
+					$fileName = $pathInfos ['basename'];
+					if ($this->_stringStartsWith ( $fileName, SYNC_PREFIX_SIGNATURE )) {
+						$absolutePath = $this->ioManager->absolutePath ( $treeId, $relativePath );
+						$this->ioManager->delete ( $absolutePath );
+						$deletedPath [] = $relativePath;
+					}else{
+						$unModifiedPath[]=$relativePath;
+					}
+				}
+				;
+			};
+			return $this->_response ( array(deleted=>$deletedPath, notModified=>$unModifiedPath), 200 );
+		} else {
+			$infos = array ();
+			$infos [INFORMATIONS_KEY] = 'Method POST required';
+			$infos [METHOD_KEY] = $this->method;
+			return $this->_response ( $infos, 405 );
+		}
+	}
+	private function _stringStartsWith($haystack, $needle) {
+		return (strpos ( $haystack, $needle ) !== FALSE);
+	}
+	
+	
+	
 	
 	/**
 	 *
