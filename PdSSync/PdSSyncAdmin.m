@@ -9,6 +9,8 @@
 #import "PdSSyncAdmin.h"
 #import "AFNetworking.h"
 
+#define kRecursiveMaxNumberOfAttempts 2
+
 @interface PdSSyncAdmin (){
     PdSFileManager *__weak _fileManager;
 }
@@ -42,6 +44,22 @@
  */
 -(void)synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
                  andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
+    int attempts=1;
+    [self _synchronizeWithprogressBlock:progressBlock
+                     andCompletionBlock:completionBlock
+                        numberOfAttempt:attempts];
+}
+
+
+-(void)_synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
+                 andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock
+                     numberOfAttempt:(int)attempts{
+    attempts++;
+    if(attempts > kRecursiveMaxNumberOfAttempts){
+        // This occurs if the recursive call fails.
+        completionBlock(NO,[NSString stringWithFormat:@"Excessive number of attempts of synchronization %i",kRecursiveMaxNumberOfAttempts]);
+        return;
+    }
     //PdSSyncAdmin*__weak weakSelf=self;
     void (^executionBlock)(void) = ^(void) {
         [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
@@ -58,15 +76,15 @@
                 }
                 NSLog(@"%@",cmdString);
                 
-                   PdSCommandInterpreter*interpreter= [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
-                                                           progressBlock:^(uint taskIndex, float progress) {
-                                                               NSString*cmd=([commands count]>taskIndex)?[commands objectAtIndex:taskIndex]:@"POST CMD";
-                                                               progressBlock(taskIndex,progress,cmd);
-                                                           } andCompletionBlock:^(BOOL success, NSString *message) {
-                                                               completionBlock(success,message);
-                                                           }];
+                PdSCommandInterpreter*interpreter= [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
+                                                                                          progressBlock:^(uint taskIndex, float progress) {
+                                                                                              NSString*cmd=([commands count]>taskIndex)?[commands objectAtIndex:taskIndex]:@"POST CMD";
+                                                                                              progressBlock(taskIndex,progress,cmd);
+                                                                                          } andCompletionBlock:^(BOOL success, NSString *message) {
+                                                                                              completionBlock(success,message);
+                                                                                          }];
                 
-           
+                
                 interpreter.finalizationDelegate=self.finalizationDelegate;
                 
             }else{
@@ -76,9 +94,8 @@
                 completionBlock(NO,m);
             }
         }];
-
+        
     };
-
     if(self.syncContext.autoCreateTrees){
         [self touchTreesWithCompletionBlock:^(BOOL success, NSInteger statusCode) {
             if(success){
@@ -87,10 +104,11 @@
                 [self createTreesWithCompletionBlock:^(BOOL success, NSInteger statusCode) {
                     if(success){
                         // Recursive call
-                        [self synchronizeWithprogressBlock:progressBlock
-                                        andCompletionBlock:completionBlock];
+                        [self _synchronizeWithprogressBlock:progressBlock
+                                        andCompletionBlock:completionBlock
+                                            numberOfAttempt:attempts];
                     }else{
-                       completionBlock(NO,[NSString stringWithFormat:@"Failure on createTreesWithCompletionBlock autoCreateTrees==YES with statusCode %i",(int)statusCode]);
+                        completionBlock(NO,[NSString stringWithFormat:@"Failure on createTreesWithCompletionBlock autoCreateTrees==YES with statusCode %i",(int)statusCode]);
                     }
                 }];
             }
@@ -99,9 +117,6 @@
         executionBlock();
     }
 }
-
-
-
 
 
 
