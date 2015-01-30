@@ -29,7 +29,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     PdSFileManager                   *__weak _fileManager;
     AFHTTPSessionManager            *_HTTPsessionManager;
     NSMutableArray                  *_allCommands;
-    BOOL                            _sanitizeAutomatically;// A sanitize command will be sent first.
+    BOOL                            _sanitizeAutomatically;
     int                             _messageCounter;
     
 }
@@ -141,30 +141,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }
 }
 
-+(id)encodeSanitize:(NSString*)destination{
-    if(destination){
-        return [NSString stringWithFormat:@"[%@,\"%@\"]", @(PdsSanitize),destination];
-    }else{
-        return nil;
-    }
-}
-
-+(id)encodeChangeMode:(NSString*)destination mode:(int)mode{
-    if(destination && (0<=mode && mode<777)){
-        return [NSString stringWithFormat:@"[%@,\"%@\",\"%i\"]", @(PdSChmod),destination,mode];
-    }else{
-        return nil;
-    }
-}
-
-+(id)encodeForget:(NSString*)destination{
-    if(destination){
-        return [NSString stringWithFormat:@"[%@,\"%@\"]", @(PdSForget),destination];
-    }else{
-        return nil;
-    }
-}
-
 
 #pragma mark - private methods
 
@@ -176,7 +152,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     
         // First pass we dicriminate creative for un creative commands
         // Creative commands requires for example download or an upload.
-        // Copy is "not creative" as we copy a existing resource
+        // Copy or move are "not creative" as we move or copy a existing resource
         for (id encodedCommand in _bunchOfCommand) {
             NSArray*cmdAsAnArray=[self _encodedCommandToArray:encodedCommand];
             if(cmdAsAnArray){
@@ -185,9 +161,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 }
                 [_allCommands addObject:cmdAsAnArray];
             }
-            if([encodedCommand isKindOfClass:[NSString class]]){
-                
-            }else{
+            if(![encodedCommand isKindOfClass:[NSString class]]){
                 [self _interruptOnFault:[NSString stringWithFormat:@"Illegal command %@",encodedCommand]];
             }
         }
@@ -209,10 +183,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         }];
     }else{
         if(_sanitizeAutomatically){
-            [self _runSanitize:@""];
+            [self _sanitize:@""];
         }
         _completionBlock(YES,@"There was no command to execute");
-    
     }
 }
 
@@ -222,12 +195,53 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
  */
 - (void)finalize{
     // The creative commands will produce UNPREFIXING temp files
-    // The unCreative commands will be executed during finalization
+    // The "unCreative" commands will be executed during finalization
     [self _finalizeWithCommands:_allCommands];
     if(_sanitizeAutomatically){
-        [self _runSanitize:@""];
+        [self _sanitize:@""];
     }
 }
+
+
+-(void)_sanitize:(NSString*)relativePath{
+    if (self->_context.mode==SourceIsDistantDestinationIsLocal||
+        self->_context.mode==SourceIsLocalDestinationIsLocal){
+        // SANITIZE LOCALLY
+        NSString *folderPath=[self _absoluteLocalPathFromRelativePath:relativePath
+                                                           toLocalUrl:_context.destinationBaseUrl
+                                                           withTreeId:_context.destinationTreeId
+                                                            addPrefix:NO];
+        PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
+        NSArray*exclusion=@[@".DS_Store"];
+        NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
+        NSDirectoryEnumerator *dirEnum =[fileManager enumeratorAtURL:[NSURL URLWithString:folderPath]
+                                          includingPropertiesForKeys:keys
+                                                             options:0
+                                                        errorHandler:^BOOL(NSURL *url, NSError *error) {
+                                                            [self _progressMessage:@"ERROR when enumerating  %@ %@",url, [error localizedDescription]];
+                                                            return YES;
+                                                        }];
+        NSURL *file;
+        NSError*removeFileError=nil;
+        while ((file = [dirEnum nextObject])) {
+            NSString *filePath=[file absoluteString];
+            if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound&&
+               [[filePath lastPathComponent] rangeOfString:kPdSSyncPrefixSignature].location!=NSNotFound &&
+               ![[filePath substringFromIndex:[filePath length]-1] isEqualToString:@"/"]){
+                [fileManager removeItemAtPath:[filePath filteredFilePath]
+                                        error:&removeFileError];
+            }
+        }
+        
+        if(!removeFileError){
+            [self _nextCommand];
+        }else{
+            [self _interruptOnFault:@"Sanitizing error"];
+        }
+    }
+}
+
+
 
 
 - (void)_successFullEnd{
@@ -302,30 +316,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                     [self _runDelete:arg1];
                 }else{
                     [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
-                }
-                break;
-            }
-            case (PdsSanitize):{
-                if(arg1){
-                    [self _runSanitize:arg1];
-                }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
-                }
-                break;
-            }
-            case (PdSChmod):{
-                if(arg1 && arg2){
-                    [self _runChmod:arg1 mode:[arg2 intValue]];
-                }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
-                }
-                break;
-            }
-            case (PdSForget):{
-                if(arg1 && arg2){
-                    [self _runForget:arg1];
-                }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
                 }
                 break;
             }
@@ -596,8 +586,24 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // EXECUTE CREATIVES COMMANDS
         NSError*error=nil;
+
+        // SORT THE COMMANDS in PdSSyncCommand value order
+        // PdSCreateOrUpdate = 0
+        // PdSCopy = 1
+        // PdSMove = 2
+        // PdSDelete = 3
         
-        for (NSArray *cmd in commands) {
+        NSArray*sortedCommand=[commands sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+            NSArray*a1=(NSArray*)obj1;
+            NSArray*a2=(NSArray*)obj2;
+            if ([[a1 objectAtIndex:PdSCommand] integerValue] < [[a2 objectAtIndex:PdSCommand] integerValue]){
+                return NSOrderedDescending;
+            }else{
+               return NSOrderedAscending;
+            }
+        }];
+        
+        for (NSArray *cmd in sortedCommand) {
             NSString *destination=[cmd objectAtIndex:PdSDestination];
             NSUInteger command=[[cmd objectAtIndex:PdSCommand] integerValue];
             BOOL isAFolder=[[destination substringFromIndex:[destination length]-1] isEqualToString:@"/"];
@@ -620,7 +626,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             }else if(command==PdSCreateOrUpdate){
                 if(!isAFolder){
                     // UN PREFIX
-                    
                     [_fileManager moveItemAtPath:[prefixedFilePath filteredFilePath]
                                           toPath:[fileWithoutPrefix filteredFilePath]
                                            error:&error];
@@ -635,12 +640,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 }
 
             }
-            
-            
-            
         }
-        
-    
          // Write the Hash Map
          NSString*jsonHashMap=[self _encodetoJson:[_context.finalHashMap dictionaryRepresentation]];
     
@@ -687,17 +687,19 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runCopy:(NSString*)source destination:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+        //DONE DURING FINALIZATION
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // COPY LOCALLY
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
-        // CURRENTLY NOT SUPPORTEDa
+        // CURRENTLY NOT SUPPORTED
     }
 }
 
 
 -(void)_runMove:(NSString*)source destination:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+         //DONE DURING FINALIZATION
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // MOVE LOCALLY
@@ -708,72 +710,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runDelete:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
+         //DONE DURING FINALIZATION
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // DELETE LOCALLY
-    }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
-        // CURRENTLY NOT SUPPORTED
-    }
-}
-
--(void)_runSanitize:(NSString*)destination{
-    if((self->_context.mode==SourceIsLocalDestinationIsDistant)||
-       self->_context.mode==SourceIsDistantDestinationIsDistant){
-        // CALL the PdSync Service
-    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
-              self->_context.mode==SourceIsLocalDestinationIsLocal){
-        // SANITIZE LOCALLY
-        NSString *folderPath=[self _absoluteLocalPathFromRelativePath:destination
-                                                           toLocalUrl:_context.destinationBaseUrl
-                                                           withTreeId:_context.destinationTreeId
-                                                            addPrefix:NO];
-        PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
-        NSArray*exclusion=@[@".DS_Store"];
-        NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
-        NSDirectoryEnumerator *dirEnum =[fileManager enumeratorAtURL:[NSURL URLWithString:folderPath]
-                                          includingPropertiesForKeys:keys
-                                                             options:0
-                                                        errorHandler:^BOOL(NSURL *url, NSError *error) {
-                                                               [self _progressMessage:@"ERROR when enumerating  %@ %@",url, [error localizedDescription]];
-                                                            return YES;
-                                                        }];
-        NSURL *file;
-        NSError*removeFileError=nil;
-        while ((file = [dirEnum nextObject])) {
-            NSString *filePath=[file absoluteString];
-            if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound&&
-               [[filePath lastPathComponent] rangeOfString:kPdSSyncPrefixSignature].location!=NSNotFound &&
-               ![[filePath substringFromIndex:[filePath length]-1] isEqualToString:@"/"]){
-                [fileManager removeItemAtPath:[filePath filteredFilePath]
-                                        error:&removeFileError];
-            }
-        }
-        
-        if(!removeFileError){
-            [self _nextCommand];
-        }else{
-            [self _interruptOnFault:@"Sanitizing error"];
-        }
-    }
-}
-
-
--(void)_runChmod:(NSString*)destination mode:(int)mode{
-    if((self->_context.mode==SourceIsLocalDestinationIsDistant)||
-       self->_context.mode==SourceIsDistantDestinationIsDistant){
-        // CALL the PdSync Service
-    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
-              self->_context.mode==SourceIsLocalDestinationIsLocal){
-        // CHMOD LOCALLY
-    }
-}
-
--(void)_runForget:(NSString*)destination{
-    if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
-        // CALL the PdSync Service
-    }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
-              self->_context.mode==SourceIsLocalDestinationIsLocal){
-        // FORGET LOCALLY
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
@@ -814,6 +754,16 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }
     for (NSString*identifier in deltaPathMap.deletedPaths) {
         [commands addObject:[PdSCommandInterpreter encodeRemove:identifier]];
+    }
+    for (NSArray*copiesArray in deltaPathMap.copiedPaths) {
+        NSString*source=[copiesArray objectAtIndex:1];
+        NSString*destination=[copiesArray objectAtIndex:0];
+        [commands addObject:[PdSCommandInterpreter encodeCopy:source destination:destination]];
+    }
+    for (NSArray*movementArray in deltaPathMap.movedPaths) {
+        NSString*source=[movementArray objectAtIndex:1];
+        NSString*destination=[movementArray objectAtIndex:0];
+        [commands addObject:[PdSCommandInterpreter encodeMove:source destination:destination]];
     }
     return commands;
 }

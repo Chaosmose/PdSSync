@@ -7,37 +7,14 @@
 
 // VERSION 1.0 Of the ObjC & PHP version
 
-// ROAD MAP FOR THE VERSION 2.0
+// IDEAS FOR THE NEXT VERSIONS
 
-// 1- UNIX like permissions
-// Permission applies to a tree
+// 0- Currently the sync is oriented : source -> destination
+// Support unoriented sync ?
 
-// A tree    is      a graph a file  & folder defined by a root folder
-// 1 tree    ==      1 hashmap
-// 1 tree    ==      1 owner (the creator)
-// 1 owner   <->     N groups
+// 1- Support SourceIsDistantDestinationIsDistant
 
-
-// 2- Gonna support server sent events :
-// http://en.wikipedia.org/wiki/Server-sent_events
-// http://nshipster.com/afnetworking-2/ real time http://rocket.github.io
-// Check : https://github.com/licson0729/libSSE-php
-// Check : http://stackoverflow.com/questions/14564903/server-sent-events-and-php-what-triggers-events-on-the-server
-
-
-// 3- Discreet doer, undoer
-
-// Each leaf can historizized [ state : [ [ doer , undoer ] , ... ]
-// we use for history : state, .PdSync/<relativepath>/counter , .PdSync/<relativepath>/history/0000000001.doer,000000001.undoer
-
-
-// 4-SourceIsDistantDestinationIsDistant
-
-
-// 5- Message pack
-
-
-// Encoding
+// 2- Homologuous P2P sync
 
 typedef NS_ENUM (NSUInteger,
                   PdSSyncCommand) {
@@ -47,6 +24,7 @@ typedef NS_ENUM (NSUInteger,
     PdSDelete           = 3 , // W source
 } ;
 
+
 typedef NS_ENUM(NSUInteger,
                 PdSSyncCMDParamRank) {
     PdSCommand     = 0,
@@ -54,27 +32,6 @@ typedef NS_ENUM(NSUInteger,
     PdSSource      = 2
 } ;
 
-
-typedef NS_ENUM (NSUInteger,
-                 PdSAdminCommand) {
-    PdsSanitize    = 4 , // X on tree
-    PdSChmod       = 5 , // X on tree
-    PdSForget      = 6 , // X on tree
-} ;
-
-
-typedef NS_ENUM(NSUInteger,
-                PdSSyncPrivilege) {
-    R_OWNER     = 400 ,
-    W_OWNER     = 200 ,
-    X_OWNER     = 100 ,
-    R_GROUP     =  40 ,
-    W_GROUP     =  20 ,
-    X_GROUP     =  10 ,
-    R_OTHER     =   4 ,
-    W_OTHER     =   2 ,
-    X_OTHER     =   1
-} ;
 
 typedef NS_ENUM (NSUInteger,
                  PdSSyncMode) {

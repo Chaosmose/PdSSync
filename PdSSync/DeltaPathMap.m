@@ -11,6 +11,8 @@
 NSString* const createdPathsKey=@"createdPaths";
 NSString* const deletedPathsKey=@"deletedPaths";
 NSString* const updatedPathsKey=@"updatedPaths";
+NSString* const copiedPathsKey=@"copiedPaths";
+NSString* const movedPathsKey=@"movedPaths";
 
 @implementation DeltaPathMap
 
@@ -24,6 +26,8 @@ NSString* const updatedPathsKey=@"updatedPaths";
     instance.createdPaths=[NSMutableArray array];
     instance.updatedPaths=[NSMutableArray array];
     instance.deletedPaths=[NSMutableArray array];
+    instance.copiedPaths=[NSMutableArray array];
+    instance.movedPaths=[NSMutableArray array];
     return instance;
 }
 
@@ -37,12 +41,10 @@ NSString* const updatedPathsKey=@"updatedPaths";
     return @{
              createdPathsKey:_createdPaths,
              deletedPathsKey:_deletedPaths,
-             updatedPathsKey:_deletedPaths
+             updatedPathsKey:_deletedPaths,
+             copiedPathsKey:_copiedPaths,
+             movedPathsKey:_movedPaths
             };
 }
-
-
-
-
 
 @end

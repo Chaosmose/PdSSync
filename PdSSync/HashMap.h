@@ -11,10 +11,14 @@
 #import "DeltaPathMap.h"
 
 extern NSString* const pathToHashKey;
-extern NSString* const hashToPathKey;
+extern NSString* const hashToPathsKey;
 
 @interface HashMap : NSObject
 
+/**
+ *  Default YES
+ */
+@property (nonatomic)BOOL useCompactSerialization;
 
 /**
  *  A dictionary encoded factory constructor
@@ -34,38 +38,20 @@ extern NSString* const hashToPathKey;
 - (NSDictionary*)dictionaryRepresentation;
 
 
-
 /**
- *  Sets the hash of a given path   
+ *  Sets the hash of a given path
  *
  *  @param hash the hash
  @  @param path the path
  */
 - (void)setHash:(NSString*)hash forPath:(NSString*)path;
 
-/**
- *  Returns the hash of a given path or nil if not found
- *
- *  @param path
- *
- *  @return the path
- */
-- (NSString*)hashForPath:(NSString*)path;
-
 
 /**
- *  Returns the path of a given hash or nil if not found
- *
- *  @param path
- *
- *  @return the path
- */
-- (NSString*)pathFromHash:(NSString*)path;
-
-
-
-/**
- *  Computes the delta path map form a source to a destination.
+ *  Computes an optimized delta path map from a source to a destination.
+ *  We try to reduce the operation and to perform the more efficient operation.
+ *  For example : we can perform a move command instead of (delete + create)
+ *  When delta is used for a distant  synchronization this may be highly critical.
  *
  *  @param source the source hashMap
  *  @param destination  the destination hashMap

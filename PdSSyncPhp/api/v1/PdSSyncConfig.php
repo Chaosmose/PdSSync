@@ -13,7 +13,6 @@ define ( 'REPOSITORY_WRITING_PATH',dirname( dirname(__DIR__)). '/Repository/'  )
 ///////////////////////
 
 require_once 'v1/IOManagerFS.php';  // Default adapter
-//require_once 'v1/classes/IOManagerRedis.class.php';
 define('PERSISTENCY_CLASSNAME'	, 'IOManagerFS');
 
 ///////////////////////
@@ -30,8 +29,6 @@ define ( 'SECRET',	'default-secret-key' ); // Used create the data system folder
 //////////////////////
 
 define ( 'MIN_TREE_ID_LENGTH',	1  );
-
-
 
 //////////////////////
 // DEBUG

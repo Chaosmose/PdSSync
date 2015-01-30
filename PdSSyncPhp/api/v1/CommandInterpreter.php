@@ -12,7 +12,7 @@ class CommandInterpreter {
 	
 	/**
 	 * References the current list of files to be used for finalization.
-	 * 
+	 *
 	 * @var array
 	 */
 	private $listOfFiles = array ();
@@ -27,7 +27,7 @@ class CommandInterpreter {
 	
 	/**
 	 * Interprets the command bunch and
-	 * 
+	 *
 	 * @param string $treeId        	
 	 * @param string $syncIdentifier        	
 	 * @param array $bunchOfCommand        	
@@ -36,7 +36,9 @@ class CommandInterpreter {
 	 */
 	function interpretBunchOfCommand($treeId, $syncIdentifier, array $bunchOfCommand, $finalHashMapFilePath) {
 		$failures = array ();
-		foreach ( $bunchOfCommand as $command ) {
+		// Sort the command to execute creative command first and  destructive commands at the end.
+		$sortedCommands=usort($bunchOfCommand,array ($this,'_compareCommand'));
+		foreach ( $sortedCommands as $sortedCommands ) {
 			if (is_array ( $command )) {
 				$result = $this->_decodeAndRunCommand ( $syncIdentifier, $command, $treeId );
 				if ($result != NULL) {
@@ -57,6 +59,16 @@ class CommandInterpreter {
 		}
 	}
 	
+	private function  _compareCommand($a,$b){
+		//Compare the command by PdSSyncCMDParamsRank
+		// PdSCreateOrUpdate = 0
+		// PdSCopy = 1
+		// PdSMove = 2
+		// PdSDelete = 3	
+		return strnatcmp($a[PdSCommand], $b[PdSCommand]);
+	}
+	
+	
 	/**
 	 * Finalizes the bunch of command
 	 *
@@ -66,7 +78,7 @@ class CommandInterpreter {
 	private function _finalize($treeId, $syncIdentifier, $finalHashMapFilePath) {
 		$failures = array ();
 		foreach ( $this->listOfFiles as $file ) {
-			if(substr ( $file, - 1 ) != "/"){
+			if (substr ( $file, - 1 ) != "/") {
 				$relativePath = dirname ( $file ) . DIRECTORY_SEPARATOR . $syncIdentifier . basename ( $file );
 				$protectedPath = $this->ioManager->absolutePath ( $treeId, $relativePath );
 				if ($this->ioManager->exists ( $protectedPath )) {
@@ -74,7 +86,7 @@ class CommandInterpreter {
 				} else {
 					$failures [] = 'Unexisting path : ' . $protectedPath . ' -> ' . $treeId . ' (' . $relativePath . ') ';
 				}
-			}else{
+			} else {
 				// It is a folder with do not prefix currently the folders
 			}
 		}
@@ -91,10 +103,9 @@ class CommandInterpreter {
 		}
 	}
 	
-	
 	/**
 	 * Decodes and runs the command
-	 * 
+	 *
 	 * @param
 	 *        	$syncIdentifier
 	 * @param array $cmd        	
@@ -112,80 +123,37 @@ class CommandInterpreter {
 					if (! isset ( $cmd [PdSDestination] )) {
 						return 'PdSDestination must be non null :' . $cmd;
 					}
-					if ($this->_isAllowedTo ( W_PRIVILEGE, $cmd [PdSDestination] )) {
-						// There is no real FS action to perform
-						// We just added the file for finalization.
-						$this->listOfFiles [] = $cmd [PdSDestination];
-						return NULL;
-					} else {
-						return 'PdSCreateOrUpdate W_PRIVILEGE required for :' . $cmd [PdSDestination];
-					}
+					// There is no real FS action to perform
+					// We just added the file for finalization.
+					$this->listOfFiles [] = $cmd [PdSDestination];
+					return NULL;
 					break;
 				case PdSCopy :
-					if ($this->_isAllowedTo ( R_PRIVILEGE, $cmd [PdSSource] ) && $this->_isAllowedTo ( R_PRIVILEGE, $cmd [PdSDestination] )) {
-						if ($this->ioManager->copy ( $source, $destination )) {
-							return NULL;
-						} else {
-							return 'PdSCopy error';
-						}
+					if ($this->ioManager->copy ( $source, $destination )) {
 						return NULL;
 					} else {
-						return 'PdSCopy R_PRIVILEGE required on ' . $cmd [PdSSource] . 'AND R_PRIVILEGE required on  ' . $cmd [PdSDestination];
+						return 'PdSCopy error';
 					}
+					return NULL;
 					break;
 				case PdSMove :
-					if ($this->_isAllowedTo ( R_PRIVILEGE, $cmd [PdSSource] ) && $this->_isAllowedTo ( R_PRIVILEGE, $cmd [PdSDestination] )) {
-						if ($this->ioManager->rename ( $source, $destination )) {
-							return NULL;
-						} else {
-							return 'PdSMove error source:' . $cmd [PdSSource] . ' destination: ' . $cmd [PdSDestination];
-							;
-						}
+					if ($this->ioManager->rename ( $source, $destination )) {
+						return NULL;
 					} else {
-						return 'PdSMove R_PRIVILEGE required on ' . $cmd [PdSSource] . 'AND R_PRIVILEGE required on  ' . $cmd [PdSDestination];
+						return 'PdSMove error source:' . $cmd [PdSSource] . ' destination: ' . $cmd [PdSDestination];
 					}
 					break;
 				case PdSDelete :
-					if ($this->_isAllowedTo ( W_PRIVILEGE, $cmd [PdSDestination] )) {
-						if ($this->ioManager->delete ( $destination )) {
-							return NULL;
-						} else {
-							return 'PdSDelete error on ' . $cmd [PdSDestination];
-						}
+					if ($this->ioManager->delete ( $destination )) {
 						return NULL;
 					} else {
-						return 'PdSDelete W_PRIVILEGE required on ' . $cmd [PdSDestination];
+						return 'PdSDelete error on ' . $cmd [PdSDestination];
 					}
-					
-					break;
-				case PdsSanitize :
-					if ($this->_isAllowedTo ( R_PRIVILEGE, $this->ioManager->absolutePath ( $treeId, '' ) )) {
-						// @todo purge any unfinalized sync in progress.
-					}
-					break;
-				case PdSChmod :
-					if ($this->_isAllowedTo ( R_PRIVILEGE, $this->ioManager->absolutePath ( $treeId, '' ) )) {
-						// @todo chmod should apply to the whole tree
-					}
-					
-					break;
-				case PdSForget :
-					if ($this->_isAllowedTo ( R_PRIVILEGE, $this->ioManager->absolutePath ( $treeId, '' ) )) {
-						// @todo erase the undoers and redoers to clean up the delta history
-					}
-					break;
 				default :
 					break;
 			}
 		}
 		return 'CMD ' . json_encode ( $cmd ) . ' is not valid';
-	}
-	private function _isAllowedTo($privilege, $relativePath) {
-		// @todo
-		// define ('R_PRIVILEGE', 2);
-		// define ('W_PRIVILEGE', 4);
-		// define ('X_PRIVILEGE', 8);
-		return true;
 	}
 }
 ?>

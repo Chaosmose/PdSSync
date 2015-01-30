@@ -186,23 +186,24 @@ abstract  class IOManagerAbstract  {
 		if ($currentPublicId == NULL) {
 			$messages [] = 'tree does not exists';
 		} else {
-			
 			$currentPublicIdFolder = $this->repositoryAbsolutePath () . $currentPublicId . DIRECTORY_SEPARATOR;
 			$oldPublicId = $this->treeData [0];
 			$newPublicId = $this->_createAPublicId ();
 			$newPublicIdFolder = $this->repositoryAbsolutePath () . $newPublicId . DIRECTORY_SEPARATOR;
 			$this->treeData [0] = $newPublicId;
 			if ($this->exists ( $currentPublicIdFolder )) {
-				
 				if ($this->put_contents ( $this->_treeInfosFolderPathFor ( $treeId ) . TREE_INFOS_FILENAME, json_encode ( $this->treeData ) ) == false) {
 					$messages [] = $treeId . ' tree infos file_put_contents error ' . $this->_treeInfosFolderPathFor ( $treeId ) . TREE_INFOS_FILENAME;
 				} else {
+					// @TODO to be refactored We do not rename on touch.
+					/*
 					if ($this->rename ( $currentPublicIdFolder, $newPublicIdFolder ) == false) {
 						$messages [] = $treeId . ' moving folder error ';
 						// we need to try to reset the tree infos (fault resilience)
 						$this->treeData [0] = $oldPublicId;
 						$this->put_contents ( $this->_treeInfosFolderPathFor ( $treeId ) . TREE_INFOS_FILENAME, json_encode ( $this->treeData ) );
 					}
+					*/
 				}
 			} else {
 				$messages [] = $currentPublicIdFolder . ' does not exist';

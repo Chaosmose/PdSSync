@@ -46,9 +46,17 @@
     void (^executionBlock)(void) = ^(void) {
         [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
             if(sourceHashMap && destinationHashMap ){
+                
                 DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
                                                         andDestination:destinationHashMap];
+                
+                NSLog(@"%@",[NSString stringWithFormat:@"%@",[dpm dictionaryRepresentation]]);
                 NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
+                NSMutableString*cmdString=[NSMutableString string];
+                for (NSString*cmd in commands) {
+                    [cmdString appendFormat:@"%@\n",[cmd copy]];
+                }
+                NSLog(@"%@",cmdString);
                 
                    PdSCommandInterpreter*interpreter= [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
                                                            progressBlock:^(uint taskIndex, float progress) {
@@ -57,6 +65,8 @@
                                                            } andCompletionBlock:^(BOOL success, NSString *message) {
                                                                completionBlock(success,message);
                                                            }];
+                
+           
                 interpreter.finalizationDelegate=self.finalizationDelegate;
                 
             }else{

@@ -41,9 +41,11 @@ Json representation :
 
 ```javascript
 	{
-		"createdPaths":[]
-		"deletedPaths":[]
-		"updatedPaths":["folder1/4fd6de231a723be15375552928c9c52a.track"]
+		"createdPaths":[],
+		"copiedPaths":["folder1/a.mp3","folder2/a.mp3"],
+		"deletedPaths":[],
+		"movedPaths":["x.txt","folder1/y.txt"],
+		"updatedPaths":["folder1/4fd6de231a723be15375552928c9c52a.track"],
 	}
 ```
 
@@ -89,33 +91,24 @@ Json Encoded command [PdSCopy,<PdSDestination>,<PdSSource>] : [1,'a/a.caf','b/c/
 ```c
 typedef NS_ENUM (NSUInteger,
                   PdSSyncCommand) {
-    PdSCreateOrUpdate   = 0 , // W destination
-    PdSCopy     		= 1 , // R source W destination
-    PdSMove     		= 2 , // R source W destination
-    PdSDelete   		= 3 , // W source
+    PdSCreateOrUpdate   = 0 , // W destination and source
+    PdSCopy             = 1 , // R source W destination
+    PdSMove             = 2 , // R source W destination
+    PdSDelete           = 3 , // W source
 } ;
 
-typedef NS_ENUM(NSUInteger,
-                PdSSyncCMDParam) {
-    PdSDestination = 0,
-    PdSSource      = 1
-} ;
-```
-##### Admin CMD  #####
-```c
 typedef NS_ENUM (NSUInteger,
                  PdSAdminCommand) {
-    PdsSanitize    = 4 , // X on tree
-    PdSChmod       = 5 , // X on tree
-    PdSForget      = 6 , // X on tree
+    PdsSanitize    = 4
 } ;
 
 typedef NS_ENUM(NSUInteger,
-                PdSAdminCMDParam) {
-    PdSPoi         = 0,
-    PdSDepth       = 1,
-    PdSValue       = 2
+                PdSSyncCMDParamRank) {
+    PdSCommand     = 0,
+    PdSDestination = 1,
+    PdSSource      = 2
 } ;
+
 ```
 
 ## How to proceed to basic tests with httpie ##
