@@ -224,7 +224,6 @@ class PdSSyncAPI {
 		}
 	}
 	
-	// @todo ACL for touch
 	protected function touch() {
 		if ($this->method == 'POST') {
 			if (isset ( $this->subject ) && count ( $this->args ) > 0 && $this->subject == "tree") {
@@ -237,7 +236,7 @@ class PdSSyncAPI {
 				if ($result == NULL) {
 					return $this->_response ( NULL, 200 );
 				} else {
-					return $this->_response ( $result, 400 );
+					return $this->_response ( $result, 404 );
 				}
 			} else {
 				return $this->_response ( 'Unknown entity' . $this->args [0], 400 );

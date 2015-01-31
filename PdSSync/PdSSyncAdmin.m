@@ -44,7 +44,7 @@
  */
 -(void)synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
                  andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
-    int attempts=1;
+    int attempts=0;
     [self _synchronizeWithprogressBlock:progressBlock
                      andCompletionBlock:completionBlock
                         numberOfAttempt:attempts];
@@ -71,9 +71,11 @@
                 NSLog(@"%@",[NSString stringWithFormat:@"%@",[dpm dictionaryRepresentation]]);
                 NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
                 NSMutableString*cmdString=[NSMutableString string];
+                [cmdString appendString:@"\n"];
                 for (NSString*cmd in commands) {
                     [cmdString appendFormat:@"%@\n",[cmd copy]];
                 }
+                [cmdString appendString:@"\n"];
                 NSLog(@"%@",cmdString);
                 
                 PdSCommandInterpreter*interpreter= [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext

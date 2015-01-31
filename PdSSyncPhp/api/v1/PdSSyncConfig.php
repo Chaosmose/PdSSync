@@ -23,7 +23,6 @@ define ( 'CREATIVE_KEY',	'default-creative-key' ); // Used to validate a tree cr
 define ( 'SECRET',	'default-secret-key' ); // Used create the data system folder
 
 
-
 //////////////////////
 // MISC 
 //////////////////////
@@ -35,6 +34,6 @@ define ( 'MIN_TREE_ID_LENGTH',	1  );
 //////////////////////
 
 define ('DEBUG_INPUTS',FALSE); // Should be FALSE and turned to TRUE only for exceptionnal purposes
-define ('DEBUG_INPUTS_IS_SELECTIVE',TRUE);// Allows to selectively debug inputs calls
+define ('DEBUG_INPUTS_IS_SELECTIVE',FALSE);// Allows to selectively debug inputs calls
 define ('DEBUG_INPUTS_FOR_METHOD','GET');
 define ('DEBUG_INPUTS_FOR_ENDPOINT','hashMap'); 

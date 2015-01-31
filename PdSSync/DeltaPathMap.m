@@ -41,7 +41,7 @@ NSString* const movedPathsKey=@"movedPaths";
     return @{
              createdPathsKey:_createdPaths,
              deletedPathsKey:_deletedPaths,
-             updatedPathsKey:_deletedPaths,
+             updatedPathsKey:_updatedPaths,
              copiedPathsKey:_copiedPaths,
              movedPathsKey:_movedPaths
             };

@@ -36,10 +36,23 @@ class CommandInterpreter {
 	 */
 	function interpretBunchOfCommand($treeId, $syncIdentifier, array $bunchOfCommand, $finalHashMapFilePath) {
 		$failures = array ();
-		// Sort the command to execute creative command first and  destructive commands at the end.
-		$sortedCommands=usort($bunchOfCommand,array ($this,'_compareCommand'));
-		foreach ( $sortedCommands as $sortedCommands ) {
+		$hasProceededToUnPrefixing = FALSE;
+		// Order matters.
+		// Sort the command to execute delete commands at the end (after create, copy and move)
+		usort ( $bunchOfCommand, array (
+				$this,
+				'_compareCommand' 
+		) );
+		foreach ( $bunchOfCommand as $command ) {
 			if (is_array ( $command )) {
+				if ($hasProceededToUnPrefixing === FALSE && $command [PdSCommand] > PdSCreateOrUpdate) {
+					// Un prefix after running all PdSCreateOrUpdate commands.
+					$unPrefixingFailures = $this->_unPrefix ( $treeId, $syncIdentifier );
+					if (count ( $unPrefixingFailures ) > 0) {
+						return $unPrefixingFailures;
+					}
+					$hasProceededToUnPrefixing = TRUE;
+				}
 				$result = $this->_decodeAndRunCommand ( $syncIdentifier, $command, $treeId );
 				if ($result != NULL) {
 					$failures [] = $result;
@@ -55,19 +68,23 @@ class CommandInterpreter {
 		if (count ( $failures ) > 0) {
 			return $failures;
 		} else {
-			return $this->_finalize ( $treeId, $syncIdentifier, $finalHashMapFilePath );
+			$this->ioManager->mkdir ( $this->ioManager->absolutePath ( $treeId, METADATA_FOLDER ) );
+			if ($this->ioManager->saveHashMap ( $treeId, $finalHashMapFilePath )) {
+				return NULL;
+			} else {
+				$failures [] = 'Error when saving the hashmap';
+				return $failures;
+			}
 		}
 	}
-	
-	private function  _compareCommand($a,$b){
-		//Compare the command by PdSSyncCMDParamsRank
+	private function _compareCommand($a, $b) {
+		// Compare the command by PdSSyncCMDParamsRank
 		// PdSCreateOrUpdate = 0
 		// PdSCopy = 1
 		// PdSMove = 2
-		// PdSDelete = 3	
-		return strnatcmp($a[PdSCommand], $b[PdSCommand]);
+		// PdSDelete = 3
+		return ($a [PdSCommand] > $b [PdSCommand]);
 	}
-	
 	
 	/**
 	 * Finalizes the bunch of command
@@ -75,7 +92,7 @@ class CommandInterpreter {
 	 * @param string $syncIdentifier        	
 	 * @param string $finalHashMapFilePath        	
 	 */
-	private function _finalize($treeId, $syncIdentifier, $finalHashMapFilePath) {
+	private function _unPrefix($treeId, $syncIdentifier) {
 		$failures = array ();
 		foreach ( $this->listOfFiles as $file ) {
 			if (substr ( $file, - 1 ) != "/") {
@@ -88,17 +105,6 @@ class CommandInterpreter {
 				}
 			} else {
 				// It is a folder with do not prefix currently the folders
-			}
-		}
-		if (count ( $failures ) > 0) {
-			return $failures;
-		} else {
-			$this->ioManager->mkdir ( $this->ioManager->absolutePath ( $treeId, METADATA_FOLDER ) );
-			if ($this->ioManager->saveHashMap ( $treeId, $finalHashMapFilePath )) {
-				return $fileList;
-			} else {
-				$failures [] = 'Error when saving the hashmap';
-				return $failures;
 			}
 		}
 	}
@@ -124,7 +130,8 @@ class CommandInterpreter {
 						return 'PdSDestination must be non null :' . $cmd;
 					}
 					// There is no real FS action to perform
-					// We just added the file for finalization.
+					// The file should only be "unPrefixed"
+					// We only add the file to listOfFiles to be unPrefixed
 					$this->listOfFiles [] = $cmd [PdSDestination];
 					return NULL;
 					break;
@@ -132,7 +139,7 @@ class CommandInterpreter {
 					if ($this->ioManager->copy ( $source, $destination )) {
 						return NULL;
 					} else {
-						return 'PdSCopy error';
+						return 'PdSCopy error source:' . $source . ' destination: ' . $destination;
 					}
 					return NULL;
 					break;
@@ -140,14 +147,14 @@ class CommandInterpreter {
 					if ($this->ioManager->rename ( $source, $destination )) {
 						return NULL;
 					} else {
-						return 'PdSMove error source:' . $cmd [PdSSource] . ' destination: ' . $cmd [PdSDestination];
+						return 'PdSMove error source:' . $source . ' destination: ' . $destination;
 					}
 					break;
 				case PdSDelete :
 					if ($this->ioManager->delete ( $destination )) {
 						return NULL;
 					} else {
-						return 'PdSDelete error on ' . $cmd [PdSDestination];
+						return 'PdSDelete error on ' . $destination;
 					}
 				default :
 					break;
