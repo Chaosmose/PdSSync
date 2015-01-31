@@ -264,7 +264,7 @@ NSString*const hashToPathsKey=@"hToPths";
                     // If the path exist on the destination an the source
                     // and the hash is different it is an Update
                     // Else it is a created path
-                    if(![[destination->_pathToHash allKeys] containsObject:pathsOnSources]){
+                    if([[destination->_pathToHash allKeys] indexOfObject:path]!=NSNotFound){
                         // update one
                         [self _addPathOrOperation:[path copy]
                                                to:delta.updatedPaths];
