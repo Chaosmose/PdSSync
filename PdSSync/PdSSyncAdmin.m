@@ -68,16 +68,8 @@
                 DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
                                                         andDestination:destinationHashMap];
                 
-                NSLog(@"%@",[NSString stringWithFormat:@"%@",[dpm dictionaryRepresentation]]);
                 NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
-                NSMutableString*cmdString=[NSMutableString string];
-                [cmdString appendString:@"\n"];
-                for (NSString*cmd in commands) {
-                    [cmdString appendFormat:@"%@\n",[cmd copy]];
-                }
-                [cmdString appendString:@"\n"];
-                NSLog(@"%@",cmdString);
-                
+       
                 PdSCommandInterpreter*interpreter= [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
                                                                                           progressBlock:^(uint taskIndex, float progress) {
                                                                                               NSString*cmd=([commands count]>taskIndex)?[commands objectAtIndex:taskIndex]:@"POST CMD";
@@ -86,8 +78,22 @@
                                                                                               completionBlock(success,message);
                                                                                           }];
                 
-                
                 interpreter.finalizationDelegate=self.finalizationDelegate;
+                
+                progressBlock(-1,0.f,[NSString stringWithFormat:@"\nDictionary representation of DeltaPathMap\n%@",[dpm dictionaryRepresentation]]);
+                NSMutableString*cmdString=[NSMutableString string];
+                [cmdString appendString:@"\n\n** Commands to be executed : **\n"];
+                for (NSString*cmd in commands) {
+                    NSString*tmpCmdString=[NSString stringWithFormat:@"%@\n",[cmd copy]];
+                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[0," withString:@"PdSCreateOrUpdate ["];
+                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[1," withString:@"PdSCopy ["];
+                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[2," withString:@"PdSMove ["];
+                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[3," withString:@"PdSDelete ["];
+                    [cmdString appendString:tmpCmdString];
+                }
+                [cmdString appendString:@"\n"];
+                progressBlock(-1,0.f,cmdString);
+                
                 
             }else{
                 BOOL sourceHashMapIsNil=(!sourceHashMap);

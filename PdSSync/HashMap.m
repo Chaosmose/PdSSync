@@ -173,7 +173,7 @@ NSString*const hashToPathsKey=@"hToPths";
                 }
                 indexInSource++;
             }
-        }else if(nbOfOccurencesOnSource>nbOfOccurencesOnDestination){
+        }else if(nbOfOccurencesOnSource>=nbOfOccurencesOnDestination){
             // There are more occurences on source than on destination.
             // We move some files then copy the others.
             
@@ -206,20 +206,22 @@ NSString*const hashToPathsKey=@"hToPths";
     for (NSString *hash in source->_hashToPaths) {
         NSMutableArray*pathsOnDestination=[[destination->_hashToPaths objectForKey:hash] mutableCopy];
         NSMutableArray*pathsOnSources=[[source->_hashToPaths objectForKey:hash] mutableCopy];
-        NSString*toBeCopiedOriginalPath=[pathsOnSources objectAtIndex:0];
+        NSString*originalPath=[pathsOnSources objectAtIndex:0];
+        
         if (pathsOnDestination && [pathsOnDestination count]>0) {
-            // Update?
-            BOOL hasBeenUpdated=NO;
+            BOOL hasBeenMoved=NO;            
             for (NSString*path in pathsOnSources) {
-                NSString*destinationHash=[destination->_pathToHash objectForKey:path];
-                if(![destinationHash isEqualToString:hash]){
-                    if(!hasBeenUpdated){
-                        // update one
-                        [delta.updatedPaths addObject:[path copy]];
-                        hasBeenUpdated=YES;
-                    }else{
+                if(!hasBeenMoved){
+                    // Move one
+                    if(![path isEqualToString:originalPath]){
+                        NSArray*movedArray=@[path,originalPath];
+                        [delta.movedPaths addObject:movedArray];
+                    }
+                    hasBeenMoved=YES;
+                }else{
+                    if(![path isEqualToString:originalPath]){
                         // Copy the others occurences.
-                        NSArray*copiedArray=@[path,toBeCopiedOriginalPath];
+                        NSArray*copiedArray=@[path,originalPath];
                         [delta.copiedPaths addObject:copiedArray];
                     }
                 }
@@ -233,16 +235,31 @@ NSString*const hashToPathsKey=@"hToPths";
                     [delta.createdPaths addObject:[path copy]];
                     hasBeenCreated=YES;
                 }else{
-                    // Copy the others occurences.
-                    NSArray*copiedArray=@[path,toBeCopiedOriginalPath];
-                    [delta.copiedPaths addObject:copiedArray];
-                    
+                    if(![path isEqualToString:originalPath]){
+                        // Copy the others occurences.
+                        NSArray*copiedArray=@[path,originalPath];
+                        [delta.copiedPaths addObject:copiedArray];
+                    }
                 }
             }
         }
     }
     return delta;
 }
+
+
+- (void)_moveOrCopyOriginal:(NSString*)originalPath
+                  fromPaths:(NSArray*)initialsPaths
+                         to:(NSArray*)finalPaths{
+    // The is to transform to initialsPaths to finalPaths
+    // With [initialsPaths count] >= [finalPaths count]
+    // We have at least one occurence that exists the originalPath;
+    // But we can have already existing paths
+    // The goal of this function is to reduce the number of operations.
+    
+    
+}
+
 
 
 /**
