@@ -309,7 +309,8 @@ NSString*const hashToPathsKey=@"hToPths";
 
 
 // Prevent from possible double entries.
-- (BOOL)_addPathOrOperation:(NSObject*)op to:(NSMutableArray*)container{
+- (BOOL)_addPathOrOperation:(NSObject*)op
+                         to:(NSMutableArray*)container{
     BOOL __block shouldBeAdded=YES;
     [container enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
         if ([op isKindOfClass:[NSArray class]]) {
@@ -340,6 +341,8 @@ NSString*const hashToPathsKey=@"hToPths";
     if(shouldBeAdded) {
         // Add the path or operation
         [container addObject:op];
+    }else{
+        NSLog(@"***");
     }
     return shouldBeAdded;
 }

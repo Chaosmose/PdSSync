@@ -65,6 +65,11 @@
         [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
             if(sourceHashMap && destinationHashMap ){
                 
+                
+                progressBlock(-1,0.f,[NSString stringWithFormat:@"\n\n\n----SYNCRONIZATION-----\n\n"]);
+                progressBlock(-1,0.f,[NSString stringWithFormat:@"\nSource: %@\n",[sourceHashMap dictionaryRepresentation]]);
+                 progressBlock(-1,0.f,[NSString stringWithFormat:@"\nDestination: %@\n",[destinationHashMap dictionaryRepresentation]]);
+                
                 DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
                                                         andDestination:destinationHashMap];
                 
