@@ -140,8 +140,7 @@ NSString*const hashToPathsKey=@"hToPths";
     // that have still one occurence present in the destination
     
     for (NSString*hash in destination->_hashToPaths) {
-        // NB : this section could be refined a little bit by preserving already valid path.
-        // But this optimization will only reduce move commands that are generally not intensive on local operation.
+        
         NSMutableArray*pathsOnDestination=[[destination->_hashToPaths objectForKey:hash] mutableCopy];
         NSMutableArray*pathsOnSources=[[source->_hashToPaths objectForKey:hash] mutableCopy];
         
@@ -151,7 +150,12 @@ NSString*const hashToPathsKey=@"hToPths";
         if(nbOfOccurencesOnSource==0){
             // We gonna delete all the files.
             for (NSString*toBeDeletedPath in pathsOnDestination) {
-                [delta.deletedPaths addObject:[toBeDeletedPath copy]];
+                // If the path exist on the destination and the source
+                // and the hash is different it is an Update not delete
+                if([[source->_pathToHash allKeys] indexOfObject:toBeDeletedPath]==NSNotFound){
+                    [self _addPathOrOperation:[toBeDeletedPath copy]
+                                       to:delta.deletedPaths];
+                }
             }
         }else if(nbOfOccurencesOnSource<nbOfOccurencesOnDestination){
             // There are more occurences on destination than on source.
@@ -159,7 +163,12 @@ NSString*const hashToPathsKey=@"hToPths";
             NSUInteger numberOfOccurenceToDelete=(nbOfOccurencesOnDestination-nbOfOccurencesOnSource);
             for (NSUInteger i=0; i<numberOfOccurenceToDelete; i++) {
                 NSString *toBeDeletedPath=[pathsOnDestination objectAtIndex:i];
-                [delta.deletedPaths addObject:[toBeDeletedPath copy]];
+                // If the path exist on the destination and the source
+                // and the hash is different it is an Update not delete
+                if([[source->_pathToHash allKeys] indexOfObject:toBeDeletedPath]==NSNotFound){
+                    [self _addPathOrOperation:[toBeDeletedPath copy]
+                                       to:delta.deletedPaths];
+                }
             }
             // Then move the preserved files to remap.
             NSUInteger indexInSource=0;
@@ -167,16 +176,19 @@ NSString*const hashToPathsKey=@"hToPths";
                 NSString *toBeMovedOriginalPath=[pathsOnDestination objectAtIndex:i];
                 NSString *toBeMovedFinalPath=[pathsOnSources objectAtIndex:indexInSource];
                 // Move only if necessary.
-                if(![toBeMovedFinalPath isEqualToString:toBeMovedFinalPath]){
+                if([self _shouldProceedToMoveOrCopyFrom:toBeMovedOriginalPath
+                                                     to:toBeMovedFinalPath
+                                        forOriginalHash:hash
+                                  destinationPathToHash:destination->_pathToHash]){
                     NSArray*movedArray=@[toBeMovedFinalPath,toBeMovedOriginalPath];
-                    [delta.movedPaths addObject:movedArray];
+                    [self _addPathOrOperation:movedArray
+                                           to:delta.movedPaths];
                 }
                 indexInSource++;
             }
         }else if(nbOfOccurencesOnSource>=nbOfOccurencesOnDestination){
             // There are more occurences on source than on destination.
             // We move some files then copy the others.
-            
             // Move
             NSUInteger numberOfOccurenceToMove=nbOfOccurencesOnDestination;
             NSString*toBeMovedFinalPath=nil;
@@ -184,18 +196,27 @@ NSString*const hashToPathsKey=@"hToPths";
                 NSString *toBeMovedOriginalPath=[pathsOnDestination objectAtIndex:i];
                 toBeMovedFinalPath=[pathsOnSources objectAtIndex:i];
                 // Move only if necessary.
-                if(![toBeMovedFinalPath isEqualToString:toBeMovedFinalPath]){
+                if([self _shouldProceedToMoveOrCopyFrom:toBeMovedOriginalPath
+                                                     to:toBeMovedFinalPath
+                                        forOriginalHash:hash
+                                  destinationPathToHash:destination->_pathToHash]){
                     NSArray*movedArray=@[toBeMovedFinalPath,toBeMovedOriginalPath];
                     [delta.movedPaths addObject:movedArray];
+                    [self _addPathOrOperation:movedArray
+                                           to:delta.movedPaths];
                 }
             }
             // Copy
             NSString*toBeCopiedOriginalPath=toBeMovedFinalPath;
             for (NSUInteger i=numberOfOccurenceToMove;i<nbOfOccurencesOnSource; i++) {
                 NSString *toBeCopiedFinalPath=[pathsOnSources objectAtIndex:i];
-                if(![toBeCopiedFinalPath isEqualToString:toBeCopiedOriginalPath]){
+                if([self _shouldProceedToMoveOrCopyFrom:toBeCopiedOriginalPath
+                                                     to:toBeCopiedFinalPath
+                                        forOriginalHash:hash
+                                  destinationPathToHash:destination->_pathToHash]){
                     NSArray*copiedArray=@[toBeCopiedFinalPath,toBeCopiedOriginalPath];
-                    [delta.copiedPaths addObject:copiedArray];
+                    [self _addPathOrOperation:copiedArray
+                                           to:delta.copiedPaths];
                 }
             }
         }
@@ -209,36 +230,59 @@ NSString*const hashToPathsKey=@"hToPths";
         NSString*originalPath=[pathsOnSources objectAtIndex:0];
         
         if (pathsOnDestination && [pathsOnDestination count]>0) {
-            BOOL hasBeenMoved=NO;            
+            BOOL hasBeenMoved=NO;
             for (NSString*path in pathsOnSources) {
                 if(!hasBeenMoved){
                     // Move one
-                    if(![path isEqualToString:originalPath]){
+                    if([self _shouldProceedToMoveOrCopyFrom:originalPath
+                                                         to:path
+                                            forOriginalHash:hash
+                                      destinationPathToHash:destination->_pathToHash]){
                         NSArray*movedArray=@[path,originalPath];
-                        [delta.movedPaths addObject:movedArray];
+                        [self _addPathOrOperation:movedArray
+                                               to:delta.movedPaths];
                     }
                     hasBeenMoved=YES;
                 }else{
-                    if(![path isEqualToString:originalPath]){
+                    if([self _shouldProceedToMoveOrCopyFrom:originalPath
+                                                         to:path
+                                            forOriginalHash:hash
+                                      destinationPathToHash:destination->_pathToHash]){
                         // Copy the others occurences.
                         NSArray*copiedArray=@[path,originalPath];
-                        [delta.copiedPaths addObject:copiedArray];
+                        [self _addPathOrOperation:copiedArray
+                                               to:delta.copiedPaths];
                     }
                 }
             }
         }else{
             // Create.
-            BOOL hasBeenCreated=NO;
+            BOOL hasBeenProcessed=NO;
             for (NSString*path in pathsOnSources) {
-                if(!hasBeenCreated){
-                    // update one
-                    [delta.createdPaths addObject:[path copy]];
-                    hasBeenCreated=YES;
+                if(!hasBeenProcessed){
+                    
+                    // If the path exist on the destination an the source
+                    // and the hash is different it is an Update
+                    // Else it is a created path
+                    if(![[destination->_pathToHash allKeys] containsObject:pathsOnSources]){
+                        // update one
+                        [self _addPathOrOperation:[path copy]
+                                               to:delta.updatedPaths];
+                    }else{
+                        // create one
+                        [self _addPathOrOperation:[path copy]
+                                           to:delta.createdPaths];
+                    }
+                    hasBeenProcessed=YES;
                 }else{
-                    if(![path isEqualToString:originalPath]){
+                    if([self _shouldProceedToMoveOrCopyFrom:originalPath
+                                                         to:path
+                                            forOriginalHash:hash
+                                      destinationPathToHash:destination->_pathToHash]){
                         // Copy the others occurences.
                         NSArray*copiedArray=@[path,originalPath];
-                        [delta.copiedPaths addObject:copiedArray];
+                        [self _addPathOrOperation:copiedArray
+                                               to:delta.copiedPaths];
                     }
                 }
             }
@@ -247,19 +291,58 @@ NSString*const hashToPathsKey=@"hToPths";
     return delta;
 }
 
+- (BOOL)_shouldProceedToMoveOrCopyFrom:(NSString*)originalPath
+                                    to:(NSString*)finalPath
+                       forOriginalHash:(NSString*)hash
+                 destinationPathToHash:(NSMutableDictionary*)pathToHash{
+    if([originalPath isEqualToString:finalPath]){
+        // That's a neutral operation
+        return NO;
+    }
 
-- (void)_moveOrCopyOriginal:(NSString*)originalPath
-                  fromPaths:(NSArray*)initialsPaths
-                         to:(NSArray*)finalPaths{
-    // The is to transform to initialsPaths to finalPaths
-    // With [initialsPaths count] >= [finalPaths count]
-    // We have at least one occurence that exists the originalPath;
-    // But we can have already existing paths
-    // The goal of this function is to reduce the number of operations.
-    
-    
+    if([[pathToHash objectForKey:finalPath] isEqualToString:hash]){
+        // The hash on the destination is already Correct
+        return NO;
+    }
+    return YES;
 }
 
+
+// Prevent from possible double entries.
+- (BOOL)_addPathOrOperation:(NSObject*)op to:(NSMutableArray*)container{
+    BOOL __block shouldBeAdded=YES;
+    [container enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+        if ([op isKindOfClass:[NSArray class]]) {
+            // It is a move or a copy
+            NSArray*pair=(NSArray*)op;
+            NSArray*pair2=(NSArray*)obj;
+            if([pair count]==2 && [pair2 count]==2){
+                if([[pair objectAtIndex:0] isEqualToString:[pair2 objectAtIndex:0]]
+                   && [[pair objectAtIndex:1] isEqualToString:[pair2 objectAtIndex:1]] ){
+                    // This op already exists.
+                    shouldBeAdded=NO;
+                    *stop=YES;
+                }else{
+                    // Invalid op
+                    shouldBeAdded=NO;
+                    *stop=YES;
+                }
+            }
+        }else if([op isKindOfClass:[NSString class]]){
+            // It is a simple path to be created, deleted or updated
+            if([(NSString*)obj isEqualToString:(NSString *)op]){
+                // This path already exists
+                shouldBeAdded=NO;
+                *stop=YES;
+            }
+        }
+    }];
+    if(shouldBeAdded) {
+        // Add the path or operation
+        [container addObject:op];
+    }
+    return shouldBeAdded;
+}
 
 
 /**
