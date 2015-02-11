@@ -68,8 +68,16 @@ class CommandInterpreter {
 		if (count ( $failures ) > 0) {
 			return $failures;
 		} else {
+			if($hasProceededToUnPrefixing==FALSE){
+				// @todo is it usefull?
+				$unPrefixingFailures = $this->_unPrefix ( $treeId, $syncIdentifier );
+				if (count ( $unPrefixingFailures ) > 0) {
+					return $unPrefixingFailures;
+				}
+			}
 			$this->ioManager->mkdir ( $this->ioManager->absolutePath ( $treeId, METADATA_FOLDER ) );
 			if ($this->ioManager->saveHashMap ( $treeId, $finalHashMapFilePath )) {
+				
 				return NULL;
 			} else {
 				$failures [] = 'Error when saving the hashmap';
