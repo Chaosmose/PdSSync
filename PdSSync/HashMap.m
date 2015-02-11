@@ -312,6 +312,7 @@ NSString*const hashToPathsKey=@"hToPths";
 - (BOOL)_addPathOrOperation:(NSObject*)op
                          to:(NSMutableArray*)container{
     BOOL __block shouldBeAdded=YES;
+
     [container enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
         if ([op isKindOfClass:[NSArray class]]) {
             // It is a move or a copy
@@ -323,12 +324,13 @@ NSString*const hashToPathsKey=@"hToPths";
                     // This op already exists.
                     shouldBeAdded=NO;
                     *stop=YES;
-                }else{
+                }
+            }else{
                     // Invalid op
                     shouldBeAdded=NO;
                     *stop=YES;
                 }
-            }
+
         }else if([op isKindOfClass:[NSString class]]){
             // It is a simple path to be created, deleted or updated
             if([(NSString*)obj isEqualToString:(NSString *)op]){
@@ -342,7 +344,6 @@ NSString*const hashToPathsKey=@"hToPths";
         // Add the path or operation
         [container addObject:op];
     }else{
-        NSLog(@"***");
     }
     return shouldBeAdded;
 }
