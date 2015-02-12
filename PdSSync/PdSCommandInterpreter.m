@@ -110,9 +110,16 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 }
 
 
-+(id)encodeCreateOrUpdate:(NSString*)source destination:(NSString*)destination{
++(id)encodeCreate:(NSString*)source destination:(NSString*)destination{
     if(source && destination){
-        return [NSString stringWithFormat:@"[%@,\"%@\",\"%@\"]", @(PdSCreateOrUpdate),destination,source];
+        return [NSString stringWithFormat:@"[%@,\"%@\",\"%@\"]", @(PdSCreate),destination,source];
+    }
+    return nil;
+}
+
++(id)encodeUpdate:(NSString*)source destination:(NSString*)destination{
+    if(source && destination){
+        return [NSString stringWithFormat:@"[%@,\"%@\",\"%@\"]", @(PdSUpdate),destination,source];
     }
     return nil;
 }
@@ -156,7 +163,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         for (id encodedCommand in _bunchOfCommand) {
             NSArray*cmdAsAnArray=[self _encodedCommandToArray:encodedCommand];
             if(cmdAsAnArray){
-                if([[cmdAsAnArray objectAtIndex:0] intValue]==PdSCreateOrUpdate){
+                if([[cmdAsAnArray objectAtIndex:0] intValue]==PdSCreate||
+                   [[cmdAsAnArray objectAtIndex:0] intValue]==PdSUpdate){
                     [creativeCommands addObject:cmdAsAnArray];
                 }
                 [_allCommands addObject:cmdAsAnArray];
@@ -287,7 +295,15 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         NSString*arg1= [cmd count]>1?[cmd objectAtIndex:1]:nil;
         NSString*arg2=[cmd count]>2?[cmd objectAtIndex:2]:nil;
         switch (cmdName) {
-            case (PdSCreateOrUpdate):{
+            case (PdSCreate):{
+                if(arg1 && arg2){
+                    [self _runCreateOrUpdate:arg2 destination:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            case (PdSUpdate):{
                 if(arg1 && arg2){
                     [self _runCreateOrUpdate:arg2 destination:arg1];
                 }else{
@@ -623,7 +639,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                     return;
                     error=nil;
                 }
-            }else if(command==PdSCreateOrUpdate){
+            }else if(command==PdSCreate || command==PdSUpdate){
                 if(!isAFolder){
                     // UN PREFIX
                     [_fileManager moveItemAtPath:[prefixedFilePath filteredFilePath]
@@ -753,10 +769,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     
     NSMutableArray*commands=[NSMutableArray array];
     for (NSString*identifier in deltaPathMap.createdPaths) {
-        [commands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:identifier destination:identifier]];
+        [commands addObject:[PdSCommandInterpreter encodeCreate:identifier destination:identifier]];
     }
     for (NSString*identifier in deltaPathMap.updatedPaths) {
-        [commands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:identifier destination:identifier]];
+        [commands addObject:[PdSCommandInterpreter encodeUpdate:identifier destination:identifier]];
     }
     for (NSArray*movementArray in deltaPathMap.movedPaths) {
         NSString*source=[movementArray objectAtIndex:1];

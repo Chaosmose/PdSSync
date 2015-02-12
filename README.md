@@ -91,10 +91,11 @@ Json Encoded command [PdSCopy,<PdSDestination>,<PdSSource>] : [1,'a/a.caf','b/c/
 ```c
 typedef NS_ENUM (NSUInteger,
                   PdSSyncCommand) {
-    PdSCreateOrUpdate   = 0 , // W destination and source
-    PdSMove             = 1 , // R source W destination
-    PdSCopy             = 2 , // R source W destination
-    PdSDelete           = 3 , // W source
+    PdSCreate   = 0 , 
+    PdSUpdate   = 1 ,
+    PdSMove     = 2 , 
+    PdSCopy     = 3 , 
+    PdSDelete   = 4 
 } ;
 
 

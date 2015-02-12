@@ -80,7 +80,8 @@ extern NSString * const PdSSyncInterpreterHasFinalized;// Notification
 // Commands encoding returns the encoded command in the relevant format.
 // Currently we use JSON, MsgPack could be supported soon.
 
-+(id)encodeCreateOrUpdate:(NSString*)source destination:(NSString*)destination;
++(id)encodeCreate:(NSString*)source destination:(NSString*)destination;
++(id)encodeUpdate:(NSString*)source destination:(NSString*)destination;
 +(id)encodeCopy:(NSString*)source destination:(NSString*)destination;
 +(id)encodeMove:(NSString*)source destination:(NSString*)destination;
 +(id)encodeRemove:(NSString*)destination;

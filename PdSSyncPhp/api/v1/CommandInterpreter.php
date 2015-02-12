@@ -45,8 +45,8 @@ class CommandInterpreter {
 		) );
 		foreach ( $bunchOfCommand as $command ) {
 			if (is_array ( $command )) {
-				if ($hasProceededToUnPrefixing === FALSE && $command [PdSCommand] > PdSCreateOrUpdate) {
-					// Un prefix after running all PdSCreateOrUpdate commands.
+				if ($hasProceededToUnPrefixing === FALSE && $command [PdSCommand] > PdSUpdate) {
+					// Un prefix after running all  commands.
 					$unPrefixingFailures = $this->_unPrefix ( $treeId, $syncIdentifier );
 					if (count ( $unPrefixingFailures ) > 0) {
 						return $unPrefixingFailures;
@@ -87,10 +87,11 @@ class CommandInterpreter {
 	}
 	private function _compareCommand($a, $b) {
 		// Compare the command by PdSSyncCMDParamsRank
-		// PdSCreateOrUpdate = 0
-		// PdSCopy = 1
-		// PdSMove = 2
-		// PdSDelete = 3
+		// PdSCreate = 0
+		// PdSUpdate = 1
+		// PdSCopy = 2
+		// PdSMove = 3
+		// PdSDelete = 4
 		return ($a [PdSCommand] > $b [PdSCommand]);
 	}
 	
@@ -133,7 +134,7 @@ class CommandInterpreter {
 			$destination = $this->ioManager->absolutePath ( $treeId, $cmd [PdSDestination] );
 			$source = $this->ioManager->absolutePath ( $treeId, $cmd [PdSSource] );
 			switch ($command) {
-				case PdSCreateOrUpdate :
+				case PdSCreate :
 					if (! isset ( $cmd [PdSDestination] )) {
 						return 'PdSDestination must be non null :' . $cmd;
 					}
@@ -143,6 +144,16 @@ class CommandInterpreter {
 					$this->listOfFiles [] = $cmd [PdSDestination];
 					return NULL;
 					break;
+					case PdSUpdate :
+						if (! isset ( $cmd [PdSDestination] )) {
+							return 'PdSDestination must be non null :' . $cmd;
+						}
+						// There is no real FS action to perform
+						// The file should only be "unPrefixed"
+						// We only add the file to listOfFiles to be unPrefixed
+						$this->listOfFiles [] = $cmd [PdSDestination];
+						return NULL;
+						break;
 				case PdSCopy :
 					if ($this->ioManager->copy ( $source, $destination )) {
 						return NULL;

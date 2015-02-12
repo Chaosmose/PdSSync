@@ -15,10 +15,11 @@ define ('SYNC_PREFIX_SIGNATURE','.PdSSync');
 // PdSSyncCommands
 ///////////////////////////////
 
-define ('PdSCreateOrUpdate'	,	0);        // W source - un prefix the asset
-define ('PdSMove'	,					1); 		// R source W destination
-define ('PdSCopy'	,					2); 		// R source W destination
-define ('PdSDelete'	,					3);		// W source
+define ('PdSCreate'	,					0);        // W source - un prefix the asset
+define ('PdSUpdate'	,					1);        // W source - un prefix the asset
+define ('PdSMove'	,					2); 		// R source W destination
+define ('PdSCopy'	,					3); 		// R source W destination
+define ('PdSDelete'	,					4);		// W source
 
 // PdSSyncCMDParamsRank
 define ('PdSCommand'   , 			0);
