@@ -17,6 +17,9 @@
 -(void)progressMessage:(NSString*)message;
 @end
 
+
+
+
 extern NSString * const PdSSyncInterpreterWillFinalize;// Notification
 extern NSString * const PdSSyncInterpreterHasFinalized;// Notification
 
@@ -40,6 +43,8 @@ extern NSString * const PdSSyncInterpreterHasFinalized;// Notification
  * ( Total command number / executed command ) + proportionnal progress on the current command
  */
 @property (nonatomic,readonly)uint progressCounter;
+
+
 
 /**
  *

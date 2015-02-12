@@ -56,9 +56,11 @@ extern NSString* const hashToPathsKey;
  *  @param source the source hashMap
  *  @param destination  the destination hashMap
  *
- *  @return the DeltaHashMap
+ *  @return the DeltaHashMap 
  */
-- (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination;
+- (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source
+                         andDestination:(HashMap*)destination
+                             withFilter:(void (^)(DeltaPathMap **pathMap))filteringBlock;
 
 
 /**

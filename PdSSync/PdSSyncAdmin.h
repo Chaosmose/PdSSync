@@ -32,6 +32,23 @@ typedef NS_ENUM(NSInteger,
 
 
 /**
+ * A filtering block that call before synchronization
+ * You can modify by reference DeltaPathMap
+ *   
+ * [self->_syncAdmin setFilteringBlock:^(DeltaPathMap *__autoreleasing *pathMap) {
+ *       // We filter the pathMap;
+ *       [[*pathMap updatedPaths]enumerateObjectsWithOptions:NSEnumerationReverse
+ *           usingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+ *      if([[SLYRunnerApi sharedInstance] supportedSoundFormat:obj]){
+ *          [[*pathMap updatedPaths] removeObjectAtIndex:idx];
+ *      }
+ *   } ];
+ * }];
+ */
+@property (nonatomic, copy) void (^filteringBlock)(DeltaPathMap **pathMap);
+
+
+/**
  *  Initialize the admin facade with a contzext
  *
  *  @param context the context

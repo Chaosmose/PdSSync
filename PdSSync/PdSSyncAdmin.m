@@ -71,7 +71,8 @@
                  progressBlock(-1,0.f,[NSString stringWithFormat:@"\nDestination: %@\n",[destinationHashMap dictionaryRepresentation]]);
                 
                 DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
-                                                        andDestination:destinationHashMap];
+                                                        andDestination:destinationHashMap
+                                                            withFilter:self.filteringBlock];
                 
                 NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
        

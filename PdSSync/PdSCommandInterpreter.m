@@ -762,10 +762,14 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 + (NSMutableArray*)commandsFromDeltaPathMap:(DeltaPathMap*)deltaPathMap{
     
-    //PdSCreateOrUpdate   = 0 , // W destination and source
-    //PdSMove             = 1 , // R source W destination
-    //PdSCopy             = 2 , // R source W destination
-    //PdSDelete           = 3 , // W source
+    /*
+        PdSCreate   = 0 , // W destination and source
+        PdSUpdate   = 1 , // W destination and source
+        PdSMove     = 2 , // R source W destination
+        PdSCopy     = 3 , // R source W destination
+        PdSDelete   = 4   // W source
+
+    */
     
     NSMutableArray*commands=[NSMutableArray array];
     for (NSString*identifier in deltaPathMap.createdPaths) {

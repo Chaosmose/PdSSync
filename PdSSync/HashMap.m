@@ -129,7 +129,9 @@ NSString*const hashToPathsKey=@"hToPths";
  *
  *  @return the DeltaHashMap
  */
-- (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source andDestination:(HashMap*)destination{
+- (DeltaPathMap*)deltaHashMapWithSource:(HashMap*)source
+                         andDestination:(HashMap*)destination
+                             withFilter:(void (^)(DeltaPathMap **pathMap))filteringBlock{
     if(!source || !destination){
         return nil;
     }
@@ -288,6 +290,8 @@ NSString*const hashToPathsKey=@"hToPths";
             }
         }
     }
+    if(filteringBlock)
+        filteringBlock(&delta);
     return delta;
 }
 
