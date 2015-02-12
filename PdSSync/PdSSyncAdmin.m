@@ -91,8 +91,8 @@
                 for (NSString*cmd in commands) {
                     NSString*tmpCmdString=[NSString stringWithFormat:@"%@\n",[cmd copy]];
                     tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[0," withString:@"PdSCreateOrUpdate ["];
-                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[1," withString:@"PdSCopy ["];
-                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[2," withString:@"PdSMove ["];
+                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[1," withString:@"PdSMove ["];
+                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[2," withString:@"PdSCopy ["];
                     tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[3," withString:@"PdSDelete ["];
                     [cmdString appendString:tmpCmdString];
                 }

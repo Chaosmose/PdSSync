@@ -589,8 +589,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
         // SORT THE COMMANDS in PdSSyncCommand value order
         // PdSCreateOrUpdate = 0
-        // PdSCopy = 1
-        // PdSMove = 2
+        // PdSMove = 1
+        // PdSCopy = 2
         // PdSDelete = 3
         
         NSArray*sortedCommand=[commands sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
@@ -747,8 +747,8 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 + (NSMutableArray*)commandsFromDeltaPathMap:(DeltaPathMap*)deltaPathMap{
     
     //PdSCreateOrUpdate   = 0 , // W destination and source
-    //PdSCopy             = 1 , // R source W destination
-    //PdSMove             = 2 , // R source W destination
+    //PdSMove             = 1 , // R source W destination
+    //PdSCopy             = 2 , // R source W destination
     //PdSDelete           = 3 , // W source
     
     NSMutableArray*commands=[NSMutableArray array];
@@ -758,15 +758,15 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     for (NSString*identifier in deltaPathMap.updatedPaths) {
         [commands addObject:[PdSCommandInterpreter encodeCreateOrUpdate:identifier destination:identifier]];
     }
-    for (NSArray*copiesArray in deltaPathMap.copiedPaths) {
-        NSString*source=[copiesArray objectAtIndex:1];
-        NSString*destination=[copiesArray objectAtIndex:0];
-        [commands addObject:[PdSCommandInterpreter encodeCopy:source destination:destination]];
-    }
     for (NSArray*movementArray in deltaPathMap.movedPaths) {
         NSString*source=[movementArray objectAtIndex:1];
         NSString*destination=[movementArray objectAtIndex:0];
         [commands addObject:[PdSCommandInterpreter encodeMove:source destination:destination]];
+    }
+    for (NSArray*copiesArray in deltaPathMap.copiedPaths) {
+        NSString*source=[copiesArray objectAtIndex:1];
+        NSString*destination=[copiesArray objectAtIndex:0];
+        [commands addObject:[PdSCommandInterpreter encodeCopy:source destination:destination]];
     }
     for (NSString*identifier in deltaPathMap.deletedPaths) {
         [commands addObject:[PdSCommandInterpreter encodeRemove:identifier]];

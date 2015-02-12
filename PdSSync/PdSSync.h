@@ -19,8 +19,8 @@
 typedef NS_ENUM (NSUInteger,
                   PdSSyncCommand) {
     PdSCreateOrUpdate   = 0 , // W destination and source
-    PdSCopy             = 1 , // R source W destination
-    PdSMove             = 2 , // R source W destination
+    PdSMove             = 1 , // R source W destination
+    PdSCopy             = 2 , // R source W destination
     PdSDelete           = 3 , // W source
 } ;
 

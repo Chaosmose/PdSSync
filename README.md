@@ -92,15 +92,11 @@ Json Encoded command [PdSCopy,<PdSDestination>,<PdSSource>] : [1,'a/a.caf','b/c/
 typedef NS_ENUM (NSUInteger,
                   PdSSyncCommand) {
     PdSCreateOrUpdate   = 0 , // W destination and source
-    PdSCopy             = 1 , // R source W destination
-    PdSMove             = 2 , // R source W destination
+    PdSMove             = 1 , // R source W destination
+    PdSCopy             = 2 , // R source W destination
     PdSDelete           = 3 , // W source
 } ;
 
-typedef NS_ENUM (NSUInteger,
-                 PdSAdminCommand) {
-    PdsSanitize    = 4
-} ;
 
 typedef NS_ENUM(NSUInteger,
                 PdSSyncCMDParamRank) {
