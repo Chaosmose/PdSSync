@@ -39,7 +39,7 @@ typedef NS_ENUM(NSInteger,
  *       // We filter the pathMap;
  *       [[*pathMap updatedPaths]enumerateObjectsWithOptions:NSEnumerationReverse
  *           usingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
- *      if([[SLYRunnerApi sharedInstance] supportedSoundFormat:obj]){
+ *      if([[API objShouldNotBeUpdated:obj]){
  *          [[*pathMap updatedPaths] removeObjectAtIndex:idx];
  *      }
  *   } ];
