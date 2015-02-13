@@ -11,6 +11,11 @@
 #import "PdSCommandInterpreter.h"
 #include <stdarg.h>
 
+
+#warning NEED TO QUALIFY Path issue on iOS (filtering createRecursive path)
+#define kUSELowerMemoryApproach YES
+
+
 NSString * const PdSSyncInterpreterWillFinalize = @"PdSSyncInterpreterWillFinalize";
 NSString * const PdSSyncInterpreterHasFinalized = @"PdSSyncInterpreterHasFinalized";
 
@@ -207,7 +212,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     // The "unCreative" commands will be executed during finalization
     [self _finalizeWithCommands:_allCommands];
     if(_sanitizeAutomatically){
-        [self _sanitize:@""];
+        //[self _sanitize:@""];
     }
 }
 
@@ -290,60 +295,60 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 -(void)_runCommandFromArrayOfArgs:(NSArray*)cmd{
-
-        [self _commandInProgress];
-        if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd count]>0){
-            int cmdName=[[cmd objectAtIndex:0] intValue];
-            NSString*arg1= [cmd count]>1?[cmd objectAtIndex:1]:nil;
-            NSString*arg2=[cmd count]>2?[cmd objectAtIndex:2]:nil;
-            switch (cmdName) {
-                case (PdSCreate):{
-                    if(arg1 && arg2){
-                        [self _runCreateOrUpdate:arg2 destination:arg1];
-                    }else{
-                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
-                    }
-                    break;
+    
+    [self _commandInProgress];
+    if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd count]>0){
+        int cmdName=[[cmd objectAtIndex:0] intValue];
+        NSString*arg1= [cmd count]>1?[cmd objectAtIndex:1]:nil;
+        NSString*arg2=[cmd count]>2?[cmd objectAtIndex:2]:nil;
+        switch (cmdName) {
+            case (PdSCreate):{
+                if(arg1 && arg2){
+                    [self _runCreateOrUpdate:arg2 destination:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
                 }
-                case (PdSUpdate):{
-                    if(arg1 && arg2){
-                        [self _runCreateOrUpdate:arg2 destination:arg1];
-                    }else{
-                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
-                    }
-                    break;
-                }
-                case (PdSCopy):{
-                    if(arg1 && arg2){
-                        [self _runCopy:arg2 destination:arg1];
-                    }else{
-                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
-                    }
-                    break;
-                }
-                case (PdSMove):{
-                    if(arg1 && arg2){
-                        [self _runMove:arg2 destination:arg1];
-                    }else{
-                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
-                    }
-                    break;
-                }
-                case (PdSDelete):{
-                    if(arg1){
-                        [self _runDelete:arg1];
-                    }else{
-                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
-                    }
-                    break;
-                }
-                default:
-                    [self _interruptOnFault:[NSString stringWithFormat:@"The command %i is currently not supported",cmdName]];
-                    break;
+                break;
             }
-        }else{
-            [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command %@",cmd?cmd:@"nil"]];
+            case (PdSUpdate):{
+                if(arg1 && arg2){
+                    [self _runCreateOrUpdate:arg2 destination:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            case (PdSCopy):{
+                if(arg1 && arg2){
+                    [self _runCopy:arg2 destination:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            case (PdSMove):{
+                if(arg1 && arg2){
+                    [self _runMove:arg2 destination:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                }
+                break;
+            }
+            case (PdSDelete):{
+                if(arg1){
+                    [self _runDelete:arg1];
+                }else{
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
+                }
+                break;
+            }
+            default:
+                [self _interruptOnFault:[NSString stringWithFormat:@"The command %i is currently not supported",cmdName]];
+                break;
         }
+    }else{
+        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command %@",cmd?cmd:@"nil"]];
+    }
 }
 
 
@@ -491,53 +496,65 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 - (void)_download:(NSString*)uriString toDestination:(NSString*)destination{
     NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]];
-    NSProgress* progress=nil;
+    
+    NSString*__block p=[self _absoluteLocalPathFromRelativePath:destination
+                                                     toLocalUrl:_context.destinationBaseUrl
+                                                     withTreeId:_context.destinationTreeId
+                                                      addPrefix:YES];
+    [_fileManager createRecursivelyRequiredFolderForPath:[p filteredFilePath]];
     PdSCommandInterpreter *__weak weakSelf=self;
-    NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
-                                                                                 progress:&progress
-                                                                              destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
-                                                                                  PdSCommandInterpreter *__strong strongSelf=weakSelf;
-                                                                                  NSString*p=[strongSelf _absoluteLocalPathFromRelativePath:destination
-                                                                                                                                 toLocalUrl:_context.destinationBaseUrl
-                                                                                                                                 withTreeId:_context.destinationTreeId
-                                                                                                                                  addPrefix:YES];
-                                                                                  [_fileManager createRecursivelyRequiredFolderForPath:p];
-                                                                                  if([_fileManager fileExistsAtPath:[NSString filteredFilePathFrom:p]]){
-                                                                                      NSError*error=nil;
-                                                                                      [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
-                                                                                      if(error){
-                                                                                          NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[self _stringFromError:error]];
-                                                                                          [strongSelf _interruptOnFault:msg];
-                                                                                          
+    
+    if(kUSELowerMemoryApproach){
+        // SIMPLE REQUEST
+        AFHTTPRequestOperation *downloadRequest = [[AFHTTPRequestOperation alloc] initWithRequest:fileRequest];
+        [downloadRequest setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
+            NSData *data = [[NSData alloc] initWithData:responseObject];
+            NSError*error=nil;
+            [data writeToFile:[p filteredFilePath]
+                      options:NSDataWritingAtomic
+                        error:&error];
+            if(error){
+                NSString *msg=[NSString stringWithFormat:@"Error during downloadRequest when writing %@ %@",p,[weakSelf _stringFromError:error]];
+                [weakSelf _interruptOnFault:msg];
+            }else{
+                [weakSelf _nextCommand];
+            }
+        } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+            [weakSelf _interruptOnFault:[weakSelf _stringFromError:error]];
+        }];
+        [downloadRequest start];
+        
+    }else{
+        // DOWNLOAD TASK ARE FAILING (DUE TO MEMORY ISSUES on IOS WITH XCODE6 + Debugger.)
+        
+        NSProgress* progress=nil;
+        NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
+                                                                                     progress:&progress
+                                                                                  destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
+                                                                                      PdSCommandInterpreter *__strong strongSelf=weakSelf;
+                                                                                      if([_fileManager fileExistsAtPath:[NSString filteredFilePathFrom:p]]){
+                                                                                          NSError*error=nil;
+                                                                                          [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
+                                                                                          if(error){
+                                                                                              NSString *msg=[NSString stringWithFormat:@"Error during download task when removing %@ %@",p,[self _stringFromError:error]];
+                                                                                              [strongSelf _interruptOnFault:msg];
+                                                                                          }
                                                                                       }
-                                                                                  }
-                                                                                  return [NSURL URLWithString:p];
-                                                                              } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
-                                                                                  
-                                                                                  
-                                                                                  PdSCommandInterpreter *__strong strongSelf=weakSelf;
-                                                                                  /*
-                                                                                   [progress removeObserver:strongSelf
-                                                                                   forKeyPath:@"fractionCompleted"
-                                                                                   context:NULL];
-                                                                                   */
-                                                                                  
-                                                                                  if(error){                                                                                                                   [strongSelf _interruptOnFault:[strongSelf _stringFromError:error]];
+                                                                                      return [NSURL URLWithString:p];
+                                                                                  } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
                                                                                       
-                                                                                  }else{
-                                                                                      [strongSelf _nextCommand];
-                                                                                  }
-                                                                                  
-                                                                              }];
-    
-    
-    /*
-     [progress addObserver:self
-     forKeyPath:@"fractionCompleted"
-     options:NSKeyValueObservingOptionNew
-     context:NULL];
-     */
-    [downloadTask resume];
+                                                                                      PdSCommandInterpreter *__strong strongSelf=weakSelf;
+                                                                                      
+                                                                                      if(error){                                                                                                                   [strongSelf _interruptOnFault:[strongSelf _stringFromError:error]];
+                                                                                          
+                                                                                      }else{
+                                                                                          [strongSelf _nextCommand];
+                                                                                      }
+                                                                                      
+                                                                                  }];
+        
+        [downloadTask resume];
+    }
 }
 
 
