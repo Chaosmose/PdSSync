@@ -33,7 +33,7 @@ typedef NS_ENUM(NSInteger,
 
 /**
  * A filtering block that call before synchronization
- * You can modify by reference DeltaPathMap
+ * You can modify by reference the DeltaPathMap to remove or add paths.
  *   
  * [self->_syncAdmin setFilteringBlock:^(DeltaPathMap *__autoreleasing *pathMap) {
  *       // We filter the pathMap;

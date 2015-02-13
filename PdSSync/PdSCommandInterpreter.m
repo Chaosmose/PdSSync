@@ -603,52 +603,48 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         // EXECUTE CREATIVES COMMANDS
         NSError*error=nil;
 
-        // SORT THE COMMANDS in PdSSyncCommand value order
-        // PdSCreateOrUpdate = 0
-        // PdSMove = 1
-        // PdSCopy = 2
-        // PdSDelete = 3
+        // SORT THE COMMANDS By PdSSyncCommand value order
+        // Creation and Update will be done before Moves, Copies and Updates
+        // PdSCreate   = 0 ,
+        // PdSUpdate   = 1 ,
+        // PdSMove     = 2 ,
+        // PdSCopy     = 3 ,
+        // PdSDelete   = 4
         
         NSArray*sortedCommand=[commands sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
             NSArray*a1=(NSArray*)obj1;
             NSArray*a2=(NSArray*)obj2;
-            if ([[a1 objectAtIndex:PdSCommand] integerValue] < [[a2 objectAtIndex:PdSCommand] integerValue]){
+            if ([[a1 objectAtIndex:PdSCommand] integerValue] > [[a2 objectAtIndex:PdSCommand] integerValue]){
                 return NSOrderedDescending;
             }else{
                return NSOrderedAscending;
             }
         }];
-        
+        //NSLog(@"sortedCommand %@",sortedCommand);
         for (NSArray *cmd in sortedCommand) {
             NSString *destination=[cmd objectAtIndex:PdSDestination];
             NSUInteger command=[[cmd objectAtIndex:PdSCommand] integerValue];
             BOOL isAFolder=[[destination substringFromIndex:[destination length]-1] isEqualToString:@"/"];
-            NSString*prefixedFilePath=[self _absoluteLocalPathFromRelativePath:destination
+            NSString*destinationPrefixedFilePath=[self _absoluteLocalPathFromRelativePath:destination
                                                                    toLocalUrl:_context.destinationBaseUrl
                                                                    withTreeId:_context.destinationTreeId
                                                                     addPrefix:YES];
-            NSString*fileWithoutPrefix=[self _absoluteLocalPathFromRelativePath:destination
+            NSString*destinationFileWithoutPrefix=[self _absoluteLocalPathFromRelativePath:destination
                                                                      toLocalUrl:_context.destinationBaseUrl
                                                                      withTreeId:_context.destinationTreeId
                                                                       addPrefix:NO];
-            if(command==PdSDelete){
-                [_fileManager removeItemAtPath:[fileWithoutPrefix filteredFilePath] error:&error];
-                if(error){
-                    [self _progressMessage:@"Error on removeItemAtPath \nfrom %@ \n%@ ",[fileWithoutPrefix filteredFilePath],[error description]];
-                    [self _interruptOnFault:[error description]];
-                    return;
-                    error=nil;
-                }
-            }else if(command==PdSCreate || command==PdSUpdate){
+          
+            
+            if(command==PdSCreate || command==PdSUpdate){
                 if(!isAFolder){
                     // UN PREFIX
-                    [_fileManager moveItemAtPath:[prefixedFilePath filteredFilePath]
-                                          toPath:[fileWithoutPrefix filteredFilePath]
+                    [_fileManager moveItemAtPath:[destinationPrefixedFilePath filteredFilePath]
+                                          toPath:[destinationFileWithoutPrefix filteredFilePath]
                                            error:&error];
                     
                     
                     if(error){
-                        [self _progressMessage:@"Error on moveItemAtPath \nfrom %@ \nto %@ \n%@ ",[prefixedFilePath filteredFilePath],[fileWithoutPrefix filteredFilePath],[error description]];
+                        [self _progressMessage:@"Error on moveItemAtPath \nfrom %@ \nto %@ \n%@ ",[destinationPrefixedFilePath filteredFilePath],[destinationFileWithoutPrefix filteredFilePath],[error description]];
                         [self _interruptOnFault:[error description]];
                         return;
                         error=nil;
@@ -656,6 +652,24 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 }
 
             }
+            
+            if(command==PdSMove){
+                NSString *source=[cmd objectAtIndex:PdSSource];
+                [self _runMove:source
+                   destination:destination];
+            }
+            
+            if(command==PdSCopy){
+                NSString *source=[cmd objectAtIndex:PdSSource];
+                [self _runCopy:source
+                   destination:destination];
+            }
+            
+            if(command==PdSDelete){
+                [self _runDelete:destination];
+            }
+            
+            
         }
          // Write the Hash Map
          NSString*jsonHashMap=[self _encodetoJson:[_context.finalHashMap dictionaryRepresentation]];
@@ -707,6 +721,25 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // COPY LOCALLY
+        
+        NSString*absoluteSource=[self _absoluteLocalPathFromRelativePath:source
+                                      toLocalUrl:_context.destinationBaseUrl
+                                      withTreeId:_context.destinationTreeId
+                                       addPrefix:NO];
+        NSString*absoluteDestination=[self _absoluteLocalPathFromRelativePath:destination
+                                                              toLocalUrl:_context.destinationBaseUrl
+                                                              withTreeId:_context.destinationTreeId
+                                                               addPrefix:NO];
+        
+        NSError*error=nil;
+        [_fileManager copyItemAtPath:[absoluteSource filteredFilePath]
+                              toPath:[absoluteDestination filteredFilePath]
+                               error:&error];
+        if(error){
+         [self _progressMessage:@"Error on copyItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
+         [self _interruptOnFault:[error description]];
+        }
+
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
@@ -719,6 +752,26 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // MOVE LOCALLY
+        
+        NSString*absoluteSource=[self _absoluteLocalPathFromRelativePath:source
+                                                              toLocalUrl:_context.destinationBaseUrl
+                                                              withTreeId:_context.destinationTreeId
+                                                               addPrefix:NO];
+        NSString*absoluteDestination=[self _absoluteLocalPathFromRelativePath:destination
+                                                                   toLocalUrl:_context.destinationBaseUrl
+                                                                   withTreeId:_context.destinationTreeId
+                                                                    addPrefix:NO];
+        
+        NSError*error=nil;
+        [_fileManager moveItemAtPath:[absoluteSource filteredFilePath]
+                              toPath:[absoluteDestination filteredFilePath]
+                               error:&error];
+        if(error){
+            [self _progressMessage:@"Error on moveItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
+            [self _interruptOnFault:[error description]];
+        }
+
+        
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
@@ -730,6 +783,16 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // DELETE LOCALLY
+        NSString*absoluteDestination=[self _absoluteLocalPathFromRelativePath:destination
+                                                                   toLocalUrl:_context.destinationBaseUrl
+                                                                   withTreeId:_context.destinationTreeId
+                                                                    addPrefix:NO];
+        NSError*error=nil;
+        [_fileManager removeItemAtPath:[absoluteDestination filteredFilePath] error:&error];
+        if(error){
+            [self _progressMessage:@"Error on removeItemAtPath \nfrom %@ \n%@ ",[absoluteDestination filteredFilePath],[error description]];
+            [self _interruptOnFault:[error description]];
+        }
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
