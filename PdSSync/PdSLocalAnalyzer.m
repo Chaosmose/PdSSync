@@ -122,7 +122,7 @@
     
     // We gonna create the hashmap folder
     NSString*hashMapFileP=[[folderURL absoluteString] stringByAppendingFormat:@"%@%@.%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
-    [fileManager createRecursivelyRequiredFolderForPath:hashMapFileP];
+    [fileManager createRecursivelyRequiredFolderForPath:[hashMapFileP  filteredFilePath]];
     
     // Let s write the serialized HashMap file
     NSDictionary*dictionaryHashMap=[hashMap dictionaryRepresentation];

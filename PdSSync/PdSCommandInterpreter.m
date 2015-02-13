@@ -75,6 +75,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                context:(PdSSyncContext*)context
                          progressBlock:(void(^)(uint taskIndex,float progress))progressBlock
                     andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock;{
+    self=[super init];
     if(self){
         self->_bunchOfCommand=[bunchOfCommand copy];
         self->_context=context;
@@ -93,9 +94,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                         format:@"SourceIsLocalDestinationIsLocal is currently not supported"];
         }
         if([context isValid] && _bunchOfCommand){
-            _queue=[[NSOperationQueue alloc] init];
-            _queue.name=[NSString stringWithFormat:@"com.pereira-da-silva.PdSSync.CommandInterpreter.%@",@([self hash])];
-            [_queue setMaxConcurrentOperationCount:1];// Sequential
+            self.queue=[[NSOperationQueue alloc] init];
+            self.queue.name=[NSString stringWithFormat:@"com.pereira-da-silva.PdSSync.CommandInterpreter.%@",@([self hash])];
+            [self.queue setMaxConcurrentOperationCount:1];// Sequential
             [self _setUpManager];
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self _run];
@@ -156,7 +157,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         PdSCommandInterpreter * __weak weakSelf=self;
         NSMutableArray*__block creativeCommands=[NSMutableArray array];
         _allCommands=[NSMutableArray array];
-    
+        
         // First pass we dicriminate creative for un creative commands
         // Creative commands requires for example download or an upload.
         // Copy or move are "not creative" as we move or copy a existing resource
@@ -253,11 +254,11 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 - (void)_successFullEnd{
-     dispatch_async(dispatch_get_main_queue(), ^{
-         _completionBlock(YES,nil);
-         [[NSNotificationCenter defaultCenter] postNotificationName:PdSSyncInterpreterHasFinalized
-                                                        object:self];
-     });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        _completionBlock(YES,nil);
+        [[NSNotificationCenter defaultCenter] postNotificationName:PdSSyncInterpreterHasFinalized
+                                                            object:self];
+    });
 }
 
 
@@ -289,59 +290,60 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 -(void)_runCommandFromArrayOfArgs:(NSArray*)cmd{
-    [self _commandInProgress];
-    if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd count]>0){
-        int cmdName=[[cmd objectAtIndex:0] intValue];
-        NSString*arg1= [cmd count]>1?[cmd objectAtIndex:1]:nil;
-        NSString*arg2=[cmd count]>2?[cmd objectAtIndex:2]:nil;
-        switch (cmdName) {
-            case (PdSCreate):{
-                if(arg1 && arg2){
-                    [self _runCreateOrUpdate:arg2 destination:arg1];
-                }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+
+        [self _commandInProgress];
+        if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd count]>0){
+            int cmdName=[[cmd objectAtIndex:0] intValue];
+            NSString*arg1= [cmd count]>1?[cmd objectAtIndex:1]:nil;
+            NSString*arg2=[cmd count]>2?[cmd objectAtIndex:2]:nil;
+            switch (cmdName) {
+                case (PdSCreate):{
+                    if(arg1 && arg2){
+                        [self _runCreateOrUpdate:arg2 destination:arg1];
+                    }else{
+                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    }
+                    break;
                 }
-                break;
-            }
-            case (PdSUpdate):{
-                if(arg1 && arg2){
-                    [self _runCreateOrUpdate:arg2 destination:arg1];
-                }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                case (PdSUpdate):{
+                    if(arg1 && arg2){
+                        [self _runCreateOrUpdate:arg2 destination:arg1];
+                    }else{
+                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    }
+                    break;
                 }
-                break;
-            }
-            case (PdSCopy):{
-                if(arg1 && arg2){
-                    [self _runCopy:arg2 destination:arg1];
-                }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                case (PdSCopy):{
+                    if(arg1 && arg2){
+                        [self _runCopy:arg2 destination:arg1];
+                    }else{
+                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    }
+                    break;
                 }
-                break;
-            }
-            case (PdSMove):{
-                if(arg1 && arg2){
-                    [self _runMove:arg2 destination:arg1];
-                }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                case (PdSMove):{
+                    if(arg1 && arg2){
+                        [self _runMove:arg2 destination:arg1];
+                    }else{
+                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    }
+                    break;
                 }
-                break;
-            }
-            case (PdSDelete):{
-                if(arg1){
-                    [self _runDelete:arg1];
-                }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
+                case (PdSDelete):{
+                    if(arg1){
+                        [self _runDelete:arg1];
+                    }else{
+                        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
+                    }
+                    break;
                 }
-                break;
+                default:
+                    [self _interruptOnFault:[NSString stringWithFormat:@"The command %i is currently not supported",cmdName]];
+                    break;
             }
-            default:
-                [self _interruptOnFault:[NSString stringWithFormat:@"The command %i is currently not supported",cmdName]];
-                break;
+        }else{
+            [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command %@",cmd?cmd:@"nil"]];
         }
-    }else{
-        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command %@",cmd?cmd:@"nil"]];
-    }
 }
 
 
@@ -351,7 +353,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 - (void)_nextCommand{
     dispatch_async(dispatch_get_main_queue(), ^{
-        //[self _progressMessage:@"NEXT CMD"];
         _progressCounter++;
         [_queue setSuspended:NO];
     });
@@ -376,7 +377,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                      @"destination":destination,
                                      @"doers":@"",
                                      @"undoers":@""};// @todo find a solution for doers / undoers if possible
-    
+        
         NSMutableURLRequest *request = [[AFHTTPRequestSerializer serializer] multipartFormRequestWithMethod:@"POST"
                                                                                                   URLString:URLString
                                                                                                  parameters:parameters
@@ -388,13 +389,13 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                                  fileName:[destination lastPathComponent]
                                                                                                                  mimeType:@"application/octet-stream"
                                                                                                                     error:nil];
-                                                                                       
                                                                                           
-                                                                                        
+                                                                                          
+                                                                                          
                                                                                       }else{
                                                                                           // It is a folder.
                                                                                       }
-                                                                                     [self _progressMessage:@"Uploading %@", [sourceURL absoluteString]];
+                                                                                      [self _progressMessage:@"Uploading %@", [sourceURL absoluteString]];
                                                                                   } error:nil];
         
         NSProgress* progress=nil;
@@ -402,9 +403,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                        progress:&progress
                                                                               completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
                                                                                   /*
-                                                                                  [progress removeObserver:weakSelf
-                                                                                                forKeyPath:@"fractionCompleted"
-                                                                                                   context:NULL];
+                                                                                   [progress removeObserver:weakSelf
+                                                                                   forKeyPath:@"fractionCompleted"
+                                                                                   context:NULL];
                                                                                    */
                                                                                   
                                                                                   if ([(NSHTTPURLResponse*)response statusCode]!=201 && error) {
@@ -415,14 +416,14 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                   }
                                                                               }];
         
-       
-        /*
-        [progress addObserver:self
-                   forKeyPath:@"fractionCompleted"
-                      options:NSKeyValueObservingOptionNew
-                      context:NULL];*/
         
-         [uploadTask resume];
+        /*
+         [progress addObserver:self
+         forKeyPath:@"fractionCompleted"
+         options:NSKeyValueObservingOptionNew
+         context:NULL];*/
+        
+        [uploadTask resume];
         
         
         
@@ -466,55 +467,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                  [self _progressMessage:@"Downloading %@", uriString];
                                  
                                  if(uriString && [uriString isKindOfClass:[NSString class]]){
-                                     NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]];
-                                     NSProgress* progress=nil;
-                                     NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
-                                                                                                                  progress:&progress
-                                                                                                               destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
-                                                                                        
-                                                                                                                   PdSCommandInterpreter *__strong strongSelf=weakSelf;
-                                                                                                                   NSString*p=[strongSelf _absoluteLocalPathFromRelativePath:destination
-                                                                                                                                                                  toLocalUrl:_context.destinationBaseUrl
-                                                                                                                                                                  withTreeId:_context.destinationTreeId
-                                                                                                                                                                   addPrefix:YES];
-                                                                                                                   [_fileManager createRecursivelyRequiredFolderForPath:p];
-                                                                                                                   if([_fileManager fileExistsAtPath:[NSString filteredFilePathFrom:p]]){
-                                                                                                                       NSError*error=nil;
-                                                                                                                       [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
-                                                                                                                       if(error){
-                                                                                                                           NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[self _stringFromError:error]];
-                                                                                                                           [strongSelf _interruptOnFault:msg];
-                                                                                                                           
-                                                                                                                       }
-                                                                                                                   }
-                                                                                                                   return [NSURL URLWithString:p];
-                                                                                                               } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
-                                                                                                                   
-                                                                                                                   
-                                                                                                                   PdSCommandInterpreter *__strong strongSelf=weakSelf;
-                                                                                                                   /*
-                                                                                                                       [progress removeObserver:strongSelf
-                                                                                                                                     forKeyPath:@"fractionCompleted"
-                                                                                                                                        context:NULL];
-                                                                                                                   */
-                                                                                                                  
-                                                                                                                   if(error){                                                                                                                   [strongSelf _interruptOnFault:[strongSelf _stringFromError:error]];
-                                                                                                                       
-                                                                                                                   }else{
-                                                                                                                       [strongSelf _nextCommand];
-                                                                                                                   }
-                                                                                                                   
-                                                                                                               }];
-                                     
-                                     
-                                     /*
-                                     [progress addObserver:self
-                                                forKeyPath:@"fractionCompleted"
-                                                   options:NSKeyValueObservingOptionNew
-                                                   context:NULL];
-                                     */
-                                     [downloadTask resume];
-                                     
+                                     [weakSelf _download:uriString toDestination:[destination copy]];
                                  }else{
                                      [weakSelf _interruptOnFault:[NSString stringWithFormat:@"Missing url in response of %@",task.currentRequest.URL.absoluteString]];
                                  }
@@ -524,7 +477,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                              }];
             
         }
-    ;
+        ;
         
         
     }else if (self->_context.mode==SourceIsLocalDestinationIsLocal){
@@ -533,6 +486,58 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
+}
+
+
+- (void)_download:(NSString*)uriString toDestination:(NSString*)destination{
+    NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]];
+    NSProgress* progress=nil;
+    PdSCommandInterpreter *__weak weakSelf=self;
+    NSURLSessionDownloadTask *downloadTask = [_HTTPsessionManager downloadTaskWithRequest:fileRequest
+                                                                                 progress:&progress
+                                                                              destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
+                                                                                  PdSCommandInterpreter *__strong strongSelf=weakSelf;
+                                                                                  NSString*p=[strongSelf _absoluteLocalPathFromRelativePath:destination
+                                                                                                                                 toLocalUrl:_context.destinationBaseUrl
+                                                                                                                                 withTreeId:_context.destinationTreeId
+                                                                                                                                  addPrefix:YES];
+                                                                                  [_fileManager createRecursivelyRequiredFolderForPath:p];
+                                                                                  if([_fileManager fileExistsAtPath:[NSString filteredFilePathFrom:p]]){
+                                                                                      NSError*error=nil;
+                                                                                      [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
+                                                                                      if(error){
+                                                                                          NSString *msg=[NSString stringWithFormat:@"Error when removing %@ %@",p,[self _stringFromError:error]];
+                                                                                          [strongSelf _interruptOnFault:msg];
+                                                                                          
+                                                                                      }
+                                                                                  }
+                                                                                  return [NSURL URLWithString:p];
+                                                                              } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
+                                                                                  
+                                                                                  
+                                                                                  PdSCommandInterpreter *__strong strongSelf=weakSelf;
+                                                                                  /*
+                                                                                   [progress removeObserver:strongSelf
+                                                                                   forKeyPath:@"fractionCompleted"
+                                                                                   context:NULL];
+                                                                                   */
+                                                                                  
+                                                                                  if(error){                                                                                                                   [strongSelf _interruptOnFault:[strongSelf _stringFromError:error]];
+                                                                                      
+                                                                                  }else{
+                                                                                      [strongSelf _nextCommand];
+                                                                                  }
+                                                                                  
+                                                                              }];
+    
+    
+    /*
+     [progress addObserver:self
+     forKeyPath:@"fractionCompleted"
+     options:NSKeyValueObservingOptionNew
+     context:NULL];
+     */
+    [downloadTask resume];
 }
 
 
@@ -555,7 +560,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                           error:&error];
         
         PdSCommandInterpreter *__weak weakSelf=self;
-
+        
         NSString *URLString =[[_context.destinationBaseUrl absoluteString] stringByAppendingFormat:@"finalizeTransactionIn/tree/%@/",_context.destinationTreeId];
         NSDictionary *parameters = @{
                                      @"syncIdentifier": _context.syncID,
@@ -578,10 +583,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                        progress:&progress
                                                                               completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
                                                                                   /*
-                                                                                  [progress removeObserver:weakSelf
-                                                                                                forKeyPath:@"fractionCompleted"
-                                                                                                   context:NULL];
-                                                                                  */
+                                                                                   [progress removeObserver:weakSelf
+                                                                                   forKeyPath:@"fractionCompleted"
+                                                                                   context:NULL];
+                                                                                   */
                                                                                   if ([(NSHTTPURLResponse*)response statusCode]!=200 && error) {
                                                                                       NSString *msg=[NSString stringWithFormat:@"Error when finalizing %@ ",[self _stringFromError:error]];
                                                                                       [self _interruptOnFault:msg];
@@ -589,20 +594,20 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                       [weakSelf _successFullEnd];
                                                                                   }
                                                                               }];
-                /*
-        [progress addObserver:self
-                   forKeyPath:@"fractionCompleted"
-                      options:NSKeyValueObservingOptionNew
-                      context:NULL];
-        */
-       
+        /*
+         [progress addObserver:self
+         forKeyPath:@"fractionCompleted"
+         options:NSKeyValueObservingOptionNew
+         context:NULL];
+         */
+        
         [uploadTask resume];
-
+        
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // EXECUTE CREATIVES COMMANDS
         NSError*error=nil;
-
+        
         // SORT THE COMMANDS By PdSSyncCommand value order
         // Creation and Update will be done before Moves, Copies and Updates
         // PdSCreate   = 0 ,
@@ -617,7 +622,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             if ([[a1 objectAtIndex:PdSCommand] integerValue] > [[a2 objectAtIndex:PdSCommand] integerValue]){
                 return NSOrderedDescending;
             }else{
-               return NSOrderedAscending;
+                return NSOrderedAscending;
             }
         }];
         //NSLog(@"sortedCommand %@",sortedCommand);
@@ -626,14 +631,14 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             NSUInteger command=[[cmd objectAtIndex:PdSCommand] integerValue];
             BOOL isAFolder=[[destination substringFromIndex:[destination length]-1] isEqualToString:@"/"];
             NSString*destinationPrefixedFilePath=[self _absoluteLocalPathFromRelativePath:destination
-                                                                   toLocalUrl:_context.destinationBaseUrl
-                                                                   withTreeId:_context.destinationTreeId
-                                                                    addPrefix:YES];
+                                                                               toLocalUrl:_context.destinationBaseUrl
+                                                                               withTreeId:_context.destinationTreeId
+                                                                                addPrefix:YES];
             NSString*destinationFileWithoutPrefix=[self _absoluteLocalPathFromRelativePath:destination
-                                                                     toLocalUrl:_context.destinationBaseUrl
-                                                                     withTreeId:_context.destinationTreeId
-                                                                      addPrefix:NO];
-          
+                                                                                toLocalUrl:_context.destinationBaseUrl
+                                                                                withTreeId:_context.destinationTreeId
+                                                                                 addPrefix:NO];
+            
             
             if(command==PdSCreate || command==PdSUpdate){
                 if(!isAFolder){
@@ -650,7 +655,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                         error=nil;
                     }
                 }
-
+                
             }
             
             if(command==PdSMove){
@@ -671,15 +676,15 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             
             
         }
-         // Write the Hash Map
-         NSString*jsonHashMap=[self _encodetoJson:[_context.finalHashMap dictionaryRepresentation]];
-    
-         
-         NSString*relativePathOfHashMapFile=[_context.destinationTreeId stringByAppendingFormat:@"/%@%@.%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
-         NSURL *hashMapFileUrl=[_context.destinationBaseUrl URLByAppendingPathComponent:relativePathOfHashMapFile];
-         [jsonHashMap writeToURL:hashMapFileUrl
-         atomically:YES encoding:NSUTF8StringEncoding
-         error:&error];
+        // Write the Hash Map
+        NSString*jsonHashMap=[self _encodetoJson:[_context.finalHashMap dictionaryRepresentation]];
+        
+        
+        NSString*relativePathOfHashMapFile=[_context.destinationTreeId stringByAppendingFormat:@"/%@%@.%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
+        NSURL *hashMapFileUrl=[_context.destinationBaseUrl URLByAppendingPathComponent:relativePathOfHashMapFile];
+        [jsonHashMap writeToURL:hashMapFileUrl
+                     atomically:YES encoding:NSUTF8StringEncoding
+                          error:&error];
         
         if(error){
             [self _interruptOnFault:[error description]];
@@ -689,7 +694,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             [[NSNotificationCenter defaultCenter] postNotificationName:PdSSyncInterpreterHasFinalized
                                                                 object:self];
         }
-    
+        
         
     }
 }
@@ -723,23 +728,23 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         // COPY LOCALLY
         
         NSString*absoluteSource=[self _absoluteLocalPathFromRelativePath:source
-                                      toLocalUrl:_context.destinationBaseUrl
-                                      withTreeId:_context.destinationTreeId
-                                       addPrefix:NO];
-        NSString*absoluteDestination=[self _absoluteLocalPathFromRelativePath:destination
                                                               toLocalUrl:_context.destinationBaseUrl
                                                               withTreeId:_context.destinationTreeId
                                                                addPrefix:NO];
+        NSString*absoluteDestination=[self _absoluteLocalPathFromRelativePath:destination
+                                                                   toLocalUrl:_context.destinationBaseUrl
+                                                                   withTreeId:_context.destinationTreeId
+                                                                    addPrefix:NO];
         
         NSError*error=nil;
         [_fileManager copyItemAtPath:[absoluteSource filteredFilePath]
                               toPath:[absoluteDestination filteredFilePath]
                                error:&error];
         if(error){
-         [self _progressMessage:@"Error on copyItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
-         [self _interruptOnFault:[error description]];
+            [self _progressMessage:@"Error on copyItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
+            [self _interruptOnFault:[error description]];
         }
-
+        
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
@@ -748,7 +753,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runMove:(NSString*)source destination:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
-         //DONE DURING FINALIZATION
+        //DONE DURING FINALIZATION
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // MOVE LOCALLY
@@ -770,7 +775,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             [self _progressMessage:@"Error on moveItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
             [self _interruptOnFault:[error description]];
         }
-
+        
         
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
@@ -779,7 +784,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 -(void)_runDelete:(NSString*)destination{
     if((self->_context.mode==SourceIsLocalDestinationIsDistant)){
-         //DONE DURING FINALIZATION
+        //DONE DURING FINALIZATION
     }else if (self->_context.mode==SourceIsDistantDestinationIsLocal||
               self->_context.mode==SourceIsLocalDestinationIsLocal){
         // DELETE LOCALLY
@@ -826,13 +831,13 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 + (NSMutableArray*)commandsFromDeltaPathMap:(DeltaPathMap*)deltaPathMap{
     
     /*
-        PdSCreate   = 0 , // W destination and source
-        PdSUpdate   = 1 , // W destination and source
-        PdSMove     = 2 , // R source W destination
-        PdSCopy     = 3 , // R source W destination
-        PdSDelete   = 4   // W source
-
-    */
+     PdSCreate   = 0 , // W destination and source
+     PdSUpdate   = 1 , // W destination and source
+     PdSMove     = 2 , // R source W destination
+     PdSCopy     = 3 , // R source W destination
+     PdSDelete   = 4   // W source
+     
+     */
     
     NSMutableArray*commands=[NSMutableArray array];
     for (NSString*identifier in deltaPathMap.createdPaths) {
@@ -865,18 +870,18 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                       ofObject:(id)object
                         change:(NSDictionary *)change
                        context:(void *)context{
-        if ( object && [keyPath isEqualToString:@"fractionCompleted"] ) {
-            if(_progressBlock){
-                NSProgress *progress = (NSProgress *)object;
-                float f=progress.fractionCompleted;
-                self->_progressBlock(_progressCounter,f);
-            }
-        }else{
-            [super observeValueForKeyPath:keyPath
-                                 ofObject:object
-                                   change:change
-                                  context:context];
+    if ( object && [keyPath isEqualToString:@"fractionCompleted"] ) {
+        if(_progressBlock){
+            NSProgress *progress = (NSProgress *)object;
+            float f=progress.fractionCompleted;
+            self->_progressBlock(_progressCounter,f);
         }
+    }else{
+        [super observeValueForKeyPath:keyPath
+                             ofObject:object
+                               change:change
+                              context:context];
+    }
 }
 
 #pragma mark - AFNetworking
@@ -931,7 +936,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     } else {
         return [[NSString alloc]initWithBytes:[jsonData bytes]
                                        length:[jsonData length] encoding:NSUTF8StringEncoding];
-
+        
     }
 }
 
@@ -946,7 +951,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                    arguments:vl];
         [self.finalizationDelegate progressMessage:[NSString stringWithFormat:@"%i# %@",_messageCounter,message]];
         va_end(vl);
-       
+        
     }
     
 }
