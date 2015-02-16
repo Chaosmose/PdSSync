@@ -212,7 +212,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     // The "unCreative" commands will be executed during finalization
     [self _finalizeWithCommands:_allCommands];
     if(_sanitizeAutomatically){
-        //[self _sanitize:@""];
+        [self _sanitize:@""];
     }
 }
 
@@ -457,31 +457,33 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             NSString*treeId=_context.sourceTreeId;
             // Decompose in a GET for the URI then a download task
             
+            
             NSString *URLString =[[_context.sourceBaseUrl absoluteString] stringByAppendingFormat:@"file/tree/%@/",treeId];
             NSDictionary *parameters = @{
                                          @"path": [source copy],
                                          @"redirect":@"false",
                                          @"returnValue":@"false"
                                          };
-            
+
             [_HTTPsessionManager GET:URLString
                           parameters:parameters
                              success:^(NSURLSessionDataTask *task, id responseObject) {
                                  NSDictionary*d=(NSDictionary*)responseObject;
                                  NSString*uriString=[d objectForKey:@"uri"];
-                                 [self _progressMessage:@"Downloading %@", uriString];
-                                 
-                                 if(uriString && [uriString isKindOfClass:[NSString class]]){
-                                     [weakSelf _download:uriString toDestination:[destination copy]];
-                                 }else{
+                                 [self _progressMessage:@"Downloading %@ \nFrom %@", uriString,URLString];
+                                                                  if(uriString && [uriString isKindOfClass:[NSString class]]){
+                                                                        [weakSelf _download:uriString toDestination:[destination copy]];
+                                                                      }else{
                                      [weakSelf _interruptOnFault:[NSString stringWithFormat:@"Missing url in response of %@",task.currentRequest.URL.absoluteString]];
                                  }
                              } failure:^(NSURLSessionDataTask *task, NSError *error) {
                                  [self _progressMessage:@"FAILURE before GET File @URI %@", URLString];
                                  [weakSelf _interruptOnFault:[weakSelf _stringFromError:error]];
                              }];
-            
+
+
         }
+             
         ;
         
         
@@ -508,16 +510,18 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         // SIMPLE REQUEST
         AFHTTPRequestOperation *downloadRequest = [[AFHTTPRequestOperation alloc] initWithRequest:fileRequest];
         [downloadRequest setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
-            NSData *data = [[NSData alloc] initWithData:responseObject];
-            NSError*error=nil;
-            [data writeToFile:[p filteredFilePath]
-                      options:NSDataWritingAtomic
-                        error:&error];
-            if(error){
-                NSString *msg=[NSString stringWithFormat:@"Error during downloadRequest when writing %@ %@",p,[weakSelf _stringFromError:error]];
-                [weakSelf _interruptOnFault:msg];
-            }else{
-                [weakSelf _nextCommand];
+            @autoreleasepool {
+                NSData *data = [[NSData alloc] initWithData:responseObject];
+                NSError*error=nil;
+                [data writeToFile:[p filteredFilePath]
+                          options:NSDataWritingAtomic
+                            error:&error];
+                if(error){
+                    NSString *msg=[NSString stringWithFormat:@"Error during downloadRequest when writing %@ %@",p,[weakSelf _stringFromError:error]];
+                    [weakSelf _interruptOnFault:msg];
+                }else{
+                    [weakSelf _nextCommand];
+                }
             }
         } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
             [weakSelf _interruptOnFault:[weakSelf _stringFromError:error]];
