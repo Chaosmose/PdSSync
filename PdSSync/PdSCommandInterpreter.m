@@ -394,9 +394,6 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                                                  fileName:[destination lastPathComponent]
                                                                                                                  mimeType:@"application/octet-stream"
                                                                                                                     error:nil];
-                                                                                          
-                                                                                          
-                                                                                          
                                                                                       }else{
                                                                                           // It is a folder.
                                                                                       }
@@ -497,7 +494,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 
 - (void)_download:(NSString*)uriString toDestination:(NSString*)destination{
-    NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]];
+    NSURLRequest *fileRequest=[NSURLRequest requestWithURL:[NSURL URLWithString:uriString]
+                                               cachePolicy:NSURLRequestUseProtocolCachePolicy
+                                           timeoutInterval:3600];
     
     NSString*__block p=[self _absoluteLocalPathFromRelativePath:destination
                                                      toLocalUrl:_context.destinationBaseUrl
@@ -922,6 +921,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             _HTTPsessionManager=[[AFHTTPSessionManager alloc]initWithBaseURL:_context.sourceBaseUrl sessionConfiguration:configuration];
         }
         if(_HTTPsessionManager){
+            
             AFJSONRequestSerializer*r=[AFJSONRequestSerializer serializer];
             [_HTTPsessionManager setRequestSerializer:r];
             _HTTPsessionManager.responseSerializer = [[AFJSONResponseSerializer alloc]init];
