@@ -43,7 +43,31 @@ class CommandInterpreter {
 				$this,
 				'_compareCommand' 
 		) );
-		foreach ( $bunchOfCommand as $command ) {
+
+        // Let's remove possible doublons
+        $filteredBunchOfCommand=array();
+        foreach ($bunchOfCommand as $command){
+            $alreadyExists=false;
+            foreach($filteredBunchOfCommand as $filteredCommand){
+                if(count ($filteredCommand)===count($command)){
+                    $nbOfArguments=count($filteredCommand);
+                    $match=true;
+                    for($i=0;$i<$nbOfArguments;$i++){
+                        $match=(($filteredBunchOfCommand[$i]==$command[$i])&& $match);
+                    }
+                    if($match==true){
+                        $alreadyExists=true;
+                    }
+                }
+            }
+            if($alreadyExists===false){
+                $filteredBunchOfCommand[]=$command;
+            }
+        }
+
+
+        $secondAttempt=array();
+		foreach ( $filteredBunchOfCommand as $command ) {
 			if (is_array ( $command )) {
 				if ($hasProceededToUnPrefixing === FALSE && $command [PdSCommand] > PdSUpdate) {
 					// Un prefix after running all  commands.
@@ -55,7 +79,7 @@ class CommandInterpreter {
 				}
 				$result = $this->_decodeAndRunCommand ( $syncIdentifier, $command, $treeId );
 				if ($result != NULL) {
-					$failures [] = $result;
+                    $secondAttempt[]=$command;
 				}
 			} else {
 				$failures [] = $command . ' is not an array';
@@ -65,6 +89,17 @@ class CommandInterpreter {
 			}
 			$result = NULL;
 		}
+        // If it is problem of dependency (order of operation e.g a move before a copy)
+        foreach ( $secondAttempt as $command ) {
+            if (is_array ( $command )) {
+                $result = $this->_decodeAndRunCommand($syncIdentifier, $command, $treeId);
+                if ($result != NULL) {
+                    $failures [] = $result;
+                }
+            }
+            $result = NULL;
+        }
+
 		if (count ( $failures ) > 0) {
 			return $failures;
 		} else {
@@ -158,22 +193,22 @@ class CommandInterpreter {
 					if ($this->ioManager->copy ( $source, $destination )) {
 						return NULL;
 					} else {
-						return 'PdSCopy error source:' . $source . ' destination: ' . $destination;
-					}
+						return 'PdSCopy error source:' . $source .'(exists ='.$this->ioManager->exists($source).') destination: ' . $destination.' (exists ='.$this->ioManager->exists($destination).')';
+                    }
 					return NULL;
 					break;
 				case PdSMove :
 					if ($this->ioManager->rename ( $source, $destination )) {
 						return NULL;
 					} else {
-						return 'PdSMove error source:' . $source . ' destination: ' . $destination;
+						return 'PdSMove error source:' . $source .'(exists ='.$this->ioManager->exists($source).') destination: ' . $destination.' (exists ='.$this->ioManager->exists($destination).')';
 					}
 					break;
 				case PdSDelete :
 					if ($this->ioManager->delete ( $destination )) {
 						return NULL;
 					} else {
-						return 'PdSDelete error on ' . $destination;
+						return 'PdSDelete error on ' . $destination.'(exists ='.$this->ioManager->exists($destination).')';
 					}
 				default :
 					break;
