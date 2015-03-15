@@ -89,7 +89,8 @@ class CommandInterpreter {
 			}
 			$result = NULL;
 		}
-        // If it is problem of dependency (order of operation e.g a move before a copy)
+
+        // If we encounter a problem of dependency (order of operation e.g a move before a dependant copy)
         foreach ( $secondAttempt as $command ) {
             if (is_array ( $command )) {
                 $result = $this->_decodeAndRunCommand($syncIdentifier, $command, $treeId);
@@ -104,7 +105,6 @@ class CommandInterpreter {
 			return $failures;
 		} else {
 			if($hasProceededToUnPrefixing==FALSE){
-				// @todo is it usefull?
 				$unPrefixingFailures = $this->_unPrefix ( $treeId, $syncIdentifier );
 				if (count ( $unPrefixingFailures ) > 0) {
 					return $unPrefixingFailures;
@@ -168,6 +168,9 @@ class CommandInterpreter {
 			// Absolute paths
 			$destination = $this->ioManager->absolutePath ( $treeId, $cmd [PdSDestination] );
 			$source = $this->ioManager->absolutePath ( $treeId, $cmd [PdSSource] );
+            $sourceExistsString=($this->ioManager->exists($source))?"Yes":"No";
+            $destinationExistsString=($this->ioManager->exists($destination))?"Yes":"No";
+
 			switch ($command) {
 				case PdSCreate :
 					if (! isset ( $cmd [PdSDestination] )) {
@@ -193,7 +196,11 @@ class CommandInterpreter {
 					if ($this->ioManager->copy ( $source, $destination )) {
 						return NULL;
 					} else {
-						return 'PdSCopy error source:' . $source .'(exists ='.$this->ioManager->exists($source).') destination: ' . $destination.' (exists ='.$this->ioManager->exists($destination).')';
+                        if(($this->ioManager->exists($destination)==true)
+                            && ($this->ioManager->exists($source)==false)){
+                            return NULL; // Patch for older version (move sequences with dependencies)
+                        }
+						return 'PdSCopy error source:' . $source .'(exists ='.$sourceExistsString.') destination: ' . $destination.' (exists ='.$destinationExistsString.')';
                     }
 					return NULL;
 					break;
@@ -201,14 +208,14 @@ class CommandInterpreter {
 					if ($this->ioManager->rename ( $source, $destination )) {
 						return NULL;
 					} else {
-						return 'PdSMove error source:' . $source .'(exists ='.$this->ioManager->exists($source).') destination: ' . $destination.' (exists ='.$this->ioManager->exists($destination).')';
+						return 'PdSMove error source:' . $source .'(exists ='.$sourceExistsString.') destination: ' . $destination.' (exists ='.$destinationExistsString.')';
 					}
 					break;
 				case PdSDelete :
 					if ($this->ioManager->delete ( $destination )) {
 						return NULL;
 					} else {
-						return 'PdSDelete error on ' . $destination.'(exists ='.$this->ioManager->exists($destination).')';
+						return 'PdSDelete error on ' . $destination.'(exists ='.$destinationExistsString.')';
 					}
 				default :
 					break;
