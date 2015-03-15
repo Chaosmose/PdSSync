@@ -196,10 +196,6 @@ class CommandInterpreter {
 					if ($this->ioManager->copy ( $source, $destination )) {
 						return NULL;
 					} else {
-                        if(($this->ioManager->exists($destination)==true)
-                            && ($this->ioManager->exists($source)==false)){
-                            return NULL; // Patch for older version (move sequences with dependencies)
-                        }
 						return 'PdSCopy error source:' . $source .'(exists ='.$sourceExistsString.') destination: ' . $destination.' (exists ='.$destinationExistsString.')';
                     }
 					return NULL;
@@ -208,6 +204,10 @@ class CommandInterpreter {
 					if ($this->ioManager->rename ( $source, $destination )) {
 						return NULL;
 					} else {
+                        if(($this->ioManager->exists($destination)==true)
+                            && ($this->ioManager->exists($source)==false)){
+                            return NULL; // Patch for older version (move sequences with dependencies)
+                        }
 						return 'PdSMove error source:' . $source .'(exists ='.$sourceExistsString.') destination: ' . $destination.' (exists ='.$destinationExistsString.')';
 					}
 					break;
