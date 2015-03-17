@@ -121,12 +121,19 @@ class CommandInterpreter {
 		}
 	}
 	private function _compareCommand($a, $b) {
-		// Compare the command by PdSSyncCMDParamsRank
-		// PdSCreate = 0
-		// PdSUpdate = 1
-		// PdSCopy = 2
-		// PdSMove = 3
-		// PdSDelete = 4
+
+/*
+        'PdSCreate' -> 0
+        'PdSUpdate' -> 1
+        'PdSMove' -> 2
+        'PdSCopy' -> 3
+        'PdSDelete' -> 4
+
+
+        $aOrder=$a[PdSCommand];
+        $bOrder=$b[PdSCommand];
+
+*/
 		return ($a [PdSCommand] > $b [PdSCommand]);
 	}
 	
@@ -196,6 +203,10 @@ class CommandInterpreter {
 					if ($this->ioManager->copy ( $source, $destination )) {
 						return NULL;
 					} else {
+                        if(($this->ioManager->exists($destination)==true)
+                            && ($this->ioManager->exists($source)==false)){
+                            return NULL; // Patch for older version (move sequences with dependencies)
+                        }
 						return 'PdSCopy error source:' . $source .'(exists ='.$sourceExistsString.') destination: ' . $destination.' (exists ='.$destinationExistsString.')';
                     }
 					return NULL;
