@@ -31,7 +31,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 @interface PdSCommandInterpreter (){
     CompletionBlock_type             _completionBlock;
     ProgressBlock_type               _progressBlock;
-    PdSFileManager                   *__weak _fileManager;
+    PdSFileManager                  *_fileManager;
     AFHTTPSessionManager            *_HTTPsessionManager;
     NSMutableArray                  *_allCommands;
     BOOL                            _sanitizeAutomatically;
@@ -197,7 +197,9 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         }];
     }else{
         if(_sanitizeAutomatically){
-            [self _sanitize:@""];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self _sanitize:@""];
+            });
         }
         _completionBlock(YES,@"There was no command to execute");
     }
@@ -225,25 +227,22 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                            toLocalUrl:_context.destinationBaseUrl
                                                            withTreeId:_context.destinationTreeId
                                                             addPrefix:NO];
-        PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
-        NSArray*exclusion=@[@".DS_Store"];
+        
         NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
-        NSDirectoryEnumerator *dirEnum =[fileManager enumeratorAtURL:[NSURL URLWithString:folderPath]
-                                          includingPropertiesForKeys:keys
-                                                             options:0
-                                                        errorHandler:^BOOL(NSURL *url, NSError *error) {
-                                                            [self _progressMessage:@"ERROR when enumerating  %@ %@",url, [error localizedDescription]];
-                                                            return YES;
-                                                        }];
+        NSDirectoryEnumerator *dirEnum =[_fileManager enumeratorAtURL:[NSURL URLWithString:folderPath]
+                                           includingPropertiesForKeys:keys
+                                                              options:0
+                                                         errorHandler:^BOOL(NSURL *url, NSError *error) {
+                                                             [self _progressMessage:@"ERROR when enumerating  %@ %@",url, [error localizedDescription]];
+                                                             return YES;
+                                                         }];
         NSURL *file;
         NSError*removeFileError=nil;
         while ((file = [dirEnum nextObject])) {
             NSString *filePath=[file absoluteString];
-            if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound&&
-               [[filePath lastPathComponent] rangeOfString:kPdSSyncPrefixSignature].location!=NSNotFound &&
-               ![[filePath substringFromIndex:[filePath length]-1] isEqualToString:@"/"]){
-                [fileManager removeItemAtPath:[filePath filteredFilePath]
-                                        error:&removeFileError];
+            if([self _filePathDeletionAllowed:filePath]){
+                [_fileManager removeItemAtPath:[filePath filteredFilePath]
+                                         error:&removeFileError];
             }
         }
         
@@ -255,6 +254,17 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     }
 }
 
+
+- (BOOL)_filePathDeletionAllowed:(NSString*)path{
+    NSArray*exclusion=@[@".DS_Store"];
+    if([exclusion indexOfObject:[path lastPathComponent]]==NSNotFound&&
+       [[path lastPathComponent] rangeOfString:kPdSSyncPrefixSignature].location!=NSNotFound &&
+       ![[path substringFromIndex:[path length]-1] isEqualToString:@"/"]){
+        return YES;
+    }else{
+        return NO;
+    }
+}
 
 
 
@@ -461,26 +471,26 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                          @"redirect":@"false",
                                          @"returnValue":@"false"
                                          };
-
+            
             [_HTTPsessionManager GET:URLString
                           parameters:parameters
                              success:^(NSURLSessionDataTask *task, id responseObject) {
                                  NSDictionary*d=(NSDictionary*)responseObject;
                                  NSString*uriString=[d objectForKey:@"uri"];
                                  [self _progressMessage:@"Downloading %@ \nFrom %@", uriString,URLString];
-                                                                  if(uriString && [uriString isKindOfClass:[NSString class]]){
-                                                                        [weakSelf _download:uriString toDestination:[destination copy]];
-                                                                      }else{
+                                 if(uriString && [uriString isKindOfClass:[NSString class]]){
+                                     [weakSelf _download:uriString toDestination:[destination copy]];
+                                 }else{
                                      [weakSelf _interruptOnFault:[NSString stringWithFormat:@"Missing url in response of %@",task.currentRequest.URL.absoluteString]];
                                  }
                              } failure:^(NSURLSessionDataTask *task, NSError *error) {
                                  [self _progressMessage:@"FAILURE before GET File @URI %@", URLString];
                                  [weakSelf _interruptOnFault:[weakSelf _stringFromError:error]];
                              }];
-
-
+            
+            
         }
-             
+        
         ;
         
         
@@ -536,13 +546,16 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                   destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
                                                                                       PdSCommandInterpreter *__strong strongSelf=weakSelf;
                                                                                       if([_fileManager fileExistsAtPath:[NSString filteredFilePathFrom:p]]){
-                                                                                          NSError*error=nil;
-                                                                                          [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
-                                                                                          if(error){
-                                                                                              NSString *msg=[NSString stringWithFormat:@"Error during download task when removing %@ %@",p,[self _stringFromError:error]];
-                                                                                              [strongSelf _interruptOnFault:msg];
+                                                                                          
+                                                                                          if([self _filePathDeletionAllowed:p]){
+                                                                                              NSError*error=nil;
+                                                                                              [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
+                                                                                              if(error){
+                                                                                                  NSString *msg=[NSString stringWithFormat:@"Non blocking Error during download task when removing %@ %@",p,[self _stringFromError:error]];
+                                                                                              }
                                                                                           }
                                                                                       }
+                                                                                      
                                                                                       return [NSURL URLWithString:p];
                                                                                   } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
                                                                                       
@@ -662,6 +675,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
             
             if(command==PdSCreate || command==PdSUpdate){
                 if(!isAFolder){
+                    
+                    [_fileManager createRecursivelyRequiredFolderForPath:[destinationFileWithoutPrefix filteredFilePath]];
+                    
+                    
                     // UN PREFIX
                     [_fileManager moveItemAtPath:[destinationPrefixedFilePath filteredFilePath]
                                           toPath:[destinationFileWithoutPrefix filteredFilePath]
@@ -757,6 +774,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                     addPrefix:NO];
         
         NSError*error=nil;
+        
+        
+        [_fileManager createRecursivelyRequiredFolderForPath:[absoluteDestination filteredFilePath]];
+        
         [_fileManager copyItemAtPath:[absoluteSource filteredFilePath]
                               toPath:[absoluteDestination filteredFilePath]
                                error:&error];
@@ -782,6 +803,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                               toLocalUrl:_context.destinationBaseUrl
                                                               withTreeId:_context.destinationTreeId
                                                                addPrefix:NO];
+        
         NSString*absoluteDestination=[self _absoluteLocalPathFromRelativePath:destination
                                                                    toLocalUrl:_context.destinationBaseUrl
                                                                    withTreeId:_context.destinationTreeId
