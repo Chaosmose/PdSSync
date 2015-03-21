@@ -257,9 +257,12 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 - (BOOL)_filePathDeletionAllowed:(NSString*)path{
     NSArray*exclusion=@[@".DS_Store"];
-    if([exclusion indexOfObject:[path lastPathComponent]]==NSNotFound&&
+    NSInteger minPrefixedLength=30+[kPdSSyncPrefixSignature length];
+    if([[path lastPathComponent] length]>minPrefixedLength&&
+       [exclusion indexOfObject:[path lastPathComponent]]==NSNotFound&&
        [[path lastPathComponent] rangeOfString:kPdSSyncPrefixSignature].location!=NSNotFound &&
-       ![[path substringFromIndex:[path length]-1] isEqualToString:@"/"]){
+       ![[path substringFromIndex:[path length]-1] isEqualToString:@"/"]
+       ){
         return YES;
     }else{
         return NO;
@@ -546,12 +549,13 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                                   destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
                                                                                       PdSCommandInterpreter *__strong strongSelf=weakSelf;
                                                                                       if([_fileManager fileExistsAtPath:[NSString filteredFilePathFrom:p]]){
-                                                                                          
-                                                                                          if([self _filePathDeletionAllowed:p]){
+                                                                                          [strongSelf _progressMessage:@"DownloadTask Deleting:%@ ",p];
+                                                                                          if([strongSelf _filePathDeletionAllowed:p]){
                                                                                               NSError*error=nil;
                                                                                               [_fileManager removeItemAtPath:[NSString filteredFilePathFrom:p] error:&error];
                                                                                               if(error){
                                                                                                   NSString *msg=[NSString stringWithFormat:@"Non blocking Error during download task when removing %@ %@",p,[self _stringFromError:error]];
+                                                                                                  [strongSelf _progressMessage:msg];
                                                                                               }
                                                                                           }
                                                                                       }
