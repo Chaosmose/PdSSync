@@ -205,7 +205,7 @@ class CommandInterpreter {
 					} else {
                         if(($this->ioManager->exists($destination)==true)
                             && ($this->ioManager->exists($source)==false)){
-                            return NULL; // Patch for older version (move sequences with dependencies)
+                            return NULL; // We keep the current destination file (May be inferred by a bad client sequence)
                         }
 						return 'PdSCopy error source:' . $source .'(exists ='.$sourceExistsString.') destination: ' . $destination.' (exists ='.$destinationExistsString.')';
                     }
@@ -217,7 +217,7 @@ class CommandInterpreter {
 					} else {
                         if(($this->ioManager->exists($destination)==true)
                             && ($this->ioManager->exists($source)==false)){
-                            return NULL; // Patch for older version (move sequences with dependencies)
+                            return NULL; // We keep the current destination file (May be inferred by a bad client sequence)
                         }
 						return 'PdSMove error source:' . $source .'(exists ='.$sourceExistsString.') destination: ' . $destination.' (exists ='.$destinationExistsString.')';
 					}
@@ -226,6 +226,9 @@ class CommandInterpreter {
 					if ($this->ioManager->delete ( $destination )) {
 						return NULL;
 					} else {
+                        if($this->ioManager->exists($destination)==false){
+                            return NULL;// There was no need to delete an unexisting path
+                        }
 						return 'PdSDelete error on ' . $destination.'(exists ='.$destinationExistsString.')';
 					}
 				default :
