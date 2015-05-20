@@ -105,5 +105,16 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 		}
 		return $result;
 	}
+
+
+    public function removeGhosts(){
+        $deletedPath=array();
+        $foundPath=array();
+        $dir=$this->repositoryAbsolutePath();
+        foreach (scandir($dir) as $f) {
+            $foundPath[]="$dir/$f";
+        }
+        return array("foundPath"=>$foundPath,"deletedPath"=> $deletedPath);
+    }
 }
 ?>

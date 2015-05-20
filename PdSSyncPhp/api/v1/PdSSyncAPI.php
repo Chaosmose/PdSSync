@@ -114,7 +114,9 @@ class PdSSyncAPI {
 				"hashMap",
 				"uploadFileTo",
 				//"cleanUp",
-				"finalizeTransactionIn" 
+                 "removeGhosts",
+				"finalizeTransactionIn"
+
 		);
 	}
 	
@@ -469,60 +471,81 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	
-	/**
-	 * @todo security impact and
-	 *       clean up
-	 * @return Ambigous <string, NULL, string>
-	 */
-	private function cleanUp() {
-		if ($this->method == 'POST') {
-			$treeId = NULL;
-			if (isset ( $this->subject ) && count ( $this->args ) > 0) {
-				$treeId = $this->args [0];
-			} else {
-				return $this->_response ( 'Undefined treeId', 404 );
-			}
-			if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
-				return $this->_response ( NULL, 406 );
-			}
-			
-			$this->ioManager = $this->getIoManager ();
-			$rootPath = $this->ioManager->absolutePath ( $treeId, '' );
-			$fileList = $this->ioManager->listRelativePathsIn ( $rootPath );
-			$deletedPath = array ();
-			$unModifiedPath=array();
-			foreach ( $fileList as $relativePath ) {
-				if (substr ( $relativePath, - 1 ) != "/") {
-					// It is not a folder.
-					$pathInfos = pathinfo ( $relativePath );
-					$fileName = $pathInfos ['basename'];
-					if ($this->_stringStartsWith ( $fileName, SYNC_PREFIX_SIGNATURE )) {
-						$absolutePath = $this->ioManager->absolutePath ( $treeId, $relativePath );
-						$this->ioManager->delete ( $absolutePath );
-						$deletedPath [] = $relativePath;
-					}else{
-						$unModifiedPath[]=$relativePath;
-					}
-				}
-				;
-			};
-			return $this->_response ( array(deleted=>$deletedPath, notModified=>$unModifiedPath), 200 );
-		} else {
-			$infos = array ();
-			$infos [INFORMATIONS_KEY] = 'Method POST required';
-			$infos [METHOD_KEY] = $this->method;
-			return $this->_response ( $infos, 405 );
-		}
-	}
-	private function _stringStartsWith($haystack, $needle) {
-		return (strpos ( $haystack, $needle ) !== FALSE);
-	}
-	
-	
-	
-	
-	/**
+
+
+
+    /**
+     * @todo security impact and
+     *       clean up
+     * @return string
+     */
+    protected function cleanUp() {
+        if ($this->method == 'POST') {
+            $treeId = NULL;
+            if (isset ( $this->subject ) && count ( $this->args ) > 0) {
+                $treeId = $this->args [0];
+            } else {
+                return $this->_response ( 'Undefined treeId', 404 );
+            }
+            if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
+                return $this->_response ( NULL, 406 );
+            }
+
+            $this->ioManager = $this->getIoManager ();
+            $rootPath = $this->ioManager->absolutePath ( $treeId, '' );
+            $fileList = $this->ioManager->listRelativePathsIn ( $rootPath );
+            $deletedPath = array ();
+            $unModifiedPath=array();
+            foreach ( $fileList as $relativePath ) {
+                if (substr ( $relativePath, - 1 ) != "/") {
+                    // It is not a folder.
+                    $pathInfos = pathinfo ( $relativePath );
+                    $fileName = $pathInfos ['basename'];
+                    if ($this->_stringStartsWith ( $fileName, SYNC_PREFIX_SIGNATURE )) {
+                        $absolutePath = $this->ioManager->absolutePath ( $treeId, $relativePath );
+                        $this->ioManager->delete ( $absolutePath );
+                        $deletedPath [] = $relativePath;
+                    }else{
+                        $unModifiedPath[]=$relativePath;
+                    }
+                }
+                ;
+            };
+            return $this->_response ( array(deleted=>$deletedPath, notModified=>$unModifiedPath), 200 );
+        } else {
+            $infos = array ();
+            $infos [INFORMATIONS_KEY] = 'Method POST required';
+            $infos [METHOD_KEY] = $this->method;
+            return $this->_response ( $infos, 405 );
+        }
+    }
+
+
+    /**
+     * @return string
+     */
+    protected function removeGhosts(){
+        if ($this->method == 'POST') {
+            $this->ioManager = $this->getIoManager ();
+            $details= $this->ioManager.removeGhosts();
+            $infos = array ();
+            $infos ['details'] = $details;
+            return $this->_response ($infos, 200 );
+        } else {
+            $infos = array ();
+            $infos [INFORMATIONS_KEY] = 'Method POST required';
+            $infos [METHOD_KEY] = $this->method;
+            return $this->_response ( $infos, 405 );
+        }
+    }
+
+    private function _stringStartsWith($haystack, $needle) {
+        return (strpos ( $haystack, $needle ) !== FALSE);
+    }
+
+
+
+    /**
 	 *
 	 * @param string $data        	
 	 * @param int $status        	

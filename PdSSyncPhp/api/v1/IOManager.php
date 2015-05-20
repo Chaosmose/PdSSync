@@ -32,7 +32,9 @@ interface IOManagerPersistency {
 	public function move_uploaded($filename, $destination);
 	
 	public function listRelativePathsIn ($rootPath,$prefix='');
-	
+
+    public function removeGhosts();
+
 }
 
 interface  IOManager extends IOManagerPersistency{
@@ -90,6 +92,8 @@ interface  IOManager extends IOManagerPersistency{
 	 *  And could perform any installation related task
 	 */
 	public function install();
+
+
 
 }
  
