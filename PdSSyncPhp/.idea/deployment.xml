@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="Dev.Sly.am">
+    <serverData>
+      <paths name="Dev.Sly.am">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/" local="$PROJECT_DIR$" web="sly.am/PdSSyncPhp.dev/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/api/v1/PdSSyncConfig.php" />
+            <excludedPath local="true" path="$PROJECT_DIR$/api/v1/PdSSyncConst.php" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>

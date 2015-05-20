@@ -1,5 +1,6 @@
 <?php
 
+/** @noinspection PhpIncludeInspection */
 include_once 'PdSSyncConst.php';
 class CommandInterpreter {
 	
@@ -212,7 +213,6 @@ class CommandInterpreter {
                         }
 						return 'PdSCopy error source:' . $source .'(exists ='.$sourceExistsString.') destination: ' . $destination.' (exists ='.$destinationExistsString.')';
                     }
-					return NULL;
 					break;
 				case PdSMove :
 					if ($this->ioManager->rename ( $source, $destination )) {

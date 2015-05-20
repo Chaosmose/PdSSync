@@ -1,5 +1,6 @@
 <?php
 
+/** @noinspection PhpIncludeInspection */
 require_once 'CommandInterpreter.php';
 require_once 'IOManager.php';
 
@@ -47,12 +48,7 @@ class PdSSyncAPI {
 	 */
 	protected $interpreter = NULL;
 	
-	/**
-	 * The IOManager is currently a FS abstraction
-	 *
-	 * @var IOManager
-	 */
-	
+
 	/**
 	 * The PUT flow
 	 *
@@ -241,7 +237,7 @@ class PdSSyncAPI {
 					return $this->_response ( $result, 404 );
 				}
 			} else {
-				return $this->_response ( 'Unknown entity' . $this->args [0], 400 );
+				return $this->_response ( 'Unknown entity'. $this->args[0], 400 );
 			}
 		} else {
 			$infos = array ();
@@ -527,10 +523,8 @@ class PdSSyncAPI {
     protected function removeGhosts(){
         if ($this->method == 'POST') {
             $this->ioManager = $this->getIoManager ();
-            $details= $this->ioManager.removeGhosts();
-            $infos = array ();
-            $infos ['details'] = $details;
-            return $this->_response ($infos, 200 );
+            $details=$this->ioManager->removeGhosts();
+            return $this->_response ($details, 200 );
         } else {
             $infos = array ();
             $infos [INFORMATIONS_KEY] = 'Method POST required';
@@ -661,7 +655,7 @@ class PdSSyncAPI {
 	
 	/**
 	 *
-	 * @return the $ioManager
+	 * @return IOManager the current IO manager
 	 */
 	protected function getIoManager() {
 		if (! $this->ioManager) {

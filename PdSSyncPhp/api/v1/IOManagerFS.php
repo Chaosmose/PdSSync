@@ -1,4 +1,6 @@
 <?php
+/** @noinspection PhpIncludeInspection */
+/** @noinspection PhpIncludeInspection */
 require_once 'IOManager.php';
 
 /**
@@ -64,7 +66,7 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 			foreach ($objects as $object) {
 				if ($object != "." && $object != "..") {
 					if (filetype($dir."/".$object) == "dir") 
-						$result=$result&&$this->_rmdir($dir."/".$object,$result); 
+						$result=$result&&$this->_rmdir($dir."/".$object,$result);
 					else 
 						$result=$result&&unlink($dir."/".$object);
 				}
@@ -106,14 +108,39 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 		return $result;
 	}
 
-
     public function removeGhosts(){
         $deletedPath=array();
         $foundPath=array();
+        $pathFoundInTreeInfo=array();
+        $pathFoundInTreeInfoOrigin=array();
         $dir=$this->repositoryAbsolutePath();
         foreach (scandir($dir) as $f) {
-            $foundPath[]="$dir/$f";
+            $foundPath[]="$dir$f";
+            $p=$dir.$f.'/'.TREE_INFOS_FILENAME;
+            if($this->exists($p)){
+                $this->treeData= json_decode( $this->get_contents($p));
+                $associatedPath=$dir.$this->treeData[0].'/';
+                $pathFoundInTreeInfo[]=$associatedPath;
+                $pathFoundInTreeInfoOrigin[]=$p;
+                if($this->exists($associatedPath)==false){
+                    //IF there is TREE INFO file but no associated folder.
+                    //ITS is a GHOST Delete the folder
+                    $this->delete($dir.$f);
+                    $deletedPath[]=$dir.$f;
+                }
+            }
+            //if $foundPath
         }
+        $i=0;
+        foreach ($pathFoundInTreeInfo as $pathFound) {
+            //  IF THERE IS NO ASSOCIATED TREE_INFOS_FILENAME IT IS A GHOST
+            if($this->exists($pathFound)==false){
+                $this->delete($pathFoundInTreeInfoOrigin[$i]);
+                $deletedPath[]=$pathFoundInTreeInfoOrigin[$i];
+            }
+            $i++;
+        }
+
         return array("foundPath"=>$foundPath,"deletedPath"=> $deletedPath);
     }
 }

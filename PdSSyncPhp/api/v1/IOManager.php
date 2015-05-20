@@ -1,5 +1,6 @@
 <?php
 
+/** @noinspection PhpIncludeInspection */
 include_once 'PdSSyncConst.php';
 
 /**
@@ -32,8 +33,6 @@ interface IOManagerPersistency {
 	public function move_uploaded($filename, $destination);
 	
 	public function listRelativePathsIn ($rootPath,$prefix='');
-
-    public function removeGhosts();
 
 }
 
@@ -94,6 +93,11 @@ interface  IOManager extends IOManagerPersistency{
 	public function install();
 
 
+    /**
+     * A function that scans the repository and removes the Ghosts and inconsistent contexts
+     * @return array
+     */
+    public function removeGhosts();
 
 }
  
@@ -279,5 +283,12 @@ abstract  class IOManagerAbstract  {
 		}
 	
 	}
+
+
+    public function removeGhosts(){
+        // Void implementation
+        return array();
+    }
+
 }
 ?>
