@@ -156,7 +156,7 @@ NSString*const hashToPathsKey=@"hToPths";
                 // and the hash is different it is an Update not delete
                 if([[source->_pathToHash allKeys] indexOfObject:toBeDeletedPath]==NSNotFound){
                     [self _addPathOrOperation:[toBeDeletedPath copy]
-                                       to:delta.deletedPaths];
+                                           to:delta.deletedPaths];
                 }
             }
         }else if(nbOfOccurencesOnSource<nbOfOccurencesOnDestination){
@@ -169,7 +169,7 @@ NSString*const hashToPathsKey=@"hToPths";
                 // and the hash is different it is an Update not delete
                 if([[source->_pathToHash allKeys] indexOfObject:toBeDeletedPath]==NSNotFound){
                     [self _addPathOrOperation:[toBeDeletedPath copy]
-                                       to:delta.deletedPaths];
+                                           to:delta.deletedPaths];
                 }
             }
             // Then move the preserved files to remap.
@@ -209,16 +209,18 @@ NSString*const hashToPathsKey=@"hToPths";
                 }
             }
             // Copy
-            NSString*toBeCopiedOriginalPath=toBeMovedFinalPath;
-            for (NSUInteger i=numberOfOccurenceToMove;i<nbOfOccurencesOnSource; i++) {
-                NSString *toBeCopiedFinalPath=[pathsOnSources objectAtIndex:i];
-                if([self _shouldProceedToMoveOrCopyFrom:toBeCopiedOriginalPath
-                                                     to:toBeCopiedFinalPath
-                                        forOriginalHash:hash
-                                  destinationPathToHash:destination->_pathToHash]){
-                    NSArray*copiedArray=@[toBeCopiedFinalPath,toBeCopiedOriginalPath];
-                    [self _addPathOrOperation:copiedArray
-                                           to:delta.copiedPaths];
+            if(toBeMovedFinalPath){
+                NSString*toBeCopiedOriginalPath=toBeMovedFinalPath;
+                for (NSUInteger i=numberOfOccurenceToMove;i<nbOfOccurencesOnSource; i++) {
+                    NSString *toBeCopiedFinalPath=[pathsOnSources objectAtIndex:i];
+                    if([self _shouldProceedToMoveOrCopyFrom:toBeCopiedOriginalPath
+                                                         to:toBeCopiedFinalPath
+                                            forOriginalHash:hash
+                                      destinationPathToHash:destination->_pathToHash]){
+                        NSArray*copiedArray=@[toBeCopiedFinalPath,toBeCopiedOriginalPath];
+                        [self _addPathOrOperation:copiedArray
+                                               to:delta.copiedPaths];
+                    }
                 }
             }
         }
@@ -273,7 +275,7 @@ NSString*const hashToPathsKey=@"hToPths";
                     }else{
                         // create one
                         [self _addPathOrOperation:[path copy]
-                                           to:delta.createdPaths];
+                                               to:delta.createdPaths];
                     }
                     hasBeenProcessed=YES;
                 }else{
@@ -303,7 +305,7 @@ NSString*const hashToPathsKey=@"hToPths";
         // That's a neutral operation
         return NO;
     }
-
+    
     if([[pathToHash objectForKey:finalPath] isEqualToString:hash]){
         // The hash on the destination is already Correct
         return NO;
@@ -316,7 +318,7 @@ NSString*const hashToPathsKey=@"hToPths";
 - (BOOL)_addPathOrOperation:(NSObject*)op
                          to:(NSMutableArray*)container{
     BOOL __block shouldBeAdded=YES;
-
+    
     [container enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
         if ([op isKindOfClass:[NSArray class]]) {
             // It is a move or a copy
@@ -330,11 +332,11 @@ NSString*const hashToPathsKey=@"hToPths";
                     *stop=YES;
                 }
             }else{
-                    // Invalid op
-                    shouldBeAdded=NO;
-                    *stop=YES;
-                }
-
+                // Invalid op
+                shouldBeAdded=NO;
+                *stop=YES;
+            }
+            
         }else if([op isKindOfClass:[NSString class]]){
             // It is a simple path to be created, deleted or updated
             if([(NSString*)obj isEqualToString:(NSString *)op]){
