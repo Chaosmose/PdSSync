@@ -33,12 +33,14 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 	public function copy( $source, $destination ){
 		return copy($source, $destination);
 	}
-	
-	/**
-	 * Deletes a file or recursively a folder
-	 * Returns true if the file or the folder does not exists.
-	 * @see IOManagerPersistency::delete()
-	 */
+
+    /**
+     * Deletes a file or recursively a folder
+     * Returns true if the file or the folder does not exists.
+     * @see IOManagerPersistency::delete()
+     * @param $filename
+     * @return bool
+     */
 	public function delete($filename){
 		if(!file_exists($filename)){
 			return true;
@@ -50,8 +52,13 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 			return unlink($filename);
 		}
 	}
-	
-	private function _rmdir($dir,$result) {
+
+    /**
+     * @param $dir
+     * @param $result
+     * @return bool
+     */
+    private function _rmdir($dir,$result) {
 		if (is_dir($dir)) {
 			$objects = scandir($dir);
 			foreach ($objects as $object) {
@@ -66,15 +73,25 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 		}
 		return $result;
 	}
-	
-	
-	public function move_uploaded($filename, $destination) {
+
+
+    /**
+     * @param $filename
+     * @param $destination
+     * @return bool
+     */
+    public function move_uploaded($filename, $destination) {
 		 $this->mkdir( dirname ( $destination ));
 		return move_uploaded_file ( $filename, $destination );
 	}
-	
-	
-	public function  listRelativePathsIn ($dirPath,$prefix=''){
+
+
+    /**
+     * @param $dirPath
+     * @param string $prefix
+     * @return array
+     */
+    public function  listRelativePathsIn ($dirPath,$prefix=''){
 		$dir = rtrim($dirPath, '\\/');
 		$result = array();
 		foreach (scandir($dir) as $f) {
@@ -88,7 +105,5 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 		}
 		return $result;
 	}
-	
-	
-	
-}?>
+}
+?>

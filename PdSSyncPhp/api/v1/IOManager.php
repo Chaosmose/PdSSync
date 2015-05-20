@@ -1,6 +1,6 @@
 <?php
 
-include_once 'v1/PdSSyncConst.php';
+include_once 'PdSSyncConst.php';
 
 /**
  *  Standard IO Functions
@@ -19,8 +19,13 @@ interface IOManagerPersistency {
 	public function mkdir($dir);
 	
 	public function rename($oldname, $newname);
-	
-	public function copy( $source, $destination );
+
+    /**
+     * @param $source
+     * @param $destination
+     * @return mixed
+     */
+    public function copy( $source, $destination );
 	
 	public function delete($filename);
 	
@@ -270,4 +275,5 @@ abstract  class IOManagerAbstract  {
 		}
 	
 	}
-}?>
+}
+?>

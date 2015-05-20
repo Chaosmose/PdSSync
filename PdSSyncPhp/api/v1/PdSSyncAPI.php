@@ -1,7 +1,7 @@
 <?php
 
-require_once 'v1/CommandInterpreter.php';
-require_once 'v1/IOManager.php';
+require_once 'CommandInterpreter.php';
+require_once 'IOManager.php';
 
 /**
  * A simple API facade in one file
@@ -102,7 +102,7 @@ class PdSSyncAPI {
 	/**
 	 * Restricted endpoint list
 	 *
-	 * @return multitype:string
+	 * @return Array
 	 */
 	private function _allowedEndPointList() {
 		return array (

@@ -12,7 +12,7 @@ define ( 'REPOSITORY_WRITING_PATH',dirname( dirname(__DIR__)). '/Repository/'  )
 // PERSITENCY
 ///////////////////////
 
-require_once 'v1/IOManagerFS.php';  // Default adapter
+require_once 'IOManagerFS.php';  // Default adapter
 define('PERSISTENCY_CLASSNAME'	, 'IOManagerFS');
 
 ///////////////////////

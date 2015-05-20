@@ -136,13 +136,15 @@ class CommandInterpreter {
 */
 		return ($a [PdSCommand] > $b [PdSCommand]);
 	}
-	
-	/**
-	 * Finalizes the bunch of command
-	 *
-	 * @param string $syncIdentifier        	
-	 * @param string $finalHashMapFilePath        	
-	 */
+
+    /**
+     * Finalizes the bunch of command
+     *
+     * @param $treeId
+     * @param string $syncIdentifier
+     * @internal param string $finalHashMapFilePath
+     * @return array
+     */
 	private function _unPrefix($treeId, $syncIdentifier) {
 		$failures = array ();
 		foreach ( $this->listOfFiles as $file ) {
@@ -158,6 +160,7 @@ class CommandInterpreter {
 				// It is a folder with do not prefix currently the folders
 			}
 		}
+        return $failures;
 	}
 	
 	/**
@@ -170,7 +173,7 @@ class CommandInterpreter {
 	 * @return string on error, or null on success
 	 */
 	private function _decodeAndRunCommand($syncIdentifier, array $cmd, $treeId) {
-		if (count ( $cmd > 1 )) {
+		if (count ( $cmd )> 1 ) {
 			$command = $cmd [0];
 			// Absolute paths
 			$destination = $this->ioManager->absolutePath ( $treeId, $cmd [PdSDestination] );
