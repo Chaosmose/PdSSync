@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name        = 'PdSSync'
-  s.version     = '1.0.1'
+  s.version     = '1.1.1'
   s.authors     = { 'Benoit Pereira da Silva' => 'benoit@pereira-da-silva.com' }
   s.homepage    = 'https://github.com/benoit-pereira-da-silva/PdSSync'
   s.summary     = 'A simple delta synchronizer'

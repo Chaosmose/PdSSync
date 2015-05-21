@@ -35,6 +35,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     AFHTTPSessionManager            *_HTTPsessionManager;
     NSMutableArray                  *_allCommands;
     BOOL                            _sanitizeAutomatically;
+    BOOL                            _hasBeenInterrupted;
     int                             _messageCounter;
     
 }
@@ -158,6 +159,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 #pragma mark - private methods
 
 - (void)_run{
+    _hasBeenInterrupted=NO;
     if([_bunchOfCommand count]>0){
         PdSCommandInterpreter * __weak weakSelf=self;
         NSMutableArray*__block creativeCommands=[NSMutableArray array];
@@ -168,33 +170,40 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
         // Copy or move are "not creative" as we move or copy a existing resource
         for (id encodedCommand in _bunchOfCommand) {
             NSArray*cmdAsAnArray=[self _encodedCommandToArray:encodedCommand];
-            if(cmdAsAnArray){
-                if([[cmdAsAnArray objectAtIndex:0] intValue]==PdSCreate||
-                   [[cmdAsAnArray objectAtIndex:0] intValue]==PdSUpdate){
-                    [creativeCommands addObject:cmdAsAnArray];
+            if (!_hasBeenInterrupted) {
+                
+                
+                if(cmdAsAnArray){
+                    if([[cmdAsAnArray objectAtIndex:0] intValue]==PdSCreate||
+                       [[cmdAsAnArray objectAtIndex:0] intValue]==PdSUpdate){
+                        [creativeCommands addObject:cmdAsAnArray];
+                    }
+                    [_allCommands addObject:cmdAsAnArray];
                 }
-                [_allCommands addObject:cmdAsAnArray];
-            }
-            if(![encodedCommand isKindOfClass:[NSString class]]){
-                [self _interruptOnFault:[NSString stringWithFormat:@"Illegal command %@",encodedCommand]];
+                if(![encodedCommand isKindOfClass:[NSString class]]){
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Illegal command %@",encodedCommand]];
+                }
             }
         }
-        for (NSArray*cmd in creativeCommands) {
-            [self->_queue addOperationWithBlock:^{
-                [weakSelf _runCommandFromArrayOfArgs:cmd];
+        if (!_hasBeenInterrupted) {
+            for (NSArray*cmd in creativeCommands) {
+                [self->_queue addOperationWithBlock:^{
+                    [weakSelf _runCommandFromArrayOfArgs:cmd];
+                }];
+            }
+            
+            [_queue addOperationWithBlock:^{
+                [[NSNotificationCenter defaultCenter] postNotificationName:PdSSyncInterpreterWillFinalize
+                                                                    object:self];
+            }];
+            [_queue addOperationWithBlock:^{
+                if(self.finalizationDelegate){
+                    [self.finalizationDelegate readyForFinalization:self];
+                }else{
+                    [self finalize];
+                }
             }];
         }
-        [_queue addOperationWithBlock:^{
-            [[NSNotificationCenter defaultCenter] postNotificationName:PdSSyncInterpreterWillFinalize
-                                                                object:self];
-        }];
-        [_queue addOperationWithBlock:^{
-            if(self.finalizationDelegate){
-                [self.finalizationDelegate readyForFinalization:self];
-            }else{
-                [self finalize];
-            }
-        }];
     }else{
         if(_sanitizeAutomatically){
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -284,6 +293,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     [self _progressMessage:@"INTERUPT ON FAULT %@",faultMessage];
     // This method is never called on reachability issues.
     [self->_queue cancelAllOperations];
+    self->_hasBeenInterrupted=YES;
     self->_completionBlock(NO,faultMessage);
 }
 
@@ -301,7 +311,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
     if(cmd && [cmd isKindOfClass:[NSArray class]] && [cmd count]>0){
         return cmd;
     }else{
-        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %@",encoded]];
+        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command (encoding) : %@, %@",encoded,cmd]];
     }
     return nil;
 }
@@ -319,7 +329,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 if(arg1 && arg2){
                     [self _runCreateOrUpdate:arg2 destination:arg1];
                 }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command PdSCreate : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
                 }
                 break;
             }
@@ -327,7 +337,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 if(arg1 && arg2){
                     [self _runCreateOrUpdate:arg2 destination:arg1];
                 }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command PdSUpdate : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
                 }
                 break;
             }
@@ -335,7 +345,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 if(arg1 && arg2){
                     [self _runCopy:arg2 destination:arg1];
                 }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command PdSCopy : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
                 }
                 break;
             }
@@ -343,7 +353,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 if(arg1 && arg2){
                     [self _runMove:arg2 destination:arg1];
                 }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command PdSMove : %i arg1:%@ arg2:%@",cmdName,arg1?arg1:@"nil",arg2?arg2:@"nil"]];
                 }
                 break;
             }
@@ -351,16 +361,16 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                 if(arg1){
                     [self _runDelete:arg1];
                 }else{
-                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
+                    [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command PdSDelete : %i arg1:%@ ",cmdName,arg1?arg1:@"nil"]];
                 }
                 break;
             }
             default:
-                [self _interruptOnFault:[NSString stringWithFormat:@"The command %i is currently not supported",cmdName]];
+                [self _interruptOnFault:[NSString stringWithFormat:@"The command default %i is currently not supported",cmdName]];
                 break;
         }
     }else{
-        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command %@",cmd?cmd:@"nil"]];
+        [self _interruptOnFault:[NSString stringWithFormat:@"Invalid command global %@",cmd?cmd:@"nil"]];
     }
 }
 
@@ -838,11 +848,14 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                    toLocalUrl:_context.destinationBaseUrl
                                                                    withTreeId:_context.destinationTreeId
                                                                     addPrefix:NO];
-        NSError*error=nil;
-        [_fileManager removeItemAtPath:[absoluteDestination filteredFilePath] error:&error];
-        if(error){
-            [self _progressMessage:@"Error on removeItemAtPath \nfrom %@ \n%@ ",[absoluteDestination filteredFilePath],[error description]];
-            [self _interruptOnFault:[error description]];
+        
+        if([_fileManager fileExistsAtPath:absoluteDestination]){
+            NSError*error=nil;
+            [_fileManager removeItemAtPath:[absoluteDestination filteredFilePath] error:&error];
+            if(error){
+                [self _progressMessage:@"Error on removeItemAtPath \nfrom %@ \n%@ ",[absoluteDestination filteredFilePath],[error description]];
+                [self _interruptOnFault:[error description]];
+            }
         }
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
