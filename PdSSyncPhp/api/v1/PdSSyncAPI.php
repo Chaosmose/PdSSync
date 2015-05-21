@@ -518,6 +518,8 @@ class PdSSyncAPI {
 
 
     /**
+     * The repository can be modified for example via FTP.
+     * This method cleanup  Ghosts or lost files.
      * @return string
      */
     protected function removeGhosts(){

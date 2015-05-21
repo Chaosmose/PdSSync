@@ -112,36 +112,49 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
         $deletedPath=array();
         $foundPath=array();
         $pathFoundInTreeInfo=array();
-        $pathFoundInTreeInfoOrigin=array();
         $dir=$this->repositoryAbsolutePath();
+        $messages=array();
         foreach (scandir($dir) as $f) {
-            $foundPath[]="$dir$f";
-            $p=$dir.$f.'/'.TREE_INFOS_FILENAME;
-            if($this->exists($p)){
-                $this->treeData= json_decode( $this->get_contents($p));
-                $associatedPath=$dir.$this->treeData[0].'/';
-                $pathFoundInTreeInfo[]=$associatedPath;
-                $pathFoundInTreeInfoOrigin[]=$p;
-                if($this->exists($associatedPath)==false){
-                    //IF there is TREE INFO file but no associated folder.
-                    //ITS is a GHOST Delete the folder
-                    $this->delete($dir.$f);
-                    $deletedPath[]=$dir.$f;
+            $path="$dir$f";
+            if (! is_dir($path)){
+                $messages[]="$path is not a folder | ";
+                $deletedPath[]=$path;
+                $this->delete($path);
+                continue;
+            }
+            if($f!='.' && $f!='..'){
+                $foundPath[]=$path;
+                $p=$dir.$f.'/'.TREE_INFOS_FILENAME;
+                if($this->exists($p)){
+                    $this->treeData= json_decode( $this->get_contents($p));
+                    $associatedPath=$dir.$this->treeData[0].'/';
+                    $pathFoundInTreeInfo[]=$associatedPath;
+                    if($this->exists($associatedPath)==false){
+                        //IF there is TREE INFO file but no associated folder.
+                        //ITS is a GHOST Delete the folder
+                        $messages[]="$p is associated with a path that do not exists ($associatedPath) | ";
+                        $deletedPath[]=$path;
+                        $this->delete($path);
+                    }
                 }
             }
-            //if $foundPath
         }
-        $i=0;
-        foreach ($pathFoundInTreeInfo as $pathFound) {
-            //  IF THERE IS NO ASSOCIATED TREE_INFOS_FILENAME IT IS A GHOST
-            if($this->exists($pathFound)==false){
-                $this->delete($pathFoundInTreeInfoOrigin[$i]);
-                $deletedPath[]=$pathFoundInTreeInfoOrigin[$i];
+        foreach ($foundPath as $p) {
+            $path_parts = pathinfo($p);
+            $fileName=$path_parts['basename'];
+            $startByDot=(substr ($fileName,0,1 ) == ".");
+            if( !in_array($p.'/',$pathFoundInTreeInfo) && !$startByDot){
+                //  IF THERE IS NO ASSOCIATED TREE_INFOS_FILENAME IT IS A GHOST
+                $messages[]="$p has no tree info file | ";
+                $deletedPath[]=$p;
+                $this->delete($p);
             }
-            $i++;
-        }
 
-        return array("foundPath"=>$foundPath,"deletedPath"=> $deletedPath);
+        }
+        return array(
+                        "deletedPath"=> $deletedPath,
+                        "messages"=>$messages
+        );
     }
 }
 ?>
