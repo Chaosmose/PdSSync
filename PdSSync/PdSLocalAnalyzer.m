@@ -41,85 +41,86 @@
     
     NSString *folderPath=[folderURL path];
     PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
-    // Local
-    NSArray*exclusion=@[@".DS_Store"];
-    NSMutableDictionary*treeDictionary=[NSMutableDictionary dictionary];
-    NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
-    NSDirectoryEnumerator *dirEnum =[fileManager enumeratorAtURL:folderURL
-                                      includingPropertiesForKeys:keys
-                                                         options:0
-                                                    errorHandler:^BOOL(NSURL *url, NSError *error) {
-                                                        NSLog(@"ERROR when enumerating  %@ %@",url, [error localizedDescription]);
-                                                        return YES;
-                                                    }];
-    
     HashMap*hashMap=[[HashMap alloc]init];
-    NSURL *file;
-    int i=0;
-    while ((file = [dirEnum nextObject])) {
-        NSString *filePath=[NSString filteredFilePathFrom:[file absoluteString]];
-        NSString *pathExtension=file.pathExtension;
-        NSNumber *isDirectory;
-        [file getResourceValue:&isDirectory
-                        forKey:NSURLIsDirectoryKey error:nil];
-
-        if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound
-           && ![pathExtension isEqualToString:kPdSSyncHashFileExtension]
-           && [filePath rangeOfString:kPdSSyncPrefixSignature].location==NSNotFound
-           ){
-            @autoreleasepool {
-                NSData *data=nil;
-                NSString*hashfile=[filePath stringByAppendingFormat:@".%@",kPdSSyncHashFileExtension];
-                NSString *relativePath=[filePath stringByReplacingOccurrencesOfString:[folderPath stringByAppendingString:@"/"] withString:@""];
-                if([isDirectory boolValue]){
-                    relativePath=[relativePath stringByAppendingString:@"/"];
-                }
-                // we check if there is a file.extension.kPdSSyncHashFileExtension
-                if(!self.recomputeHash && [fileManager fileExistsAtPath:hashfile] ){
-                    NSError*crc32ReadingError=nil;
-                    NSString*crc32String=[NSString stringWithContentsOfFile:filePath
-                                                                   encoding:NSUTF8StringEncoding
-                                                                      error:&crc32ReadingError];
-                    if(!crc32ReadingError){
-                        long long crc32=[crc32String longLongValue];
-                        progressBlock((unsigned int)crc32,relativePath,i);
+    if([fileManager fileExistsAtPath:folderPath]){
+        NSArray*exclusion=@[@".DS_Store"];
+        NSMutableDictionary*treeDictionary=[NSMutableDictionary dictionary];
+        NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
+        NSDirectoryEnumerator *dirEnum =[fileManager enumeratorAtURL:folderURL
+                                          includingPropertiesForKeys:keys
+                                                             options:0
+                                                        errorHandler:^BOOL(NSURL *url, NSError *error) {
+                                                            NSLog(@"ERROR when enumerating  %@ %@",url, [error localizedDescription]);
+                                                            return YES;
+                                                        }];
+        
+        
+        NSURL *file;
+        int i=0;
+        while ((file = [dirEnum nextObject])) {
+            NSString *filePath=[NSString filteredFilePathFrom:[file absoluteString]];
+            NSString *pathExtension=file.pathExtension;
+            NSNumber *isDirectory;
+            [file getResourceValue:&isDirectory
+                            forKey:NSURLIsDirectoryKey error:nil];
+            
+            if([exclusion indexOfObject:[file lastPathComponent]]==NSNotFound
+               && ![pathExtension isEqualToString:kPdSSyncHashFileExtension]
+               && [filePath rangeOfString:kPdSSyncPrefixSignature].location==NSNotFound
+               ){
+                @autoreleasepool {
+                    NSData *data=nil;
+                    NSString*hashfile=[filePath stringByAppendingFormat:@".%@",kPdSSyncHashFileExtension];
+                    NSString *relativePath=[filePath stringByReplacingOccurrencesOfString:[folderPath stringByAppendingString:@"/"] withString:@""];
+                    if([isDirectory boolValue]){
+                        relativePath=[relativePath stringByAppendingString:@"/"];
+                    }
+                    // we check if there is a file.extension.kPdSSyncHashFileExtension
+                    if(!self.recomputeHash && [fileManager fileExistsAtPath:hashfile] ){
+                        NSError*crc32ReadingError=nil;
+                        NSString*crc32String=[NSString stringWithContentsOfFile:filePath
+                                                                       encoding:NSUTF8StringEncoding
+                                                                          error:&crc32ReadingError];
+                        if(!crc32ReadingError){
+                            long long crc32=[crc32String longLongValue];
+                            progressBlock((unsigned int)crc32,relativePath,i);
+                        }else{
+                            NSLog(@"ERROR when reading crc32 from %@ %@",filePath,[crc32ReadingError localizedDescription]);
+                        }
                     }else{
-                        NSLog(@"ERROR when reading crc32 from %@ %@",filePath,[crc32ReadingError localizedDescription]);
+                        if (dataBlock) {
+                            data=dataBlock(filePath,i);
+                        }else{
+                            data=[NSData dataWithContentsOfFile:filePath];
+                        }
                     }
-                }else{
-                    if (dataBlock) {
-                        data=dataBlock(filePath,i);
-                    }else{
-                        data=[NSData dataWithContentsOfFile:filePath];
+                    unsigned long crc32=(unsigned long)[data crc32];
+                    
+                    if (crc32==0){
+                        // Include the folders.
+                        // We use the relative path as CRC32
+                        crc32=[[relativePath dataUsingEncoding:NSUTF8StringEncoding] crc32];
                     }
-                }
-                unsigned long crc32=(unsigned long)[data crc32];
-                
-                if (crc32==0){
-                    // Include the folders.
-                    // We use the relative path as CRC32
-                    crc32=[[relativePath dataUsingEncoding:NSUTF8StringEncoding] crc32];
-                }
-                if(crc32!=0){
-                    [hashMap setHash:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forPath:relativePath];
-                    [treeDictionary setObject:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forKey:relativePath];
-                    i++;
-                    if(self.saveHashInAFile){
-                        [self _writeCrc32:crc32 toFileWithPath:filePath];
+                    if(crc32!=0){
+                        [hashMap setHash:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forPath:relativePath];
+                        [treeDictionary setObject:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forKey:relativePath];
+                        i++;
+                        if(self.saveHashInAFile){
+                            [self _writeCrc32:crc32 toFileWithPath:filePath];
+                        }
+                        if(progressBlock)
+                            progressBlock(crc32,relativePath,i);
                     }
-                    if(progressBlock)
-                        progressBlock(crc32,relativePath,i);
+                    
                 }
-                
+            }
+            
+            if(!self.saveHashInAFile && [pathExtension isEqualToString:kPdSSyncHashFileExtension]){
+                NSError*removeFile=nil;
+                [fileManager removeItemAtPath:filePath error:&removeFile];
             }
         }
-        
-        if(!self.saveHashInAFile && [pathExtension isEqualToString:kPdSSyncHashFileExtension]){
-            NSError*removeFile=nil;
-            [fileManager removeItemAtPath:filePath error:&removeFile];
-        }
     }
-    
     // We gonna create the hashmap folder
     NSString*hashMapFileP=[[folderURL absoluteString] stringByAppendingFormat:@"%@%@.%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
     [fileManager createRecursivelyRequiredFolderForPath:[hashMapFileP  filteredFilePath]];
