@@ -385,7 +385,11 @@ class PdSSyncAPI {
 						$d = dirname ( $destination ) . DIRECTORY_SEPARATOR . $syncIdentifier . basename ( $destination );
 						$uploadfile = $this->ioManager->absolutePath ( $treeId, $d );
 						if ($this->ioManager->move_uploaded ( $_FILES ['source'] ['tmp_name'], $uploadfile )) {
-							return $this->_response ( NULL, 201 );
+                            if ( $this->ioManager->exists($uploadfile) ){
+                                return $this->_response ( NULL, 201 );
+                            }else{
+                                return $this->_response ( 'Error while moving unexisting destination path ' . $uploadfile, 404 );
+                            }
 						} else {
 							return $this->_response ( 'Error while moving  ' . $uploadfile, 412 );
 						}
