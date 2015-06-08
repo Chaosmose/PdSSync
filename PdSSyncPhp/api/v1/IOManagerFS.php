@@ -14,6 +14,7 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 	}
 	
 	public function put_contents($filename, $data) {
+        $this->delete($newname);
 		return file_put_contents ( $filename, $data );
 	}
 	
@@ -29,10 +30,12 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 	}
 	
 	public function rename($oldname, $newname) {
+        $this->delete($newname);
 		return rename ( $oldname, $newname );
 	}
 	
 	public function copy( $source, $destination ){
+        $this->delete($newname);
 		return copy($source, $destination);
 	}
 
@@ -83,7 +86,8 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
      * @return bool
      */
     public function move_uploaded($filename, $destination) {
-		 $this->mkdir( dirname ( $destination ));
+        $this->delete($destination);
+		$this->mkdir( dirname ( $destination ));
 		return move_uploaded_file ( $filename, $destination );
 	}
 
