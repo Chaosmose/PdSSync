@@ -796,8 +796,12 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                               toPath:[absoluteDestination filteredFilePath]
                                error:&error];
         if(error){
-            [self _progressMessage:@"Error on copyItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
-            [self _interruptOnFault:[error description]];
+            if(![_fileManager fileExistsAtPath:[absoluteDestination filteredFilePath]]){
+                // NSFileManagerDelegate seems not to handle correctly this case
+                [self _progressMessage:@"Error on copyItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
+                [self _interruptOnFault:[error description]];
+                
+            }
         }
         
     }else if (self->_context.mode==SourceIsDistantDestinationIsDistant){
@@ -828,8 +832,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                               toPath:[absoluteDestination filteredFilePath]
                                error:&error];
         if(error){
-            [self _progressMessage:@"Error on moveItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
-            [self _interruptOnFault:[error description]];
+            if(![_fileManager fileExistsAtPath:[absoluteDestination filteredFilePath]]){
+                [self _progressMessage:@"Error on moveItemAtPath \nfrom %@ \nto %@ \n%@ ",[absoluteSource filteredFilePath],[absoluteDestination filteredFilePath],[error description]];
+                [self _interruptOnFault:[error description]];
+            }
         }
         
         
@@ -849,7 +855,7 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
                                                                    withTreeId:_context.destinationTreeId
                                                                     addPrefix:NO];
         
-        if([_fileManager fileExistsAtPath:absoluteDestination]){
+        if([_fileManager fileExistsAtPath:[absoluteDestination filteredFilePath]]){
             NSError*error=nil;
             [_fileManager removeItemAtPath:[absoluteDestination filteredFilePath] error:&error];
             if(error){

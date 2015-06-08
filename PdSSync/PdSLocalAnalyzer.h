@@ -39,7 +39,11 @@
  */
 - (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
                                 dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
-                        progressBlock:(void(^)(NSUInteger hash,NSString*path, NSUInteger index))progressBlock
+                        progressBlock:(void(^)(NSString*hash,NSString*path, NSUInteger index))progressBlock
               andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock;
+
+
+
+- (void)saveHashMap:(HashMap*)hashMap toFolderUrl:(NSURL*)folderURL;
 
 @end

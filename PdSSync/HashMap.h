@@ -21,6 +21,16 @@ extern NSString* const hashToPathsKey;
 @property (nonatomic)BOOL useCompactSerialization;
 
 /**
+ *  Delta computation path map
+ *  When set to YES :
+ *  We try to reduce the operation and to perform the more efficient operation.
+ *  For example : we clone existing files with the same hash
+ *
+ *  Default is NO
+ **/
+@property (nonatomic)BOOL deltaHashMapWithReducedTransfer;
+
+/**
  *  A dictionary encoded factory constructor
  *
  *  @param dictionary the dictionary
@@ -41,18 +51,14 @@ extern NSString* const hashToPathsKey;
 /**
  *  Sets the hash of a given path
  *
- *  @param hash the hash
+ *  @param syncHash the hash
  @  @param path the path
  */
-- (void)setHash:(NSString*)hash forPath:(NSString*)path;
+- (void)setSyncHash:(NSString*)syncHash forPath:(NSString*)path;
 
 
 /**
  *  Computes an optimized delta path map from a source to a destination.
- *  We try to reduce the operation and to perform the more efficient operation.
- *  For example : we can perform a move command instead of (delete + create)
- *  When delta is used for a distant  synchronization this may be highly critical.
- *
  *  @param source the source hashMap
  *  @param destination  the destination hashMap
  *

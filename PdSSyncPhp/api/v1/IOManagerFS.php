@@ -14,7 +14,6 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 	}
 	
 	public function put_contents($filename, $data) {
-        $this->delete($newname);
 		return file_put_contents ( $filename, $data );
 	}
 	

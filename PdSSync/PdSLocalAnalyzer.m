@@ -36,7 +36,7 @@
  */
 - (void)createHashMapFromLocalFolderURL:(NSURL*)folderURL
                               dataBlock:(NSData* (^)(NSString*path, NSUInteger index))dataBlock
-                          progressBlock:(void(^)(NSUInteger hash,NSString*path, NSUInteger index))progressBlock
+                          progressBlock:(void(^)(NSString*hash,NSString*path, NSUInteger index))progressBlock
                      andCompletionBlock:(void(^)(HashMap*hashMap))completionBlock{
     
     NSString *folderPath=[folderURL path];
@@ -44,7 +44,6 @@
     HashMap*hashMap=[[HashMap alloc]init];
     if([fileManager fileExistsAtPath:folderPath]){
         NSArray*exclusion=@[@".DS_Store"];
-        NSMutableDictionary*treeDictionary=[NSMutableDictionary dictionary];
         NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
         NSDirectoryEnumerator *dirEnum =[fileManager enumeratorAtURL:folderURL
                                           includingPropertiesForKeys:keys
@@ -82,8 +81,7 @@
                                                                        encoding:NSUTF8StringEncoding
                                                                           error:&crc32ReadingError];
                         if(!crc32ReadingError){
-                            long long crc32=[crc32String longLongValue];
-                            progressBlock((unsigned int)crc32,relativePath,i);
+                            progressBlock(crc32String,relativePath,i);
                         }else{
                             NSLog(@"ERROR when reading crc32 from %@ %@",filePath,[crc32ReadingError localizedDescription]);
                         }
@@ -94,24 +92,24 @@
                             data=[NSData dataWithContentsOfFile:filePath];
                         }
                     }
-                    unsigned long crc32=(unsigned long)[data crc32];
-                    
+                    uint32_t crc32=(uint32_t)[data crc32];
+                    NSString*crc32String=[NSString stringWithFormat:@"%@",@(crc32)];
                     if (crc32==0){
                         // Include the folders.
                         // We use the relative path as CRC32
                         crc32=[[relativePath dataUsingEncoding:NSUTF8StringEncoding] crc32];
                     }
                     if(crc32!=0){
-                        [hashMap setHash:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forPath:relativePath];
-                        [treeDictionary setObject:[NSString stringWithFormat:@"%lu",(unsigned long)crc32] forKey:relativePath];
+                        [hashMap setSyncHash:crc32String
+                                     forPath:relativePath];
                         i++;
                         if(self.saveHashInAFile){
-                            [self _writeCrc32:crc32 toFileWithPath:filePath];
+                            [self _writeCrc32:crc32String
+                               toFileWithPath:filePath];
                         }
                         if(progressBlock)
-                            progressBlock(crc32,relativePath,i);
+                            progressBlock(crc32String,relativePath,i);
                     }
-                    
                 }
             }
             
@@ -121,6 +119,16 @@
             }
         }
     }
+    
+    [self saveHashMap:hashMap
+          toFolderUrl:folderURL];
+    completionBlock(hashMap);
+}
+
+
+
+- (void)saveHashMap:(HashMap*)hashMap toFolderUrl:(NSURL*)folderURL{
+    PdSFileManager*fileManager=[PdSFileManager sharedInstance] ;
     // We gonna create the hashmap folder
     NSString*hashMapFileP=[[folderURL absoluteString] stringByAppendingFormat:@"%@%@.%@",kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
     [fileManager createRecursivelyRequiredFolderForPath:[hashMapFileP  filteredFilePath]];
@@ -138,7 +146,7 @@
         NSLog(@"ERROR when writing hashmap to %@ %@", [error description],hashMapFileP);
         
     }
-    completionBlock(hashMap);
+
 }
 
 
@@ -146,12 +154,11 @@
 #pragma mark - private
 
 
-- (BOOL)_writeCrc32:(unsigned long)crc32 toFileWithPath:(NSString*)path{
+- (BOOL)_writeCrc32:(NSString*)crc32 toFileWithPath:(NSString*)path{
     NSError *crc32WritingError=nil;
     NSString *crc32Path=[path stringByAppendingFormat:@".%@",kPdSSyncHashFileExtension];
-    NSString *crc32String=[NSString stringWithFormat:@"%lu",crc32];
-    
-    [crc32String writeToFile:crc32Path
+
+    [crc32 writeToFile:crc32Path
                   atomically:YES
                     encoding:NSUTF8StringEncoding
                        error:&crc32WritingError];

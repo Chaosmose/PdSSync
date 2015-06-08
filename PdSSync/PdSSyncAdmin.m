@@ -45,83 +45,34 @@
 -(void)synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
                  andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
     int attempts=0;
-    [self _synchronizeWithprogressBlock:progressBlock
-                     andCompletionBlock:completionBlock
-                        numberOfAttempt:attempts];
+    [self _prepareAndSynchronizeWithprogressBlock:progressBlock
+                               andCompletionBlock:completionBlock
+                                  numberOfAttempt:attempts];
 }
 
 
--(void)_synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
-                 andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock
-                     numberOfAttempt:(int)attempts{
+-(void)_prepareAndSynchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
+                            andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock
+                               numberOfAttempt:(int)attempts{
     attempts++;
     if(attempts > kRecursiveMaxNumberOfAttempts){
         // This occurs if the recursive call fails.
         completionBlock(NO,[NSString stringWithFormat:@"Excessive number of attempts of synchronization %i",kRecursiveMaxNumberOfAttempts]);
         return;
     }
-    //PdSSyncAdmin*__weak weakSelf=self;
-    void (^executionBlock)(void) = ^(void) {
-        [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
-            if(sourceHashMap && destinationHashMap ){
-                
-                
-                progressBlock(-1,0.f,[NSString stringWithFormat:@"\n\n\n----SYNCRONIZATION-----\n\n"]);
-                progressBlock(-1,0.f,[NSString stringWithFormat:@"\nSource: %@\n",[sourceHashMap dictionaryRepresentation]]);
-                 progressBlock(-1,0.f,[NSString stringWithFormat:@"\nDestination: %@\n",[destinationHashMap dictionaryRepresentation]]);
-                
-                DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
-                                                        andDestination:destinationHashMap
-                                                            withFilter:self.filteringBlock];
-                
-                NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
-       
-                PdSCommandInterpreter*interpreter= [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
-                                                                                          progressBlock:^(uint taskIndex, float progress) {
-                                                                                              NSString*cmd=([commands count]>taskIndex)?[commands objectAtIndex:taskIndex]:@"POST CMD";
-                                                                                              progressBlock(taskIndex,progress,cmd);
-                                                                                          } andCompletionBlock:^(BOOL success, NSString *message) {
-                                                                                              completionBlock(success,message);
-                                                                                          }];
-                
-                interpreter.finalizationDelegate=self.finalizationDelegate;
-                
-                progressBlock(-1,0.f,[NSString stringWithFormat:@"\nDictionary representation of DeltaPathMap\n%@",[dpm dictionaryRepresentation]]);
-                NSMutableString*cmdString=[NSMutableString string];
-                [cmdString appendString:@"\n\n** Commands to be executed : **\n"];
-                for (NSString*cmd in commands) {
-                    NSString*tmpCmdString=[NSString stringWithFormat:@"%@\n",[cmd copy]];
-                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[0," withString:@"PdSCreate ["];
-                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[1," withString:@"PdSUpdate ["];
-                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[2," withString:@"PdSMove ["];
-                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[3," withString:@"PdSCopy ["];
-                    tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[4," withString:@"PdSDelete ["];
-                    [cmdString appendString:tmpCmdString];
-                }
-                [cmdString appendString:@"\n"];
-                progressBlock(-1,0.f,cmdString);
-                
-                
-            }else{
-                BOOL sourceHashMapIsNil=(!sourceHashMap);
-                BOOL destinationHashMapIsNil=(!destinationHashMap);
-                NSString *m=[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i source HashMap Is Nil : %@ destination HashMap Is Nil %@" ,(int)statusCode,sourceHashMapIsNil?@"YES":@"NO",destinationHashMapIsNil?@"YES":@"NO"];
-                completionBlock(NO,m);
-            }
-        }];
-        
-    };
     if(self.syncContext.autoCreateTrees){
         [self touchTreesWithCompletionBlock:^(BOOL success, NSInteger statusCode) {
             if(success){
-                executionBlock();
+                [self _synchronizeWithprogressBlock:progressBlock
+                                 andCompletionBlock:completionBlock];
+                
             }else{
                 [self createTreesWithCompletionBlock:^(BOOL success, NSInteger statusCode) {
                     if(success){
                         // Recursive call
-                        [self _synchronizeWithprogressBlock:progressBlock
-                                        andCompletionBlock:completionBlock
-                                            numberOfAttempt:attempts];
+                        [self _prepareAndSynchronizeWithprogressBlock:progressBlock
+                                                   andCompletionBlock:completionBlock
+                                                      numberOfAttempt:attempts];
                     }else{
                         completionBlock(NO,[NSString stringWithFormat:@"Failure on createTreesWithCompletionBlock autoCreateTrees==YES with statusCode %i",(int)statusCode]);
                     }
@@ -129,10 +80,68 @@
             }
         }];
     }else{
-        executionBlock();
+        [self _synchronizeWithprogressBlock:progressBlock
+                         andCompletionBlock:completionBlock];
     }
 }
 
+
+
+- (void)_synchronizeWithprogressBlock:(void(^)(uint taskIndex,float progress,NSString*message))progressBlock
+                   andCompletionBlock:(void(^)(BOOL success,NSString*message))completionBlock{
+    
+    
+    [self hashMapsForTreesWithCompletionBlock:^(HashMap *sourceHashMap, HashMap *destinationHashMap, NSInteger statusCode) {
+        if(sourceHashMap && destinationHashMap ){
+            
+            NSString*s=[NSString stringWithFormat:@"\nSource: %@\n",[sourceHashMap dictionaryRepresentation]];
+            NSString*d=[NSString stringWithFormat:@"\nDestination: %@\n",[destinationHashMap dictionaryRepresentation]];
+            progressBlock(-1,0.f,[NSString stringWithFormat:@"\n\n\n----SYNCRONIZATION-----\n\n"]);
+            progressBlock(-1,0.f,s);
+            progressBlock(-1,0.f,d);
+            
+            DeltaPathMap*dpm=[sourceHashMap deltaHashMapWithSource:sourceHashMap
+                                                    andDestination:destinationHashMap
+                                                        withFilter:self.filteringBlock];
+            
+            NSMutableArray*commands=[PdSCommandInterpreter commandsFromDeltaPathMap:dpm];
+            
+            
+            
+            PdSCommandInterpreter*interpreter= [PdSCommandInterpreter interpreterWithBunchOfCommand:commands context:self->_syncContext
+                                                                                      progressBlock:^(uint taskIndex, float progress) {
+                                                                                          NSString*cmd=([commands count]>taskIndex)?[commands objectAtIndex:taskIndex]:@"POST CMD";
+                                                                                          progressBlock(taskIndex,progress,cmd);
+                                                                                      } andCompletionBlock:^(BOOL success, NSString *message) {
+                                                                                          completionBlock(success,message);
+                                                                                      }];
+            
+            interpreter.finalizationDelegate=self.finalizationDelegate;
+            
+            progressBlock(-1,0.f,[NSString stringWithFormat:@"\nDictionary representation of DeltaPathMap\n%@",[dpm dictionaryRepresentation]]);
+            NSMutableString*cmdString=[NSMutableString string];
+            [cmdString appendString:@"\n\n** Commands to be executed : **\n"];
+            for (NSString*cmd in commands) {
+                NSString*tmpCmdString=[NSString stringWithFormat:@"%@\n",[cmd copy]];
+                tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[0," withString:@"PdSCreate ["];
+                tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[1," withString:@"PdSUpdate ["];
+                tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[2," withString:@"PdSMove ["];
+                tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[3," withString:@"PdSCopy ["];
+                tmpCmdString=[tmpCmdString stringByReplacingOccurrencesOfString:@"[4," withString:@"PdSDelete ["];
+                [cmdString appendString:tmpCmdString];
+            }
+            [cmdString appendString:@"\n"];
+            progressBlock(-1,0.f,cmdString);
+            
+            
+        }else{
+            BOOL sourceHashMapIsNil=(!sourceHashMap);
+            BOOL destinationHashMapIsNil=(!destinationHashMap);
+            NSString *m=[NSString stringWithFormat:@"Failure on hashMapsForTreesWithCompletionBlock with statusCode %i source HashMap Is Nil : %@ destination HashMap Is Nil %@" ,(int)statusCode,sourceHashMapIsNil?@"YES":@"NO",destinationHashMapIsNil?@"YES":@"NO"];
+            completionBlock(NO,m);
+        }
+    }];
+}
 
 
 
@@ -171,19 +180,19 @@
  */
 - (void)createTreesWithCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block{
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
-        if([self _createTreeLocalUrl:_syncContext.sourceBaseUrl
+        if([self _createOrConfirmTreeLocalUrl:_syncContext.sourceBaseUrl
                               withId:_syncContext.sourceTreeId]){
-        
-        [self _createTreeDistantUrl:_syncContext.destinationBaseUrl
-                             withId:_syncContext.destinationTreeId
-                 andCompletionBlock:^(BOOL success, NSInteger statusCode) {
-                      block(success,statusCode);
-                 }];
+            
+            [self _createTreeDistantUrl:_syncContext.destinationBaseUrl
+                                 withId:_syncContext.destinationTreeId
+                     andCompletionBlock:^(BOOL success, NSInteger statusCode) {
+                         block(success,statusCode);
+                     }];
         }else{
             block(NO,404);
         }
     }else if(_syncContext.mode==SourceIsDistantDestinationIsLocal){
-        if([self _createTreeLocalUrl:_syncContext.destinationBaseUrl
+        if([self _createOrConfirmTreeLocalUrl:_syncContext.destinationBaseUrl
                               withId:_syncContext.destinationTreeId]){
             
             [self _createTreeDistantUrl:_syncContext.sourceBaseUrl
@@ -195,14 +204,14 @@
             block(NO,404);
         }
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
-        if([self _createTreeLocalUrl:_syncContext.sourceBaseUrl
+        if([self _createOrConfirmTreeLocalUrl:_syncContext.sourceBaseUrl
                               withId:_syncContext.sourceTreeId]&&
-           [self _createTreeLocalUrl:_syncContext.destinationBaseUrl
+           [self _createOrConfirmTreeLocalUrl:_syncContext.destinationBaseUrl
                               withId:_syncContext.destinationTreeId]){
-            block(YES,200);
-        }else{
-            block(NO,404);
-        }
+               block(YES,200);
+           }else{
+               block(NO,404);
+           }
     }else if (_syncContext.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
@@ -226,22 +235,20 @@
     
 }
 
--(BOOL)_createTreeLocalUrl:(NSURL*)baseUrl
+-(BOOL)_createOrConfirmTreeLocalUrl:(NSURL*)baseUrl
                     withId:(NSString*)identifier{
     NSString*p=[baseUrl absoluteString];
     p=[p stringByAppendingFormat:@"%@/",identifier];
-    BOOL created=[_fileManager createRecursivelyRequiredFolderForPath:p];
-    if(created){
+    if ([_fileManager fileExistsAtPath:[p filteredFilePath]]) {
+        return YES;
+    }
+    [_fileManager createRecursivelyRequiredFolderForPath:p];
     // By default we create a void hashmap.
+    HashMap*hashMap=[[HashMap alloc] init];
     PdSLocalAnalyzer*analyzer=[[PdSLocalAnalyzer alloc] init];
     analyzer.saveHashInAFile=NO;
-    [analyzer createHashMapFromLocalFolderURL:[NSURL URLWithString:p]
-                                    dataBlock:nil
-                                progressBlock:nil
-                           andCompletionBlock:^(HashMap *hashMap) {
-                                   }];
-    }
-    return created;
+    [analyzer saveHashMap:hashMap toFolderUrl:[NSURL URLWithString:p]];
+    return YES;
 }
 
 
@@ -254,16 +261,16 @@
  */
 - (void)touchTreesWithCompletionBlock:(void (^)(BOOL success, NSInteger statusCode))block{
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
-       if( [self _touchLocalUrl:_syncContext.sourceBaseUrl
-                  andTreeWithId:_syncContext.sourceTreeId]){
-        [self _touchDistantUrl:_syncContext.destinationBaseUrl
-                withTreeWithId:_syncContext.destinationTreeId
-            andCompletionBlock:^(BOOL success, NSInteger statusCode) {
-                block(success,statusCode);
-            }];
-       }else{
+        if( [self _touchLocalUrl:_syncContext.sourceBaseUrl
+                   andTreeWithId:_syncContext.sourceTreeId]){
+            [self _touchDistantUrl:_syncContext.destinationBaseUrl
+                    withTreeWithId:_syncContext.destinationTreeId
+                andCompletionBlock:^(BOOL success, NSInteger statusCode) {
+                    block(success,statusCode);
+                }];
+        }else{
             block(NO,404);
-       }
+        }
     }else if (_syncContext.mode==SourceIsDistantDestinationIsLocal){
         if([self _touchLocalUrl:_syncContext.destinationBaseUrl
                   andTreeWithId:_syncContext.destinationTreeId]){
@@ -278,7 +285,7 @@
         
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
         if([self _touchLocalUrl:_syncContext.sourceBaseUrl andTreeWithId:_syncContext.sourceTreeId]&&
-          [self _touchLocalUrl:_syncContext.destinationBaseUrl andTreeWithId:_syncContext.destinationTreeId]){
+           [self _touchLocalUrl:_syncContext.destinationBaseUrl andTreeWithId:_syncContext.destinationTreeId]){
             block(YES,200);
         }else{
             block(NO,404);
@@ -300,7 +307,7 @@
           } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
               block(NO,operation.response.statusCode);
           }];
-
+    
 }
 
 -(BOOL)_touchLocalUrl:(NSURL*)baseUrl
@@ -317,46 +324,46 @@
  *
  *  @param block      the result block
  */
--(void)hashMapsForTreesWithCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block{  
+-(void)hashMapsForTreesWithCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block{
     PdSSyncAdmin*__weak weakSelf=self;
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
         [weakSelf _distantHashMapForUrl:_syncContext.destinationBaseUrl
-                         andTreeWithId:_syncContext.destinationTreeId
-                           withCompletionBlock:^(HashMap *hashMap, NSInteger statusCode) {
-                                   PdSSyncAdmin* strongSelf=weakSelf;
-                                   HashMap*sourceHashMap=[strongSelf  _localHashMapForUrl:strongSelf->_syncContext.sourceBaseUrl
-                                                                                  andTreeWithId:strongSelf->_syncContext.sourceTreeId];
-                               
-                                   HashMap*destinationHashMap=hashMap;
-                                   [strongSelf->_syncContext setFinalHashMap:sourceHashMap];
-                                   if(!destinationHashMap && statusCode==404){
-                                       // There is currently no destination hashMap let's create a void one.
-                                       destinationHashMap=[[HashMap alloc] init];
-                                   }
-                                   block(sourceHashMap,destinationHashMap,statusCode);
-                           }];
+                          andTreeWithId:_syncContext.destinationTreeId
+                    withCompletionBlock:^(HashMap *hashMap, NSInteger statusCode) {
+                        PdSSyncAdmin* strongSelf=weakSelf;
+                        HashMap*sourceHashMap=[strongSelf  _localHashMapForUrl:strongSelf->_syncContext.sourceBaseUrl
+                                                                 andTreeWithId:strongSelf->_syncContext.sourceTreeId];
+                        
+                        HashMap*destinationHashMap=hashMap;
+                        [strongSelf->_syncContext setFinalHashMap:sourceHashMap];
+                        if(!destinationHashMap && statusCode==404){
+                            // There is currently no destination hashMap let's create a void one.
+                            destinationHashMap=[[HashMap alloc] init];
+                        }
+                        block(sourceHashMap,destinationHashMap,statusCode);
+                    }];
     }else if (_syncContext.mode==SourceIsDistantDestinationIsLocal){
         [weakSelf _distantHashMapForUrl:_syncContext.sourceBaseUrl
-                         andTreeWithId:_syncContext.sourceTreeId
-                           withCompletionBlock:^(HashMap *hashMap, NSInteger statusCode) {
-                               PdSSyncAdmin* strongSelf=weakSelf;
-                               HashMap*sourceHashMap=hashMap;
-                               HashMap*destinationHashMap=[strongSelf  _localHashMapForUrl:strongSelf->_syncContext.destinationBaseUrl
-                                                                                   andTreeWithId:strongSelf->_syncContext.destinationTreeId];
-                               
-                               [strongSelf->_syncContext setFinalHashMap:sourceHashMap];
-                               if(!sourceHashMap && statusCode==404){
-                                   destinationHashMap=[[HashMap alloc] init];
-                               }
-                               block(sourceHashMap,destinationHashMap,statusCode);
-                           }];
-
+                          andTreeWithId:_syncContext.sourceTreeId
+                    withCompletionBlock:^(HashMap *hashMap, NSInteger statusCode) {
+                        PdSSyncAdmin* strongSelf=weakSelf;
+                        HashMap*sourceHashMap=hashMap;
+                        HashMap*destinationHashMap=[strongSelf  _localHashMapForUrl:strongSelf->_syncContext.destinationBaseUrl
+                                                                      andTreeWithId:strongSelf->_syncContext.destinationTreeId];
+                        
+                        [strongSelf->_syncContext setFinalHashMap:sourceHashMap];
+                        if(!sourceHashMap && statusCode==404){
+                            destinationHashMap=[[HashMap alloc] init];
+                        }
+                        block(sourceHashMap,destinationHashMap,statusCode);
+                    }];
+        
     }else if (_syncContext.mode==SourceIsLocalDestinationIsLocal){
         HashMap*sourceHashMap=[weakSelf _localHashMapForUrl:_syncContext.sourceBaseUrl
-                                                    andTreeWithId:_syncContext.sourceTreeId];
+                                              andTreeWithId:_syncContext.sourceTreeId];
         _syncContext.finalHashMap=sourceHashMap;
         HashMap*destinationHashMap=[weakSelf _localHashMapForUrl:_syncContext.destinationBaseUrl
-                                                         andTreeWithId:_syncContext.sourceTreeId];
+                                                   andTreeWithId:_syncContext.sourceTreeId];
         if(!destinationHashMap){
             // There is currently no destination hashMap let's create a void one.
             destinationHashMap=[[HashMap alloc] init];
@@ -369,12 +376,12 @@
     }else if (_syncContext.mode==SourceIsDistantDestinationIsDistant){
         // CURRENTLY NOT SUPPORTED
     }
-
+    
     
 }
 
 -(HashMap*)_localHashMapForUrl:(NSURL*)url
-                      andTreeWithId:(NSString*)identifier{
+                 andTreeWithId:(NSString*)identifier{
     NSString*hashMapRelativePath=[NSString stringWithFormat:@"%@%@/%@%@.%@",[url absoluteString],identifier,kPdSSyncMetadataFolder,kPdSSyncHashMashMapFileName,kPdSSyncHashFileExtension];
     hashMapRelativePath=[hashMapRelativePath filteredFilePath];
     NSURL *hashMapUrl=[NSURL fileURLWithPath:hashMapRelativePath];
@@ -399,8 +406,8 @@
 }
 
 -(void)_distantHashMapForUrl:(NSURL*)url
-                  andTreeWithId:(NSString*)identifier
-                withCompletionBlock:(void (^)(HashMap*hashMap,NSInteger statusCode))block{
+               andTreeWithId:(NSString*)identifier
+         withCompletionBlock:(void (^)(HashMap*hashMap,NSInteger statusCode))block{
     NSMutableDictionary*parameters=[NSMutableDictionary dictionary];
     if(_syncContext.creationKey)
         [parameters setObject:_syncContext.creationKey forKey:@"key"];
@@ -410,17 +417,17 @@
     //manager.requestSerializer=[AFJSONRequestSerializer serializer];
     NSString *URLString=[[url absoluteString]stringByAppendingFormat:@"hashMap/tree/%@/",identifier];
     [manager GET:URLString
-       parameters: parameters
-          success:^(AFHTTPRequestOperation *operation, id responseObject) {
-              if( [responseObject isKindOfClass:[NSDictionary class]]){
-                  HashMap*hashMap=[HashMap fromDictionary:responseObject];
-                  block(hashMap,operation.response.statusCode);
-              }else{
-                  block(nil,PdSStatusErrorHashMapDeserializationTypeMissMatch);
-              }
-          } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-              block(nil, operation.response.statusCode);
-          }];
+      parameters: parameters
+         success:^(AFHTTPRequestOperation *operation, id responseObject) {
+             if( [responseObject isKindOfClass:[NSDictionary class]]){
+                 HashMap*hashMap=[HashMap fromDictionary:responseObject];
+                 block(hashMap,operation.response.statusCode);
+             }else{
+                 block(nil,PdSStatusErrorHashMapDeserializationTypeMissMatch);
+             }
+         } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+             block(nil, operation.response.statusCode);
+         }];
 }
 
 
