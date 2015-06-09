@@ -160,6 +160,10 @@ typedef void(^CompletionBlock_type)(BOOL success,NSString*message);
 
 - (void)_run{
     _hasBeenInterrupted=NO;
+    if(_sanitizeAutomatically){
+        [self _sanitize:@""];
+    }
+    
     if([_bunchOfCommand count]>0){
         PdSCommandInterpreter * __weak weakSelf=self;
         NSMutableArray*__block creativeCommands=[NSMutableArray array];
