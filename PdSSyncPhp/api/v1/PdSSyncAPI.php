@@ -221,7 +221,7 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	
+
 	protected function touch() {
 		if ($this->method == 'POST') {
 			if (isset ( $this->subject ) && count ( $this->args ) > 0 && $this->subject == "tree") {
@@ -246,7 +246,7 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	
+
 	/**
 	 * Returns the hash map
 	 * By default direct=true
@@ -282,7 +282,7 @@ class PdSSyncAPI {
 				// $result = json_decode($result);
 				return $this->_response ( $result, $this->ioManager->status );
 			}
-			
+
 			$uri = $this->ioManager->uriFor ( $treeId, METADATA_FOLDER . HASHMAP_FILENAME );
 			if ($redirect) {
 				header ( 'Location:  ' . $uri, true, 307 );
@@ -299,7 +299,7 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	
+
 	/**
 	 * Redirects to a file
 	 * By default redirect=false
@@ -315,11 +315,11 @@ class PdSSyncAPI {
 				} else {
 					return $this->_response ( 'Undefined treeId', 404 );
 				}
-				
+
 				if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
 					return $this->_response ( NULL, 406 );
 				}
-				
+
 				$redirect = true;
 				if (array_key_exists ( 'redirect', $this->request )) {
 					$redirect = (strtolower ( $this->request ['redirect'] ) == 'true');
@@ -328,7 +328,7 @@ class PdSSyncAPI {
 				if (array_key_exists ( 'returnValue', $this->request )) {
 					$returnValue = (strtolower ( $this->request ['returnValue'] ) == 'true');
 				}
-				
+
 				$this->ioManager = $this->getIoManager ();
 				$path = $this->ioManager->absolutePath ( $treeId, $this->request ['path'] );
 				if (! $this->ioManager->exists ( $path )) {
@@ -357,7 +357,7 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	
+
 	/**
 	 * Upload the file to the relative path
 	 *
@@ -391,7 +391,7 @@ class PdSSyncAPI {
                                 return $this->_response ( 'Error while moving unexisting destination path ' . $uploadfile, 404 );
                             }
 						} else {
-							return $this->_response ( 'Error while moving  ' . $uploadfile, 412 );
+							return $this->_response ('Error while moving  ' . $uploadfile, 412 );
 						}
 					} else {
 						// We create directly the folder without the sync identifier
@@ -403,7 +403,7 @@ class PdSSyncAPI {
 						} else {
 							return $this->_response ( array (
 									'There is no file and path seems not to be a folder ',
-									$d 
+									$d
 							), 417 );
 						}
 					}
@@ -420,7 +420,7 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
-	
+
 	/**
 	 * Finalize the synchronization transaction with a bunch, then save the hashMap.
 	 *
@@ -455,7 +455,7 @@ class PdSSyncAPI {
 					} else {
 						return $this->_response ( array (
 								errors => $errors,
-								commands => $commands 
+								commands => $commands
 						), 417 );
 					}
 				} else {
@@ -547,36 +547,30 @@ class PdSSyncAPI {
 
     /**
 	 *
-	 * @param string $data        	
-	 * @param int $status        	
+	 * @param string $data
+	 * @param int $status
 	 * @return string
 	 */
-	private function _response($data, $status = 200) {
-		// we use this for JSON response only
-		// We can accounter also redirections so we prefer to set
-		// the header contextually.
-		header ( "Access-Control-Allow-Orgin: *" );
-		header ( "Access-Control-Allow-Methods: *" );
-		header ( "Content-Type: application/json" );
-		$header = 'HTTP/1.1 ' . $status . ' ' . $this->requestStatus ( $status );
-		header ( $header );
-		if (isset ( $data )) {
-			// We do not encode to json
-			// If a string is not a valid JSON it should be a embedded in a container array
-			if (is_string ( $data )) {
-				return $data;
-			} else {
-				return json_encode ( $data );
-			}
-		} else {
-			return NULL;
-		}
-	}
-	
+    private function _response($data, $status = 200) {
+        // we use this for JSON response only
+        // We can accounter also redirections so we prefer to set
+        // the header contextually.
+        header ( "Access-Control-Allow-Orgin: *" );
+        header ( "Access-Control-Allow-Methods: *" );
+        header ( "Content-Type: application/json" );
+        $header = 'HTTP/1.1 ' . $status . ' ' . $this->requestStatus ( $status );
+        header ( $header );
+        if (isset ( $data )) {
+            return json_encode ( $data );
+        } else {
+            return NULL;
+        }
+    }
+
 	/**
 	 * Cleans up the inputs
 	 *
-	 * @param unknown_type $data        	
+	 * @param unknown_type $data
 	 * @return Ambigous <string, multitype:NULL >
 	 */
 	private function _cleanInputs($data) {
@@ -587,14 +581,14 @@ class PdSSyncAPI {
 		 * strip_tags ( $data ) ); } return $clean_input;
 		 */
 	}
-	
+
 	// ///////////////
 	// protected
 	// //////////////
-	
+
 	/**
 	 *
-	 * @param int $code        	
+	 * @param int $code
 	 * @return string
 	 */
 	public function requestStatus($code) {
@@ -640,11 +634,11 @@ class PdSSyncAPI {
 				502 => 'Bad Gateway',
 				503 => 'Service Unavailable',
 				504 => 'Gateway Timeout',
-				505 => 'HTTP Version Not Supported' 
+				505 => 'HTTP Version Not Supported'
 		);
 		return ($status [$code]) ? $status [$code] : $status [500];
 	}
-	
+
 	/**
 	 * A lazy loading command interpreter
 	 * with its associated file manager
@@ -658,7 +652,7 @@ class PdSSyncAPI {
 		}
 		return $this->interpreter;
 	}
-	
+
 	/**
 	 *
 	 * @return IOManager the current IO manager
