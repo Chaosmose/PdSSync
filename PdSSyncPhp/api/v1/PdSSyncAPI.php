@@ -551,21 +551,29 @@ class PdSSyncAPI {
 	 * @param int $status
 	 * @return string
 	 */
-    private function _response($data, $status = 200) {
-        // we use this for JSON response only
-        // We can accounter also redirections so we prefer to set
-        // the header contextually.
-        header ( "Access-Control-Allow-Orgin: *" );
-        header ( "Access-Control-Allow-Methods: *" );
-        header ( "Content-Type: application/json" );
-        $header = 'HTTP/1.1 ' . $status . ' ' . $this->requestStatus ( $status );
-        header ( $header );
-        if (isset ( $data )) {
-            return json_encode ( $data );
-        } else {
-            return NULL;
-        }
-    }
+	private function _response($data, $status = 200) {
+		// we use this for JSON response only
+		// We can accounter also redirections so we prefer to set
+		// the header contextually.
+		header ( "Access-Control-Allow-Orgin: *" );
+		header ( "Access-Control-Allow-Methods: *" );
+		header ( "Content-Type: application/json" );
+		$header = 'HTTP/1.1 ' . $status . ' ' . $this->requestStatus ( $status );
+		header ( $header );
+		if (isset ( $data )) {
+			// We do not encode to json
+			// If a string is not a valid JSON it should be a embedded in a container array
+			if (is_string ( $data )) {
+				return $data;
+			} else {
+				return json_encode ( $data );
+			}
+		} else {
+			return NULL;
+		}
+	}
+
+
 
 	/**
 	 * Cleans up the inputs

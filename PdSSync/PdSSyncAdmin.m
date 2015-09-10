@@ -325,7 +325,7 @@
  *  @param block      the result block
  */
 -(void)hashMapsForTreesWithCompletionBlock:(void (^)(HashMap*sourceHashMap,HashMap*destinationHashMap,NSInteger statusCode))block{
-    PdSSyncAdmin*__weak weakSelf=self;
+    PdSSyncAdmin*__block weakSelf=self;
     if(_syncContext.mode==SourceIsLocalDestinationIsDistant){
         [weakSelf _distantHashMapForUrl:_syncContext.destinationBaseUrl
                           andTreeWithId:_syncContext.destinationTreeId

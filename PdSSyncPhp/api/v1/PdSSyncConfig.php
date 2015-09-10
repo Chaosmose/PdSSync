@@ -5,8 +5,8 @@
 ///////////////////////
 
 
-define ( 'REPOSITORY_HOST',((array_key_exists('HTTPS', $_SERVER))?($_SERVER['HTTPS'])?'https://':'http://':'http://').$_SERVER['SERVER_NAME'].'/PdSSyncPhp.dev/Repository/' );
-define ( 'REPOSITORY_WRITING_PATH',dirname( dirname(__DIR__)). '/Repository/'  );
+define ( 'REPOSITORY_HOST',((array_key_exists('HTTPS', $_SERVER))?($_SERVER['HTTPS'])?'https://':'http://':'http://').$_SERVER['SERVER_NAME'].'/files/' );
+define ( 'REPOSITORY_WRITING_PATH',dirname( dirname(__DIR__)). '/files/'  );
 
 ///////////////////////
 // PERSITENCY
