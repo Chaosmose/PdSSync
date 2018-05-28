@@ -32,14 +32,8 @@
 
 @property (nonatomic)BOOL autoCreateTrees;
 
-// Additional properties
-// Usable for acl and credentials and security
-
-@property (nonatomic,copy)NSString*name;
-@property (nonatomic,copy)NSString*token;
 @property (nonatomic,copy)NSString*creationKey;
-@property (nonatomic)int groupID;
-@property (nonatomic)int userID;
+
 
 
 /**

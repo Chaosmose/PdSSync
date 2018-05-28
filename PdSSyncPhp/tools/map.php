@@ -13,7 +13,7 @@
             $channelDescriptorPath = $path.$element.DIRECTORY_SEPARATOR.'channel.json';
             $json = file_get_contents($channelDescriptorPath);
             $json = utf8_encode(substr($json,2));
-            $list .= "<p>$element $json</p>";
+            $list .= "<p><b>$element</b>: $json</p>";
         }
 
     }
@@ -26,6 +26,6 @@
 <link rel="stylesheet" type="text/css" href="map.css"/>
 </head>
 <body>
-<p><?php echo ($list); ?>**</p>
+<p><?php echo ($list); ?></p>
 </body>
 </html>
