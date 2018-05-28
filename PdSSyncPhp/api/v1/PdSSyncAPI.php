@@ -193,6 +193,8 @@ class PdSSyncAPI {
 			return $this->_response ( $infos, 405 );
 		}
 	}
+
+
 	protected function create() {
 		if ($this->method == 'POST') {
 			if (isset ( $this->subject ) && count ( $this->args ) > 0 && $this->subject == "tree") {
@@ -490,7 +492,6 @@ class PdSSyncAPI {
             if (strlen ( $treeId ) < MIN_TREE_ID_LENGTH) {
                 return $this->_response ( NULL, 406 );
             }
-
             $this->ioManager = $this->getIoManager ();
             $rootPath = $this->ioManager->absolutePath ( $treeId, '' );
             $fileList = $this->ioManager->listRelativePathsIn ( $rootPath );
@@ -498,18 +499,17 @@ class PdSSyncAPI {
             $unModifiedPath=array();
             foreach ( $fileList as $relativePath ) {
                 if (substr ( $relativePath, - 1 ) != "/") {
-                    // It is not a folder.
-                    $pathInfos = pathinfo ( $relativePath );
-                    $fileName = $pathInfos ['basename'];
-                    if ($this->_stringStartsWith ( $fileName, SYNC_PREFIX_SIGNATURE )) {
-                        $absolutePath = $this->ioManager->absolutePath ( $treeId, $relativePath );
-                        $this->ioManager->delete ( $absolutePath );
-                        $deletedPath [] = $relativePath;
-                    }else{
-                        $unModifiedPath[]=$relativePath;
-                    }
-                }
-                ;
+					// It is not a folder.
+					$pathInfos = pathinfo($relativePath);
+					$fileName = $pathInfos ['basename'];
+					if ($this->_stringStartsWith($fileName, SYNC_PREFIX_SIGNATURE)) {
+						$absolutePath = $this->ioManager->absolutePath($treeId, $relativePath);
+						$this->ioManager->delete($absolutePath);
+						$deletedPath [] = $relativePath;
+					} else {
+						$unModifiedPath[] = $relativePath;
+					}
+				};
             };
             return $this->_response ( array(deleted=>$deletedPath, notModified=>$unModifiedPath), 200 );
         } else {

@@ -34,7 +34,7 @@ final class IOManagerFS extends IOManagerAbstract implements IOManagerPersistenc
 	}
 	
 	public function copy( $source, $destination ){
-        $this->delete($newname);
+        $this->delete($destination);
 		return copy($source, $destination);
 	}
 

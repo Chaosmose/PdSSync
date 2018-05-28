@@ -1,0 +1,64 @@
+
+html,
+body {
+    width: 90%;
+    height: auto;
+    overflow: auto;
+}
+
+
+body {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+	 padding:5%;
+}
+
+h1, h2, h3 {
+    line-height: 1.2;
+}
+
+h1 {
+    font-size: 38px;
+    
+    margin-bottom: 22px;
+}
+
+h2 {
+    font-size: 28px;
+    
+    margin-bottom: 10px;
+}
+
+h3 {
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+h1 a,
+h2 a,
+h3 a,
+span a {
+    border-bottom: 1px solid;
+    font-weight: 700;
+}
+
+p {
+    line-height: 1.4;
+    margin-bottom: 20px;
+}
+
+a {
+    text-decoration: none;
+	color:black;
+    transition-duration: 0.25s;
+}
+
+p 
+strong {
+    font-weight: 700;
+}
+
+p a {
+    border-bottom: 1px solid;
+}

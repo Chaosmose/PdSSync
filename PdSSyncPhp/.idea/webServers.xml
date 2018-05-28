@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="a6b9682c-555d-4321-900d-289101dc1b2d" name="repository.sly.am" url="http://repository.sly.am">
+        <fileTransfer host="repository.sly.am" port="21" rootFolder="/home/repository/public_html">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="21" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
